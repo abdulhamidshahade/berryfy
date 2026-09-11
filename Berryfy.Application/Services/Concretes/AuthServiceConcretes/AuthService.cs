@@ -149,10 +149,16 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new LoginResponseDto { User = null, Token = "" };
             }
 
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                return new LoginResponseDto { Token = string.Empty, ErrorMessage = "Account is locked. Please try again later." };
+            }
+
             var isPasswordCorrect = await _userManager.CheckPasswordAsync(user, requestDto.Password);
 
             if (!isPasswordCorrect)
             {
+                await _userManager.AccessFailedAsync(user);
                 _logger.LogWarning("Invalid password for email: {Email}", normalizedEmail);
                 return new LoginResponseDto { User = null, Token = "" };
             }
@@ -161,6 +167,11 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             {
                 _logger.LogWarning("Login attempted with unconfirmed email: {Email}", normalizedEmail);
                 return new LoginResponseDto { User = null, Token = "", ErrorMessage = "Email not confirmed. Please check your email and confirm your account." };
+            }
+
+            if (!(await _userManager.ResetAccessFailedCountAsync(user)).Succeeded)
+            {
+                return new LoginResponseDto { Token = string.Empty, ErrorMessage = "Unable to sign in. Please try again." };
             }
 
             var userRoles = await _userManager.GetRolesAsync(user);
@@ -188,10 +199,15 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
         public async Task<LoginResponseDto> RefreshTokenAsync(string refreshToken)
         {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                return new LoginResponseDto { Token = string.Empty, ErrorMessage = "Invalid or expired refresh token." };
+            }
             var hashedToken = TokenService.HashToken(refreshToken);
             var user = _userManager.Users.FirstOrDefault(u => u.RefreshToken == hashedToken);
 
-            if (user == null || user.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
+            if (user == null || user.RefreshTokenExpiry == null || user.RefreshTokenExpiry <= DateTime.UtcNow ||
+                !user.EmailConfirmed || await _userManager.IsLockedOutAsync(user))
             {
                 return new LoginResponseDto { Token = string.Empty, ErrorMessage = "Invalid or expired refresh token." };
             }
