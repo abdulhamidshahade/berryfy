@@ -63,6 +63,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     return result;
                 }
 
+                if (!userId.HasValue || cart.UserId != userId || orderDto.UserId != userId)
+                {
+                    result.ErrorMessage = "You can only check out your own cart";
+                    return result;
+                }
+
                 // If cart is already PendingPayment, check if order exists
                 if (cart.Status == CartStatus.PendingPayment)
                 {
@@ -72,8 +78,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         _logger.LogInformation("Found existing order {OrderId} for cart {CartId}, syncing and returning it", existingOrder.Id, cartId);
                         // Sync the order with current cart state (in case items were modified)
-                        await _orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId);
-                        result.Order = existingOrder;
+                        if (!await _orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId))
+                        {
+                            result.ErrorMessage = "Could not update the pending order";
+                            return result;
+                        }
+                        result.Order = await _orderService.GetOrderByCartIdAsync(cartId);
                         result.IsSuccess = true;
                         return result;
                     }
@@ -82,8 +92,10 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
 
                 foreach (var item in cart.CartItems)
                 {
-                    var isInStock = await _inventoryService.IsInStockAsync(item.ProductId, item.Quantity);
-                    if (!isInStock)
+                    // Cart additions already reserved these units. Available stock excludes them.
+                    var product = await _inventoryService.GetProductWithStockInfoAsync(item.ProductId);
+                    if (item.Quantity <= 0 || product == null || product.ReservedStock < item.Quantity ||
+                        product.StockQuantity < product.ReservedStock)
                     {
                         result.ErrorMessage = $"Insufficient stock for product ID {item.ProductId}";
                         return result;
