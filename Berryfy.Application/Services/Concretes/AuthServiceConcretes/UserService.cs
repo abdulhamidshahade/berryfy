@@ -41,6 +41,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         public async Task<ApplicationUserDto> GetUserById(int id)
         {
             var user = await _userManager.Users.Where(i => i.Id == id).FirstOrDefaultAsync();
+            if (user != null) user.roles = await _userManager.GetRolesAsync(user);
 
             return _mapper.Map<ApplicationUserDto>(user);
         }
