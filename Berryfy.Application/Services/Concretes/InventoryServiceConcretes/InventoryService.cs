@@ -27,7 +27,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
         {
             if (quantity <= 0)
             {
-                return true;
+                return false;
             }
 
             var product = await _productRepository.GetByIdAsync(productId);
@@ -91,23 +91,14 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 return false;
             }
 
-            if (newQuantity < 0)
+            if (newQuantity < 0 || newQuantity < product.ReservedStock)
             {
                 return false;
             }
 
             int difference = newQuantity - product.StockQuantity;
 
-            InventoryChangeType changeType = difference >= 0
-                ? InventoryChangeType.StockAdjustment
-                : InventoryChangeType.Restock;
-
             product.StockQuantity = newQuantity;
-
-            if (product.StockQuantity < product.ReservedStock)
-            {
-                product.ReservedStock = product.StockQuantity;
-            }
 
             product.UpdatedAt = DateTime.UtcNow;
 
@@ -116,7 +107,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 ProductId = productId,
                 CurrentStockQuantity = product.StockQuantity,
                 QuantityChanged = difference,
-                ChangeType = changeType,
+                ChangeType = InventoryChangeType.StockAdjustment,
                 Notes = notes,
                 CreatedAt = DateTime.UtcNow,
                 PerformedByUserId = performedByUserId
@@ -134,9 +125,10 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
         public async Task<bool> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _productRepository.GetByIdAsync(productId);
 
-            if (product == null || product.ReservedStock < quantity)
+            if (product == null || product.ReservedStock < quantity || product.StockQuantity < quantity)
             {
                 return false;
             }
@@ -203,6 +195,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
         public async Task<bool> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _productRepository.GetByIdAsync(productId);
             if (product == null)
             {
@@ -237,6 +230,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
         public async Task<bool> ReserveStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _productRepository.GetByIdAsync(productId);
             if (product == null)
                 return false;
