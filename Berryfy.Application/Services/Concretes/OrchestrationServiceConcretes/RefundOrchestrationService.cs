@@ -74,11 +74,13 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 }
 
                 var amountToRefund = refundAmount ?? order.Total;
-                if (amountToRefund > order.Total)
+                if (amountToRefund <= 0 || amountToRefund > order.Total || amountToRefund > payment.Amount)
                 {
-                    result.ErrorMessage = "Refund amount cannot exceed order total";
+                    result.ErrorMessage = "Refund amount must be positive and cannot exceed the order total or payment amount";
                     return result;
                 }
+
+                var isFullRefund = amountToRefund == order.Total && amountToRefund == payment.Amount;
 
                 var strategy = _unitOfWork.BeginTransactionAsyncStrategy();
                 var transactionResult = await strategy.ExecuteAsync(async () =>
@@ -97,8 +99,21 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                             return false;
                         }
 
-                        result.PaymentRefunded = true;
-                        result.RefundedAmount = amountToRefund;
+                        // A partial monetary refund does not imply that any items were returned.
+                        if (!isFullRefund)
+                        {
+                            if (!await _unitOfWork.CommitTransactionAsync())
+                            {
+                                await _unitOfWork.RollbackTransactionAsync();
+                                result.ErrorMessage = "Failed to commit refund transaction";
+                                return false;
+                            }
+
+                            result.PaymentRefunded = true;
+                            result.RefundedAmount = amountToRefund;
+                            result.IsSuccess = true;
+                            return true;
+                        }
 
                         _logger.LogDebug("Restoring inventory for refunded order {OrderId}", orderId);
                         foreach (var item in order.OrderItems)
@@ -111,15 +126,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
 
                             if (!inventoryRestored)
                             {
-                                result.Warnings.Add($"Failed to restore inventory for product {item.ProductId}");
-                            }
-                            else
-                            {
-                                result.InventoryRestored = true;
+                                throw new InvalidOperationException($"Failed to restore inventory for product {item.ProductId}");
                             }
                         }
 
                         _logger.LogDebug("Reverting coupon usage for refunded order {OrderId}", orderId);
+                        var couponsReverted = false;
                         if (order.UserId > 0)
                         {
                             var couponIds = await _userCouponService.GetCouponIdsUsedInOrderAsync(orderId);
@@ -132,11 +144,11 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
 
                                 if (!couponReverted)
                                 {
-                                    result.Warnings.Add($"Failed to revert coupon {couponId} usage");
+                                    throw new InvalidOperationException($"Failed to revert coupon {couponId} usage");
                                 }
                                 else
                                 {
-                                    result.CouponsReverted = true;
+                                    couponsReverted = true;
                                 }
                             }
                         }
@@ -162,6 +174,10 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                         }
 
                         result.IsSuccess = true;
+                        result.PaymentRefunded = true;
+                        result.RefundedAmount = amountToRefund;
+                        result.InventoryRestored = order.OrderItems.Count > 0;
+                        result.CouponsReverted = couponsReverted;
                         _logger.LogInformation("Successfully processed refund for order {OrderId}, amount {RefundAmount}",
                             orderId, amountToRefund);
                         return true;
@@ -170,6 +186,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         _logger.LogError(ex, "Error during refund transaction for order {OrderId}", orderId);
                         await _unitOfWork.RollbackTransactionAsync();
+                        result.CouponsReverted = false;
                         result.ErrorMessage = $"Refund transaction failed: {ex.Message}";
                         return false;
                     }
