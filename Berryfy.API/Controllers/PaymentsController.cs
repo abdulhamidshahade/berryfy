@@ -48,6 +48,22 @@ namespace Berryfy.API.Controllers
                 var userId = GetCurrentUserId();
                 var sessionId = GetSessionId();
 
+                if (!userId.HasValue) return Unauthorized();
+                if (!createPaymentDto.OrderId.HasValue) return BadRequest(new { StatusMessage = "An order is required" });
+                var payableOrder = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
+                if (payableOrder == null) return NotFound();
+                if (payableOrder.UserId != userId.Value) return Forbid();
+                if (payableOrder.Status != OrderStatus.Pending || payableOrder.IsPaid)
+                    return Conflict(new { StatusMessage = "This order is not awaiting payment" });
+                if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Total)
+                    return BadRequest(new { StatusMessage = "Payment amount must match the order total" });
+                if (!string.Equals(createPaymentDto.Currency, "USD", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new { StatusMessage = "Orders must be paid in USD" });
+
+                var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Id);
+                if (previousPayment.IsSuccess && previousPayment.Data?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
+                    return Conflict(new { StatusMessage = "Payment has already been submitted for this order" });
+
                 var result = await _paymentService.ProcessPaymentAsync(createPaymentDto, userId, sessionId);
                 if (!result.IsSuccess)
                 {
@@ -115,6 +131,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [UserAndAbove]
         public async Task<IActionResult> GetPaymentById(int id)
         {
             try
@@ -125,6 +142,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
+                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -134,6 +152,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpGet("transaction/{transactionId}")]
+        [UserAndAbove]
         public async Task<IActionResult> GetPaymentByTransactionId(string transactionId)
         {
             try
@@ -144,6 +163,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
+                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -153,6 +173,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpGet("order/{orderId}")]
+        [UserAndAbove]
         public async Task<IActionResult> GetPaymentByOrderId(int orderId)
         {
             try
@@ -163,6 +184,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
+                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -197,10 +219,9 @@ namespace Berryfy.API.Controllers
         {
             try
             {
-                var currentUserId = GetCurrentUserId();
-                if (currentUserId != userId && !User.IsInRole("Admin"))
+                if (!CanAccessUserResource(userId))
                 {
-                    return Forbid("You can only access your own payments");
+                    return Forbid();
                 }
 
                 var result = await _paymentService.GetPaymentsByUserIdAsync(userId);
