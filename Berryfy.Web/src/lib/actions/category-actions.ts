@@ -8,10 +8,12 @@ import { redirect } from "next/navigation";
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { requireCatalogAdmin } from '../catalog-access';
+import { removeLocalCatalogImage } from '../local-catalog-images';
 
 const categoryService: ICategoryService = new CategoryService();
 
-async function uploadImageFile(file: File, currentImageUrl?: string): Promise<string> {
+async function uploadImageFile(file: File): Promise<string> {
   const useCloudflare = process.env.USE_CLOUDFLARE === 'true';
 
   if (useCloudflare) {
@@ -82,12 +84,6 @@ async function uploadImageFile(file: File, currentImageUrl?: string): Promise<st
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  if(currentImageUrl){
-      var fullPath = path.join(process.cwd(), `public${currentImageUrl}`);
-      if(fs.existsSync(fullPath)){
-        fs.rmSync(fullPath, { recursive: true });
-      }
-    }
 
   const filePath = path.join(uploadDir, fileName);
   fs.writeFileSync(filePath, buffer);
@@ -96,6 +92,7 @@ async function uploadImageFile(file: File, currentImageUrl?: string): Promise<st
 }
 
 export async function createCategory(formData: FormData) {
+  await requireCatalogAdmin();
   const name = formData.get('name') as string;
   const description = formData.get('description') as string;
   const imageFile = formData.get('imageFile') as File;
@@ -158,7 +155,8 @@ export async function createCategory(formData: FormData) {
   }
 }
 
-export async function updateCategory(formData: FormData, currentImageUrl: string) {
+export async function updateCategory(formData: FormData, _currentImageUrl: string) {
+  await requireCatalogAdmin();
   const id = formData.get('id') as string;
   const name = formData.get('name') as string;
   const description = formData.get('description') as string;
@@ -211,7 +209,7 @@ export async function updateCategory(formData: FormData, currentImageUrl: string
     let imageUrl: string;
     
     if (hasNewImage) {
-      imageUrl = await uploadImageFile(imageFile, currentImageUrl);
+      imageUrl = await uploadImageFile(imageFile);
     } else {
       const existingCategory = await categoryService.getById(parseInt(id));
       if (!existingCategory) {
@@ -271,6 +269,7 @@ export async function validateConfirmation(formData: FormData) {
 }
 
 export async function deleteCategory(formData: FormData) {
+  await requireCatalogAdmin();
   const categoryId = parseInt(formData.get('id') as string);
   
   console.log('Delete attempt for category ID:', categoryId);
@@ -298,11 +297,7 @@ export async function deleteCategory(formData: FormData) {
     
     if (category && category.imageUrl.startsWith('/uploads/')) {
       try {
-        const imagePath = path.join(process.cwd(), 'public', category.imageUrl);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log('Cleaned up image file:', category.imageUrl);
-        }
+        removeLocalCatalogImage(category.imageUrl, 'category');
       } catch (cleanupError) {
         console.error('Failed to cleanup image file:', cleanupError);
       }
