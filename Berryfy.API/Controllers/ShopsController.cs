@@ -1,5 +1,6 @@
 ﻿using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.ShopDtos;
+using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Services.Interfaces.ShopServiceInterfaces;
 using Berryfy.Domain.Entities.ShopEntities;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPut]
         [Route("{id}")]
+        [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<ShopDto>>> Update(int id, [FromBody] UpdateShopDto shopDto)
         {
             var updatedShop = await _shopService.UpdateShopAsync(id, shopDto);
