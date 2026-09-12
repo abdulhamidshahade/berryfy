@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProduct } from '../../../../../lib/actions/product-actions';
@@ -76,6 +77,23 @@ function formatQuantityChange(quantity: number): { text: string; className: stri
 }
 
 export default async function InventoryHistoryPage({ params }: PageProps) {
+  try {
+    return await loadInventoryHistoryPage({ params });
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading inventory history:', error);
+    return (
+      <div className="container-fluid">
+        <div className="alert alert-danger" role="alert">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          <strong>Error!</strong> Unable to load inventory history. Please try again later.
+        </div>
+      </div>
+    );
+  }
+}
+
+async function loadInventoryHistoryPage({ params }: PageProps) {
   var resolvedSearchParams = await params;
   const productId = parseInt(resolvedSearchParams.id);
   
@@ -83,7 +101,7 @@ export default async function InventoryHistoryPage({ params }: PageProps) {
     notFound();
   }
 
-  try {
+  
     const [product, history] = await Promise.all([
       getProduct(productId),
       getInventoryHistory(productId, 100)
@@ -273,15 +291,5 @@ export default async function InventoryHistoryPage({ params }: PageProps) {
         </div>
       </div>
     );
-  } catch (error) {
-    console.error('Error loading inventory history:', error);
-    return (
-      <div className="container-fluid">
-        <div className="alert alert-danger" role="alert">
-          <i className="bi bi-exclamation-triangle me-2"></i>
-          <strong>Error!</strong> Unable to load inventory history. Please try again later.
-        </div>
-      </div>
-    );
-  }
+  
 } 
