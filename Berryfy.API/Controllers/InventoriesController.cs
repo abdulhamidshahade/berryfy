@@ -78,7 +78,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("reserve-stock")]
-        [UserAndAbove]
+        [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> ReserveStock([FromBody] ReserveStockRequest request)
         {
             try
@@ -122,7 +122,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("release-reserved-stock")]
-        [UserAndAbove]
+        [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> ReleaseReservedStock([FromBody] ReleaseStockRequest request)
         {
             try
@@ -155,7 +155,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("confirm-deduction")]
-        [UserAndAbove]
+        [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> ConfirmStockDeduction([FromBody] ConfirmDeductionRequest request)
         {
             try
