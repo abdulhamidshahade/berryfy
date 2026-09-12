@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { OrderService } from '../../../lib/services/order/service';
@@ -10,6 +11,16 @@ interface OrderDetailPageProps {
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+  try {
+    return await loadOrderDetailPage({ params });
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading order:', error);
+    notFound();
+  }
+}
+
+async function loadOrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params;
   const orderId = parseInt(id);
 
@@ -17,7 +28,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     notFound();
   }
 
-  try {
+  
     const orderService = new OrderService();
     const order = await orderService.getById(orderId);
     if (!order) {
@@ -322,7 +333,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </div>
               <div className="card-body">
                 <p className="card-text mb-3">
-                  Have questions about this order? We're here to help.
+                  Have questions about this order? We&apos;re here to help.
                 </p>
                 <div className="d-grid gap-2">
                     <a href="mailto:support@berryfy.org" className="btn btn-outline-primary btn-sm">
@@ -340,8 +351,5 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </div>
       </div>
     );
-  } catch (error) {
-    console.error('Error loading order:', error);
-    notFound();
-  }
+  
 } 
