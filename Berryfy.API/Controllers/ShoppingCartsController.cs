@@ -22,6 +22,7 @@ namespace Berryfy.API.Controllers
         private readonly IOrderService _orderService;
         private readonly ICheckoutOrchestrationService _checkoutOrchestrationService;
 
+        [NonAction]
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var value = context.RouteData.Values["cartId"] ?? context.RouteData.Values["id"];
