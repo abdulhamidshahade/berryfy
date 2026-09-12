@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Berryfy.Domain.Constants;
 
 namespace Berryfy.API.Controllers
 {
@@ -15,6 +16,14 @@ namespace Berryfy.API.Controllers
         {
             var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null && int.TryParse(userIdClaim.Value, out int id) ? id : null;
+        }
+
+        protected bool CanAccessUserResource(int? ownerId)
+        {
+            return GetCurrentUserId().HasValue &&
+                (ownerId == GetCurrentUserId() ||
+                 User.IsInRole(RoleConstants.Admin) ||
+                 User.IsInRole(RoleConstants.SuperAdmin));
         }
 
         protected string? GetSessionId()
