@@ -40,12 +40,14 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<bool> IsInStockAsync(int productId, int quantity)
         {
+            if (quantity <= 0) return false;
             var product = await _context.Products.FindAsync(productId);
             return product != null && (product.StockQuantity - product.ReservedStock) >= quantity;
         }
 
         public async Task<bool> ReserveStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
             {
@@ -66,6 +68,7 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<bool> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
             {
@@ -74,7 +77,7 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
             if (product.ReservedStock < quantity)
             {
-                quantity = product.ReservedStock; 
+                return false;
             }
 
             product.ReservedStock -= quantity;
@@ -85,23 +88,20 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<bool> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
         {
+            if (quantity <= 0) return false;
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
             {
                 return false;
             }
 
-            int totalAvailable = product.StockQuantity + product.ReservedStock;
-            if (totalAvailable < quantity)
+            if (product.ReservedStock < quantity || product.StockQuantity < quantity)
             {
                 return false;
             }
 
-            int reservedDeduction = Math.Min(product.ReservedStock, quantity);
-            product.ReservedStock -= reservedDeduction;
-
-            int remaining = quantity - reservedDeduction;
-            product.StockQuantity -= remaining;
+            product.ReservedStock -= quantity;
+            product.StockQuantity -= quantity;
 
             product.UpdatedAt = DateTime.UtcNow;
 
@@ -111,6 +111,7 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<bool> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
         {
+            if (quantity <= 0) return false;
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
             {
@@ -125,17 +126,14 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<bool> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
         {
+            if (newQuantity < 0) return false;
             var product = await _context.Products.FindAsync(productId);
-            if (product == null)
+            if (product == null || newQuantity < product.ReservedStock)
             {
                 return false;
             }
 
             product.StockQuantity = newQuantity;
-            if (product.StockQuantity < product.ReservedStock)
-            {
-                product.ReservedStock = product.StockQuantity;
-            }
 
             product.UpdatedAt = DateTime.UtcNow;
 
