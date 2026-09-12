@@ -431,7 +431,7 @@ function DeleteWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
               <strong>Warning!</strong> This action cannot be undone.
             </div>
             
-            <p>Are you sure you want to delete the wishlist <strong>"{wishlist.name}"</strong>?</p>
+            <p>Are you sure you want to delete the wishlist <strong>&quot;{wishlist.name}&quot;</strong>?</p>
             
             {wishlist.itemCount > 0 && (
               <div className="alert alert-warning">
@@ -473,7 +473,7 @@ function DuplicateWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
           <form action={duplicateWishlist}>
             <input type="hidden" name="wishlistId" value={wishlist.id} />
             <div className="modal-body">
-              <p>Create a copy of <strong>"{wishlist.name}"</strong> with all its items.</p>
+              <p>Create a copy of <strong>&quot;{wishlist.name}&quot;</strong> with all its items.</p>
               
               <div className="mb-3">
                 <label htmlFor="newName" className="form-label">New Wishlist Name *</label>
@@ -522,7 +522,7 @@ function ShareWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
             <a href="/profile/wishlist" className="btn-close"></a>
           </div>
           <div className="modal-body">
-            <p>Manage sharing settings for <strong>"{wishlist.name}"</strong>.</p>
+            <p>Manage sharing settings for <strong>&quot;{wishlist.name}&quot;</strong>.</p>
             
             <div className="d-flex justify-content-between align-items-center p-3 border rounded">
               <div>
@@ -578,7 +578,7 @@ function ClearWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
               <strong>Warning!</strong> This action cannot be undone.
             </div>
             
-            <p>Are you sure you want to remove all items from <strong>"{wishlist.name}"</strong>?</p>
+            <p>Are you sure you want to remove all items from <strong>&quot;{wishlist.name}&quot;</strong>?</p>
             
             <div className="alert alert-info">
               <i className="bi bi-info-circle me-2"></i>
@@ -629,7 +629,7 @@ function BulkManageOverlay({ wishlist }: { wishlist?: WishlistDto }) {
           <div className="modal-header">
             <h5 className="modal-title">
               <i className="bi bi-list-check me-2"></i>
-              Manage "{wishlist.name}" Items
+              Manage &quot;{wishlist.name}&quot; Items
             </h5>
             <a href="/profile/wishlist" className="btn-close"></a>
           </div>

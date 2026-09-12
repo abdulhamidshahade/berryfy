@@ -54,7 +54,7 @@ export default function DeleteCategoryForm({ category, searchParams }: Props) {
             />
             {attempted && error && (
               <div className="invalid-feedback">
-                Please type "{expectedConfirmation}" exactly as shown
+                Please type &quot;{expectedConfirmation}&quot; exactly as shown
               </div>
             )}
           </div>
@@ -125,7 +125,7 @@ export default function DeleteCategoryForm({ category, searchParams }: Props) {
           This action will:
         </h6>
         <ul className="text-muted mb-0 small">
-          <li>Permanently delete the category "{category.name}"</li>
+          <li>Permanently delete the category &quot;{category.name}&quot;</li>
           <li>Remove all references to this category</li>
           <li>This action cannot be undone</li>
         </ul>

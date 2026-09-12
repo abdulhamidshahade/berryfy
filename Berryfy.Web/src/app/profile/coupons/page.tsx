@@ -103,7 +103,7 @@ async function CouponCard({ coupon, userId }: { coupon: CouponDto; userId: numbe
           ) : hasUsed ? (
             <div className="text-center text-warning">
               <i className="bi bi-check-circle me-1"></i>
-              You've already used this coupon
+              You&apos;ve already used this coupon
             </div>
           ) : (
             <div className="d-grid">
@@ -137,7 +137,7 @@ async function UserCouponsList() {
           <i className="bi bi-ticket-detailed display-1 text-muted"></i>
         </div>
         <h3 className="text-muted">No Coupons Available</h3>
-        <p className="text-muted mb-4">You don't have any coupons yet. Keep shopping to earn discounts!</p>
+        <p className="text-muted mb-4">You don&apos;t have any coupons yet. Keep shopping to earn discounts!</p>
         <Link href="/" className="btn btn-primary">
           <i className="bi bi-shop me-2"></i>Continue Shopping
         </Link>

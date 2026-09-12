@@ -56,7 +56,7 @@ export default async function EditCategoryPage({ params, searchParams }: Props) 
                 Edit Category
               </h1>
               <p className="text-muted mb-0">
-                Update information for "{category.name}"
+                Update information for &quot;{category.name}&quot;
               </p>
             </div>
           </div>

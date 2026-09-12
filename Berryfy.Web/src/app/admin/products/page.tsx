@@ -227,7 +227,7 @@ export default async function AdminProductsPage({
               <h5 className="card-title mb-0">
                 <i className="bi bi-list-ul me-2"></i>Products Overview
                 {searchTerm && (
-                  <span className="text-muted ms-2">(Search: "{searchTerm}")</span>
+                  <span className="text-muted ms-2">(Search: &quot;{searchTerm}&quot;)</span>
                 )}
               </h5>
             </div>

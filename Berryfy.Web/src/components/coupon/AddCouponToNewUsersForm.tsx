@@ -130,7 +130,7 @@ export async function AddCouponToNewUsersForm() {
         <i className="bi bi-info-circle me-2"></i>
         <strong>Note:</strong> This action will add the selected coupon to all new users 
         {newUsers.length > 0 ? ` (currently ${newUsers.length} users)` : ''}. 
-        New users are identified as users with "new" in their first name. 
+        New users are identified as users with &quot;new&quot; in their first name. 
         Users who already have this coupon will be skipped.
       </div>
 

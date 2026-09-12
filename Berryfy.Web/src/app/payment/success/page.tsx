@@ -92,7 +92,7 @@ export default async function PaymentSuccessPage({ searchParams }: PaymentSucces
                     </div>
                     <div>
                       <h6 className="mb-1">Confirmation Email</h6>
-                      <p className="text-muted mb-0 small">You'll receive a confirmation email with your receipt and order details.</p>
+                      <p className="text-muted mb-0 small">You&apos;ll receive a confirmation email with your receipt and order details.</p>
                     </div>
                   </div>
                   <div className="d-flex align-items-start mb-3">
@@ -110,7 +110,7 @@ export default async function PaymentSuccessPage({ searchParams }: PaymentSucces
                     </div>
                     <div>
                       <h6 className="mb-1">Shipping Updates</h6>
-                      <p className="text-muted mb-0 small">You'll receive tracking information once your order ships.</p>
+                      <p className="text-muted mb-0 small">You&apos;ll receive tracking information once your order ships.</p>
                     </div>
                   </div>
                 </div>

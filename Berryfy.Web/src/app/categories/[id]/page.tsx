@@ -52,7 +52,7 @@ async function CategoryProducts({ category }: { category: CategoryDto }) {
                     <i className="bi bi-box-seam display-1 text-muted"></i>
                 </div>
                 <h3 className="text-muted">No products available</h3>
-                <p className="text-muted mb-4">This category doesn't have any products available at the moment.</p>
+                <p className="text-muted mb-4">This category doesn&apos;t have any products available at the moment.</p>
                 <a href="/categories" className="btn btn-primary me-2">
                     <i className="bi bi-grid-3x3-gap me-2"></i>Browse Categories
                 </a>
@@ -199,7 +199,7 @@ export default async function CategoryDetailsPage({ params }: CategoryDetailsPag
                         <div className="col-md-8 mx-auto">
                             <h4 className="mb-3">Discover More Categories</h4>
                             <p className="text-muted mb-4">
-                                Explore our other categories to find exactly what you're looking for.
+                                Explore our other categories to find exactly what you&apos;re looking for.
                             </p>
                             <a href="/categories" className="btn btn-outline-primary me-2">
                                 <i className="bi bi-grid-3x3-gap me-2"></i>Browse All Categories

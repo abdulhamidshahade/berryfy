@@ -48,7 +48,7 @@ export default function EmailConfirmationForm({ email, token }: EmailConfirmatio
 
           <div className="text-center">
             <p className="mb-0">
-              Didn't receive the email?{' '}
+              Didn&apos;t receive the email?{' '}
               <a href={`/auth/resend-confirmation?email=${encodeURIComponent(email)}`} className="text-decoration-none">
                 Resend confirmation email
               </a>

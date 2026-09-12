@@ -229,7 +229,7 @@ export default function CheckoutForm({ cart, searchParams }: CheckoutFormProps) 
                   <div className="text-center">
                     <i className="bi bi-piggy-bank-fill text-success me-1"></i>
                     <span className="text-success fw-bold">
-                      You're saving ${cart.discountTotal.toFixed(2)}!
+                      You&apos;re saving ${cart.discountTotal.toFixed(2)}!
                     </span>
                   </div>
                 </div>

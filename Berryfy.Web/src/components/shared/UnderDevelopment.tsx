@@ -10,9 +10,9 @@ export default function UnderDevelopment() {
               <i className="bi bi-tools display-1 text-muted opacity-50"></i>
             </div>
             <h1 className="display-4 fw-bold text-warning mb-3">Under Development</h1>
-            <h2 className="h3 text-dark mb-3">We're Working on Something Great</h2>
+            <h2 className="h3 text-dark mb-3">We&apos;re Working on Something Great</h2>
             <p className="text-muted mb-4">
-              This page is currently under development. I'm working hard 
+              This page is currently under development. I&apos;m working hard 
               to bring you new features and improvements. Please check back soon!
             </p>
             <div className="d-flex gap-3 justify-content-center flex-wrap">

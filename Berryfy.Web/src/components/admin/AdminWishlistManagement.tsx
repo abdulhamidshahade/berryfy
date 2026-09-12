@@ -534,11 +534,11 @@ function AdminClearWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
               <strong>Warning!</strong> This action cannot be undone.
             </div>
             
-            <p>Are you sure you want to remove all items from <strong>"{wishlist.name}"</strong>?</p>
+            <p>Are you sure you want to remove all items from <strong>&quot;{wishlist.name}&quot;</strong>?</p>
             
             <div className="alert alert-info">
               <i className="bi bi-info-circle me-2"></i>
-              This will remove all <strong>{wishlist.itemCount} items</strong> from the user's wishlist.
+              This will remove all <strong>{wishlist.itemCount} items</strong> from the user&apos;s wishlist.
             </div>
           </div>
           <div className="modal-footer">
@@ -579,7 +579,7 @@ function AdminDeleteWishlistOverlay({ wishlist }: { wishlist?: WishlistDto }) {
                 <strong>Danger!</strong> This action cannot be undone.
               </div>
               
-              <p>Are you sure you want to permanently delete <strong>"{wishlist.name}"</strong>?</p>
+              <p>Are you sure you want to permanently delete <strong>&quot;{wishlist.name}&quot;</strong>?</p>
               
               {wishlist.itemCount > 0 && (
                 <div className="alert alert-warning">

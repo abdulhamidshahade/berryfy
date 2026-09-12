@@ -240,7 +240,7 @@ export default async function InventoryEditProductPage({ params }: PageProps) {
                             <strong>Product is Active</strong>
                             <br />
                             <small className="text-muted">
-                              Inactive products won't appear in the store
+                              Inactive products won&apos;t appear in the store
                             </small>
                           </label>
                         </div>

@@ -221,7 +221,7 @@ export default async function DeletePaymentPage({ params, searchParams }: Props)
                 
                 <div className="mb-4">
                   <label htmlFor="confirmation" className="form-label fw-medium">
-                    Type "DELETE" to confirm <span className="text-danger">*</span>
+                    Type &quot;DELETE&quot; to confirm <span className="text-danger">*</span>
                   </label>
                   <input 
                     type="text" 
@@ -233,7 +233,7 @@ export default async function DeletePaymentPage({ params, searchParams }: Props)
                     required
                   />
                   <div className="form-text">
-                    Type "DELETE" (in uppercase) to confirm that you want to permanently delete this payment.
+                    Type &quot;DELETE&quot; (in uppercase) to confirm that you want to permanently delete this payment.
                   </div>
                 </div>
 

@@ -190,7 +190,7 @@ export default function UsersTable({
             <span className="small text-muted">Active filters:</span>
             {searchQuery && (
               <span className="badge bg-light text-dark">
-                Search: "{searchQuery}"
+                Search: &quot;{searchQuery}&quot;
                 <a href={createUserUrl(selectedUserId, { role: selectedRole || '' })} className="text-decoration-none ms-1">×</a>
               </span>
             )}

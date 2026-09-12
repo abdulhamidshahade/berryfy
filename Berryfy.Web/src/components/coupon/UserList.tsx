@@ -13,7 +13,7 @@ export async function UsersList({ couponId, couponCode }: { couponId: number; co
           <i className="bi bi-people display-1 text-muted"></i>
         </div>
         <h3 className="text-muted">No Users Found</h3>
-        <p className="text-muted mb-4">This coupon hasn't been assigned to any users yet.</p>
+        <p className="text-muted mb-4">This coupon hasn&apos;t been assigned to any users yet.</p>
         <Link href={`/admin/coupons/${couponId}/add-user`} className="btn btn-primary">
           <i className="bi bi-person-plus me-2"></i>Add User to Coupon
         </Link>

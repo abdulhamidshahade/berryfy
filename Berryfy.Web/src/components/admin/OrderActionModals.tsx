@@ -135,7 +135,7 @@ export function RefundOrderModal({ orderId, redirectTo }: OrderActionModalBasePr
               </div>
               <div className="alert alert-info">
                 <i className="bi bi-info-circle me-2"></i>
-                This will process the refund and update the order status to "Refunded".
+                This will process the refund and update the order status to &quot;Refunded&quot;.
               </div>
             </div>
             <div className="modal-footer">

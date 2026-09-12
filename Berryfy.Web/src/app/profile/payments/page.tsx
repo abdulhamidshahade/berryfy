@@ -296,7 +296,7 @@ export default async function UserPaymentsPage({ searchParams }: UserPaymentsPag
             <div className="text-center py-5">
               <i className="bi bi-credit-card display-1 text-muted mb-3"></i>
               <h5 className="text-muted">No payment history</h5>
-              <p className="text-muted mb-4">You haven't made any payments yet.</p>
+              <p className="text-muted mb-4">You haven&apos;t made any payments yet.</p>
               <Link href="/products" className="btn btn-primary">
                 <i className="bi bi-shop me-2"></i>
                 Start Shopping

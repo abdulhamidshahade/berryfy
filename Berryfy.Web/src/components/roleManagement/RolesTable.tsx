@@ -112,7 +112,7 @@ export default function RolesTable({
           <div className="d-flex align-items-center gap-2">
             <span className="small text-muted">Active filter:</span>
             <span className="badge bg-light text-dark">
-              Search: "{searchQuery}"
+              Search: &quot;{searchQuery}&quot;
               <a href="/admin/role-management?tab=roles#roles-table" className="text-decoration-none ms-1">×</a>
             </span>
             <a href="/admin/role-management?tab=roles#roles-table" className="btn btn-sm btn-outline-secondary">

@@ -172,7 +172,7 @@ async function CategoriesSection() {
               <div className="py-5">
                 <i className="bi bi-grid display-1 text-muted opacity-50"></i>
                 <h4 className="text-muted mt-3">Categories Coming Soon</h4>
-                <p className="text-muted">We're working on adding amazing product categories for you!</p>
+                <p className="text-muted">We&apos;re working on adding amazing product categories for you!</p>
               </div>
             </div>
           )}
@@ -285,7 +285,7 @@ async function FeaturedProductsSection() {
               <div className="py-5">
                 <i className="bi bi-box-seam display-1 text-muted opacity-50"></i>
                 <h4 className="text-muted mt-3">Products Coming Soon</h4>
-                <p className="text-muted">We're adding amazing products to our catalog!</p>
+                <p className="text-muted">We&apos;re adding amazing products to our catalog!</p>
               </div>
             </div>
           )}
@@ -333,7 +333,7 @@ function TestimonialsSection() {
         <div className="row">
           <div className="col-12 text-center mb-5">
             <h2 className="display-5 fw-bold text-dark">What Our Customers Say</h2>
-            <p className="lead text-muted">Don't just take our word for it - hear from our satisfied customers</p>
+            <p className="lead text-muted">Don&apos;t just take our word for it - hear from our satisfied customers</p>
           </div>
         </div>
         <div className="row g-4">
@@ -346,7 +346,7 @@ function TestimonialsSection() {
                       <i key={i} className="bi bi-star-fill text-warning"></i>
                     ))}
                   </div>
-                  <p className="card-text text-muted mb-4">"{testimonial.content}"</p>
+                  <p className="card-text text-muted mb-4">&quot;{testimonial.content}&quot;</p>
                   <div className="mt-auto">
                     <h6 className="fw-bold mb-0">{testimonial.name}</h6>
                     <small className="text-muted">{testimonial.role}</small>

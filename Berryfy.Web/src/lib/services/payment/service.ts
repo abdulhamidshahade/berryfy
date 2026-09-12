@@ -21,7 +21,6 @@ export class PaymentService implements IPaymentService {
     
     try {
       console.log('ProcessPayment - Request URL:', url);
-      console.log('ProcessPayment - Request Data:', JSON.stringify(paymentData, null, 2));
       
       const res: ResponseDto<PaymentResponse> = await apiRequest(url, {
         method: 'POST',
@@ -42,7 +41,6 @@ export class PaymentService implements IPaymentService {
       return json.data;
     } catch (error) {
       console.error('PaymentService.processPayment error:', error);
-      console.error('PaymentService.processPayment - Request data was:', JSON.stringify(paymentData, null, 2));
       throw error; 
     }
   }

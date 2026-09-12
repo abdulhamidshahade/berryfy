@@ -120,7 +120,7 @@ export default function CategoryForm({
                           className="form-check-label"
                           htmlFor="keepCurrentImage"
                         >
-                          Keep current image (don't upload a new one)
+                          Keep current image (don&apos;t upload a new one)
                         </label>
                       </div>
                     </div>

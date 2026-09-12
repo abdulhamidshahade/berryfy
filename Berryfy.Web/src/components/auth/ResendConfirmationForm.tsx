@@ -50,7 +50,7 @@ export default function ResendConfirmationForm({ email, redirectTo }: ResendConf
             Resend Confirmation Email
           </h2>
           <p className="text-muted">
-            Enter your email address and we'll send you a new 6-digit confirmation code.
+            Enter your email address and we&apos;ll send you a new 6-digit confirmation code.
           </p>
         </div>
 

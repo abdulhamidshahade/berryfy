@@ -49,7 +49,7 @@ export default async function OrdersPage() {
           <i className="bi bi-bag-x display-1 text-muted mb-4 d-block"></i>
           <h2 className="mb-3">No Orders Found</h2>
           <p className="text-muted mb-4">
-            You haven't placed any orders yet. Start shopping to see your order history here.
+            You haven&apos;t placed any orders yet. Start shopping to see your order history here.
           </p>
           <Link href="/products" className="btn btn-primary btn-lg">
             <i className="bi bi-bag-plus me-2"></i>

@@ -27,7 +27,7 @@ export default async function CategoriesPage() {
                 Categories
               </h1>
               <p className="lead mb-0">
-                Discover our wide range of categories and find exactly what you're looking for.
+                Discover our wide range of categories and find exactly what you&apos;re looking for.
               </p>
             </div>
             <div className="col-lg-4 text-lg-end">
