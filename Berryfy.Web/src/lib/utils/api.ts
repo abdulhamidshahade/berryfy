@@ -17,60 +17,6 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-async function attemptTokenRefresh(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const refreshToken = cookieStore.get('refresh_token')?.value;
-  if (!refreshToken) return null;
-
-  try {
-    const response = await fetch(`${process.env.API_BASE_AUTH}/refresh-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: refreshToken }),
-    });
-
-    if (!response.ok) return null;
-
-    const result = await response.json();
-    if (!result.isSuccess || !result.data?.token) return null;
-
-    const { isSecure } = await import('../cookie-is-secure-server').then(m => ({ isSecure: m.cookieIsSecure() }));
-    const secure = await isSecure;
-
-    cookieStore.set('auth_token', result.data.token, {
-      path: '/',
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      maxAge: 2 * 60 * 60,
-    });
-
-    if (result.data.refreshToken) {
-      cookieStore.set('refresh_token', result.data.refreshToken, {
-        path: '/',
-        httpOnly: true,
-        secure,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
-      });
-    }
-
-    if (result.data.user) {
-      cookieStore.set('user_info', JSON.stringify(result.data.user), {
-        path: '/',
-        httpOnly: true,
-        secure,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
-      });
-    }
-
-    return result.data.token as string;
-  } catch {
-    return null;
-  }
-}
-
 export async function apiRequest<T>(
   url: string, 
   options: ApiRequestOptions = {}
@@ -98,23 +44,6 @@ export async function apiRequest<T>(
       headers: buildHeaders(token),
       credentials: 'include',
     });
-
-    // --- 401 handling: attempt refresh then retry once ---
-    if (response.status === 401 && requireAuth && !isPublic) {
-      const newToken = await attemptTokenRefresh();
-      if (newToken) {
-        const retryResponse = await fetch(url, {
-          ...fetchOptions,
-          headers: buildHeaders(newToken),
-          credentials: 'include',
-        });
-
-        if (retryResponse.ok) {
-          return parseJsonResponse<T>(retryResponse);
-        }
-      }
-      // Refresh failed or retry still 401 — fall through to throw
-    }
 
     if (!response.ok) {
       if (response.status === 401 && isPublic) {
@@ -160,7 +89,7 @@ export async function apiRequest<T>(
         status: response.status,
         statusText: response.statusText,
         errorDetails,
-        requestOptions: fetchOptions
+        method: fetchOptions.method ?? 'GET'
       });
       
       throw new Error(errorMessage);
