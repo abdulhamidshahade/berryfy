@@ -15,6 +15,7 @@ namespace Berryfy.Infrastructure.Repositories.ShopConcretes
                               IUnitOfWork unitOfWork)
         {
             _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<Shop> GetShopAsync(int id)
