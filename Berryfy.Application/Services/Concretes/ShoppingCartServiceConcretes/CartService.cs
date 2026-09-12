@@ -321,13 +321,14 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 if (existingItem != null)
                 {
-                    totalQuantityNeeded = existingItem.Quantity + quantity;
+                    totalQuantityNeeded = checked(existingItem.Quantity + quantity);
                     _logger.LogDebug("Existing item found. Current quantity: {CurrentQuantity}, Adding: {AddQuantity}, Total needed: {TotalQuantity}",
                         existingItem.Quantity, quantity, totalQuantityNeeded);
                 }
 
 
-                if (!await _inventoryService.IsInStockAsync(productId, totalQuantityNeeded))
+                // Existing units are already reserved and excluded from available stock.
+                if (!await _inventoryService.IsInStockAsync(productId, quantity))
                 {
                     _logger.LogWarning("Insufficient stock for product {ProductId}. Requested: {Quantity}, Total needed: {TotalQuantity}",
                         productId, quantity, totalQuantityNeeded);
@@ -446,6 +447,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
 
+            if (cart == null || cart.Id != cartId) return null;
             var item = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
 
             if (item == null)
@@ -467,19 +469,19 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     return null;
                 }
 
-                await _inventoryService.ReserveStockAsync(
+                if (!await _inventoryService.ReserveStockAsync(
                     productId,
                     quantityDifference,
                     cartId,
-                    "CartItem");
+                    "CartItem")) return null;
             }
             else
             {
-                await _inventoryService.ReleaseReservedStockAsync(
+                if (!await _inventoryService.ReleaseReservedStockAsync(
                     productId,
                     Math.Abs(quantityDifference),
                     cartId,
-                    "CartItem");
+                    "CartItem")) return null;
             }
 
             var updatedQuantity = await _cartRepository.UpdateItemQuantityAsync(userId, sessionId, productId, quantity);
@@ -610,7 +612,8 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 }
 
                 
-                if (userId.HasValue && cart.UserId.HasValue && cart.UserId != userId)
+                if (cart.UserId.HasValue ? cart.UserId != userId :
+                    string.IsNullOrEmpty(sessionId) || cart.SessionId != sessionId)
                 {
                     _logger.LogWarning("User {UserId} attempted to clear cart {CartId} owned by user {OwnerId}",
                         userId, cartId, cart.UserId);
@@ -623,15 +626,16 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 {
                     _logger.LogDebug("Releasing reserved stock for {ItemCount} items in cart {CartId}", cart.CartItems.Count, cartId);
 
-                    var stockReleaseTasks = cart.CartItems.Select(async item =>
+                    foreach (var item in cart.CartItems)
                     {
                         try
                         {
-                            await _inventoryService.ReleaseReservedStockAsync(
+                            var released = await _inventoryService.ReleaseReservedStockAsync(
                                 item.ProductId,
                                 item.Quantity,
                                 cartId,
                                 "CartItem");
+                            if (!released) return false;
 
                             _logger.LogDebug("Released stock for product {ProductId}, quantity {Quantity}",
                                 item.ProductId, item.Quantity);
@@ -640,10 +644,9 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                         {
                             _logger.LogError(ex, "Failed to release stock for product {ProductId} in cart {CartId}",
                                 item.ProductId, cartId);
+                            return false;
                         }
-                    });
-
-                    await Task.WhenAll(stockReleaseTasks);
+                    }
                 }
                 else if (isConverted)
                 {
@@ -677,8 +680,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
         public async Task<bool> CompleteCartAsync(int cartId, int? userId)
         {
-            var updatedCart = await _cartRepository.UpdateCartStatusAsync(userId, CartStatus.Converted);
-            return updatedCart != null;
+            var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+            if (cart == null || !userId.HasValue || cart.UserId != userId) return false;
+            var order = await _orderRepository.GetOrderByCartIdAsync(cartId);
+            if (order == null || !order.isPaid) return false;
+            return await ConvertCartAsync(cartId);
         }
 
         public async Task<bool> ConvertCartAsync(int cartId)
