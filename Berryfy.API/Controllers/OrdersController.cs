@@ -4,6 +4,7 @@ using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.OrderDtos;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
+using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.OrderEntities;
 using Microsoft.AspNetCore.Mvc;
@@ -16,13 +17,16 @@ namespace Berryfy.API.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly IMapper _mapper;
+        private readonly ICartService _cartService;
 
         public OrdersController(
             IOrderService orderService,
-            IMapper mapper)
+            IMapper mapper,
+            ICartService cartService)
         {
             _orderService = orderService;
             _mapper = mapper;
+            _cartService = cartService;
         }
 
         [HttpPost]
@@ -41,6 +45,14 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue) return Unauthorized();
+                var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active)
+                    ?? await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
+                if (cart == null) return NotFound();
+                if (cart.UserId != userId.Value) return Forbid();
+
+                request.UserId = userId.Value;
                 var order = await _orderService.CreateOrderFromCartAsync(request.CartId, request);
                 if (order == null)
                 {
@@ -89,6 +101,8 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
+                if (!CanAccessUserResource(order.UserId)) return Forbid();
+
                 return Ok(new ResponseDto<OrderDto>
                 {
                     IsSuccess = true,
@@ -115,8 +129,7 @@ namespace Berryfy.API.Controllers
         {
             try
             {
-                var currentUserId = GetCurrentUserId();
-                if (!currentUserId.HasValue || currentUserId.Value != userId)
+                if (!CanAccessUserResource(userId))
                 {
                     return Forbid();
                 }
@@ -254,6 +267,11 @@ namespace Berryfy.API.Controllers
         {
             try
             {
+                var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
+                    ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                if (cart == null) return NotFound();
+                if (!CanAccessUserResource(cart.UserId)) return Forbid();
+
                 var totals = await _orderService.CalculateOrderTotalsAsync(cartId);
                 if (totals == null)
                 {
@@ -492,9 +510,9 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                if (order.UserId != userId && !User.IsInRole("Admin"))
+                if (!CanAccessUserResource(order.UserId))
                 {
-                    return Forbid("You can only sync your own orders");
+                    return Forbid();
                 }
 
                 if (order.CartId <= 0)
