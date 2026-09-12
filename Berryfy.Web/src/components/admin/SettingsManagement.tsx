@@ -697,7 +697,7 @@ export default function SettingsManagement({
 
               <div className="text-center">
                 <small className="text-muted">Last backup:</small>
-                <div className="fw-bold">{formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000))}</div>
+                <div className="fw-bold">Not available</div>
               </div>
             </div>
           </div>
