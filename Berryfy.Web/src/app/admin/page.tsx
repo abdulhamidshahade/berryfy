@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 ﻿import Link from 'next/link';
 import { getProducts } from '../../lib/actions/product-actions';
 import { IOrderService } from '../../lib/services/order/interface';
@@ -9,6 +10,33 @@ import { UserService } from '../../lib/services/user/service';
 export const dynamic = 'force-dynamic';
 export default async function AdminDashboard() {
   try {
+    return await loadAdminDashboard();
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading admin dashboard:', error);
+    return (
+      <div className="container-fluid">
+        <div className="text-center py-5">
+          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
+          <h2>Error Loading Dashboard</h2>
+          <p className="text-muted">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+          <Link 
+            href="/admin" 
+            className="btn btn-primary"
+          >
+            <i className="bi bi-arrow-clockwise me-2"></i>
+            Reload Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+}
+
+async function loadAdminDashboard() {
+  
     const products = await getProducts();
 
     const totalProducts = products.length;
@@ -32,7 +60,7 @@ export default async function AdminDashboard() {
             <div className="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-2">
               <div>
                 <h1 className="h3 mb-1">Dashboard Overview</h1>
-                <p className="text-muted mb-0">Welcome back! Here's what's happening in your store.</p>
+                <p className="text-muted mb-0">Welcome back! Here&apos;s what&apos;s happening in your store.</p>
               </div>
               <div className="text-end">
                 <small className="text-muted d-block">Last updated</small>
@@ -312,25 +340,5 @@ export default async function AdminDashboard() {
         </div>
       </div>
     );
-  } catch (error) {
-    console.error('Error loading admin dashboard:', error);
-    return (
-      <div className="container-fluid">
-        <div className="text-center py-5">
-          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
-          <h2>Error Loading Dashboard</h2>
-          <p className="text-muted">
-            {error instanceof Error ? error.message : 'An unexpected error occurred'}
-          </p>
-          <Link 
-            href="/admin" 
-            className="btn btn-primary"
-          >
-            <i className="bi bi-arrow-clockwise me-2"></i>
-            Reload Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  
 }
