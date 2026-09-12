@@ -3,6 +3,7 @@ import { getPaymentById } from '../../../../../lib/actions/payment-actions';
 import { getOrderByPaymentId } from '../../../../../lib/actions/order-actions';
 import { PaymentStatus, PaymentMethod } from '../../../../../types/payment';
 import { OrderStatus } from '../../../../../types/order';
+import { escapeHtml } from '../../../../../lib/utils/escape-html';
 
 export async function GET(
   request: NextRequest,
@@ -104,7 +105,7 @@ export async function GET(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt - ${payment.transactionId}</title>
+    <title>Receipt - ${escapeHtml(payment.transactionId)}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -224,7 +225,7 @@ export async function GET(
     <div class="receipt-info">
         <div class="info-row">
             <span class="info-label">Transaction ID:</span>
-            <span>${payment.transactionId}</span>
+            <span>${escapeHtml(payment.transactionId)}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Date:</span>
@@ -250,18 +251,18 @@ export async function GET(
         </div>
         <div class="info-row">
             <span class="info-label">Provider:</span>
-            <span>${payment.provider}</span>
+            <span>${escapeHtml(payment.provider)}</span>
         </div>
         ${payment.cardLast4 ? `
         <div class="info-row">
             <span class="info-label">Card:</span>
-            <span>**** **** **** ${payment.cardLast4}</span>
+            <span>**** **** **** ${escapeHtml(payment.cardLast4)}</span>
         </div>
         ` : ''}
         ${payment.cardBrand ? `
         <div class="info-row">
             <span class="info-label">Card Brand:</span>
-            <span>${payment.cardBrand}</span>
+            <span>${escapeHtml(payment.cardBrand)}</span>
         </div>
         ` : ''}
     </div>
@@ -271,21 +272,21 @@ export async function GET(
         <div class="section-title">Billing Information</div>
         <div class="info-row">
             <span class="info-label">Name:</span>
-            <span>${payment.payerName}</span>
+            <span>${escapeHtml(payment.payerName)}</span>
         </div>
         ${payment.payerEmail ? `
         <div class="info-row">
             <span class="info-label">Email:</span>
-            <span>${payment.payerEmail}</span>
+            <span>${escapeHtml(payment.payerEmail)}</span>
         </div>
         ` : ''}
         ${payment.billingAddress1 ? `
         <div class="info-row">
             <span class="info-label">Address:</span>
             <span>
-                ${payment.billingAddress1}${payment.billingAddress2 ? ', ' + payment.billingAddress2 : ''}<br>
-                ${payment.billingCity}, ${payment.billingState} ${payment.billingPostalCode}<br>
-                ${payment.billingCountry}
+                ${escapeHtml(payment.billingAddress1)}${payment.billingAddress2 ? ', ' + escapeHtml(payment.billingAddress2) : ''}<br>
+                ${escapeHtml(payment.billingCity)}, ${escapeHtml(payment.billingState)} ${escapeHtml(payment.billingPostalCode)}<br>
+                ${escapeHtml(payment.billingCountry)}
             </span>
         </div>
         ` : ''}
@@ -297,7 +298,7 @@ export async function GET(
         <div class="section-title">Order Details</div>
         <div class="info-row">
             <span class="info-label">Order #:</span>
-            <span>${order.referenceNumber || order.id}</span>
+            <span>${escapeHtml(order.referenceNumber || order.id)}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Order Status:</span>
@@ -316,7 +317,7 @@ export async function GET(
             <tbody>
                 ${order.orderItems.map(item => `
                 <tr>
-                    <td>${item.productName}</td>
+                    <td>${escapeHtml(item.productName)}</td>
                     <td>${item.quantity}</td>
                     <td>$${item.unitPrice.toFixed(2)}</td>
                     <td>$${item.totalPrice.toFixed(2)}</td>
@@ -352,7 +353,7 @@ export async function GET(
     ${payment.notes ? `
     <div class="section">
         <div class="section-title">Notes</div>
-        <p>${payment.notes}</p>
+        <p>${escapeHtml(payment.notes)}</p>
     </div>
     ` : ''}
 
@@ -369,8 +370,10 @@ export async function GET(
     return new NextResponse(receiptHtml, {
       status: 200,
       headers: {
-        'Content-Type': 'text/html',
-        'Content-Disposition': `inline; filename="receipt-${payment.transactionId}.html"`,
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': `inline; filename="receipt-${paymentId}.html"`,
+        'Cache-Control': 'private, no-store',
+        'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
       },
     });
 
@@ -381,4 +384,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}
