@@ -47,7 +47,7 @@ export default async function DeleteCategoryPage({ params, searchParams }: Props
                 Delete Category
               </h1>
               <p className="text-muted mb-0">
-                Permanently remove "{category.name}" from the system
+                Permanently remove &quot;{category.name}&quot; from the system
               </p>
             </div>
           </div>
