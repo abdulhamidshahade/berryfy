@@ -431,12 +431,12 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var amountToRefund = refundAmount ?? payment.Amount;
-                if (amountToRefund > payment.Amount)
+                if (amountToRefund <= 0 || amountToRefund > payment.Amount)
                 {
                     return new ResponseDto<PaymentResponseDto>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Refund amount cannot exceed payment amount"
+                        StatusMessage = "Refund amount must be positive and cannot exceed payment amount"
                     };
                 }
 
