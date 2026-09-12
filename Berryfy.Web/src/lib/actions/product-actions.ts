@@ -9,12 +9,13 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { ProductFilterDto, PaginationDto } from "../../types/pagination";
+import { requireCatalogAdmin } from '../catalog-access';
+import { removeLocalCatalogImage } from '../local-catalog-images';
 
 const productService: IProductService = new ProductService();
 
 async function uploadImageFile(
-  file: File,
-  currentImageUrl?: string
+  file: File
 ): Promise<string> {
   const useCloudflare = process.env.USE_CLOUDFLARE === "true";
 
@@ -88,13 +89,6 @@ async function uploadImageFile(
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  if (currentImageUrl) {
-    var fullPath = path.join(process.cwd(), `public${currentImageUrl}`);
-    if (fs.existsSync(fullPath)) {
-      fs.rmSync(fullPath, { recursive: true });
-    }
-  }
-
   const filePath = path.join(uploadDir, fileName);
   fs.writeFileSync(filePath, buffer);
 
@@ -102,6 +96,7 @@ async function uploadImageFile(
 }
 
 export async function createProduct(formData: FormData): Promise<void> {
+  await requireCatalogAdmin();
   try {
     //get -> for one element/ getAll -> for multiple elements
     const categories = formData.getAll("categories");
@@ -159,8 +154,9 @@ export async function createProduct(formData: FormData): Promise<void> {
 
 export async function updateProduct(
   formData: FormData,
-  currentImageUrl: string
+  _currentImageUrl: string
 ) {
+  await requireCatalogAdmin();
   try {
     const id = parseInt(formData.get("id") as string);
     const categories = formData.getAll("categories");
@@ -181,7 +177,9 @@ export async function updateProduct(
       }
     }
 
-    const imageUrl = await uploadImageFile(imageFile, currentImageUrl);
+    const imageUrl = imageFile && imageFile.size > 0
+      ? await uploadImageFile(imageFile)
+      : (await productService.getById(id)).imageUrl;
 
     const productData: UpdateProductDto = {
       id,
@@ -212,22 +210,19 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(formData: FormData) {
+  await requireCatalogAdmin();
   try {
     const id = parseInt(formData.get("id") as string);
 
     const product = await productService.getById(id);
 
-    await productService.delete(id);
+    if (!await productService.delete(id)) throw new Error('Product could not be deleted');
 
 
 
     if (product && product.imageUrl.startsWith('/uploads/')) {
       try {
-        const imagePath = path.join(process.cwd(), 'public', product.imageUrl);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log('Cleaned up image file:', product.imageUrl);
-        }
+        removeLocalCatalogImage(product.imageUrl, 'product');
       } catch (cleanupError) {
         console.error('Failed to cleanup image file:', cleanupError);
       }
