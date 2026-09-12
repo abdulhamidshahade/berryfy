@@ -92,7 +92,9 @@ export async function processPayment(formData: FormData) {
     if (result.success) {
       revalidatePath("/payment");
       revalidatePath("/orders");
-      redirect("/payment/success");
+      const params = new URLSearchParams({ orderId: String(orderId) });
+      if (result.transactionId) params.set('transactionId', result.transactionId);
+      redirect(`/payment/success?${params}`);
     } else {
       throw new Error(result.message || "Payment processing failed");
     }
