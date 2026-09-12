@@ -22,6 +22,7 @@ export class AuthService {
     try {
       const response = await fetch(url, {
         ...options,
+        cache: 'no-store',
         headers: defaultHeaders,
       });
 
@@ -73,7 +74,7 @@ const cookieStore = await cookies();
   }
 
   static async getCurrentUser(token: string): Promise<ApiResponse<User>> {
-    return this.makeRequest<User>(`${API_BASE_URL}/me`, {
+    return this.makeRequest<User>('/me', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -104,7 +105,7 @@ const newSessionId = crypto.randomUUID();
   }
 
   static async checkEmailExists(email: string): Promise<ApiResponse<boolean>> {
-    return this.makeRequest<boolean>(`${API_BASE_URL}/exists/email-address/${encodeURIComponent(email)}`, {
+    return this.makeRequest<boolean>(`/exists/email-address/${encodeURIComponent(email)}`, {
       method: 'GET',
     });
   }
