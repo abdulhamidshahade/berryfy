@@ -8,18 +8,52 @@ using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace Berryfy.API.Controllers
 {
     [Route("api/shopping-carts")]
     [ApiController]
-    public class ShoppingCartsController : BaseController
+    public class ShoppingCartsController : BaseController, IAsyncActionFilter
     {
         private readonly IUserCouponService _userCouponService;
         private readonly ICartService _cartService;
         private readonly IInventoryService _inventoryService;
         private readonly IOrderService _orderService;
         private readonly ICheckoutOrchestrationService _checkoutOrchestrationService;
+
+        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        {
+            var value = context.RouteData.Values["cartId"] ?? context.RouteData.Values["id"];
+            if (value != null)
+            {
+                if (!int.TryParse(value.ToString(), out var cartId) || cartId <= 0)
+                {
+                    context.Result = BadRequest();
+                    return;
+                }
+
+                CartDto? cart = null;
+                foreach (var status in Enum.GetValues<CartStatus>())
+                {
+                    cart = await _cartService.GetCartByIdAsync(cartId, status);
+                    if (cart != null) break;
+                }
+
+                var userId = GetCurrentUserId();
+                var sessionId = GetSessionId();
+                var ownsCart = cart != null && (cart.UserId.HasValue
+                    ? userId.HasValue && cart.UserId == userId
+                    : !string.IsNullOrEmpty(sessionId) && cart.SessionId == sessionId);
+                if (!ownsCart)
+                {
+                    context.Result = NotFound();
+                    return;
+                }
+            }
+
+            await next();
+        }
 
         public ShoppingCartsController(
             IUserCouponService userCouponService,
@@ -339,7 +373,7 @@ namespace Berryfy.API.Controllers
                 var updatedCart = await _cartService.AddItemAsync(
                     itemRequest.CartId, 
                     GetCurrentUserId(), 
-                    itemRequest.SessionId, 
+                    GetSessionId(),
                     itemRequest.ProductId, 
                     itemRequest.Quantity);
 
@@ -374,7 +408,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPut("{cartId}/update")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> UpdateItemQuantity([FromBody] AddItemRequest itemRequest)
+        public async Task<ActionResult<ResponseDto<CartDto>>> UpdateItemQuantity(int cartId, [FromBody] AddItemRequest itemRequest)
         {
             try
             {
@@ -390,7 +424,8 @@ namespace Berryfy.API.Controllers
 
                 if (itemRequest.Quantity == 0)
                 {
-                    await RemoveItemFromCart(itemRequest.CartId, itemRequest.ProductId);
+                    var removed = await _cartService.RemoveItemAsync(cartId, GetCurrentUserId(), GetSessionId(), itemRequest.ProductId);
+                    if (!removed) return BadRequest();
                     return Ok(new ResponseDto<CartDto>
                     {
                         IsSuccess = true,
@@ -399,21 +434,10 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                var isInStock = await _inventoryService.IsInStockAsync(itemRequest.ProductId, itemRequest.Quantity);
-                if (!isInStock)
-                {
-                    return BadRequest(new ResponseDto<CartDto>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Insufficient stock for the requested quantity"
-                    });
-                }
-
                 var updatedCart = await _cartService.UpdateItemQuantityAsync(
-                    itemRequest.CartId, 
-                    itemRequest.UserId, 
-                    itemRequest.SessionId, 
+                    cartId,
+                    GetCurrentUserId(),
+                    GetSessionId(),
                     itemRequest.ProductId, 
                     itemRequest.Quantity);
 
@@ -520,6 +544,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("{cartId}/complete")]
+        [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> CompleteCart(int cartId)
         {
             try
@@ -677,6 +702,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("{cartId}/checkout")]
+        [UserAndAbove]
         public async Task<ActionResult<ResponseDto<object>>> CheckoutCart(int cartId, [FromBody] CheckoutRequest request)
         {
             try
@@ -806,7 +832,7 @@ namespace Berryfy.API.Controllers
 
                 if (order.UserId != userId.Value)
                 {
-                    return Forbid("You can only reactivate your own carts");
+                    return Forbid();
                 }
 
                 if (order.CartId != cartId)
