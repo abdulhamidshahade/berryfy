@@ -39,9 +39,10 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
         }
 
 
-        public async Task<OrderTotal> CalculateOrderTotalsAsync(int userId)
+        public async Task<OrderTotal> CalculateOrderTotalsAsync(int cartId)
         {
-            var cart = await _cartService.GetCartByUserIdAsync(userId, CartStatus.Converted);
+            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
+                ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
 
             if (cart == null)
             {
@@ -49,7 +50,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
-            decimal discountTotal = cart.CartCoupons.Sum(coupon => coupon.DiscountAmount);
+            decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
             decimal taxAmount = (subTotal - discountTotal) * 0.1m;
             decimal shippingAmount = subTotal > 100 ? 0 : 10;
 
@@ -77,7 +78,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
             }
 
-            if (cart == null)
+            if (cart == null || orderDto.UserId <= 0 || cart.UserId != orderDto.UserId)
             {
                 return null;
             }
@@ -94,7 +95,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
-            decimal discountTotal = cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0;
+            decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
             decimal taxAmount = (subTotal - discountTotal) * 0.1m;
             decimal shippingAmount = subTotal > 100 ? 0 : 10;
             decimal total = subTotal - discountTotal + taxAmount + shippingAmount;
@@ -125,7 +126,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _orderRepository.CreateOrderAsync(order);
+            order = await _orderRepository.CreateOrderAsync(order);
 
             if (order == null)
             {
@@ -299,7 +300,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
         public async Task<bool> SyncOrderWithCartAsync(int orderId, int cartId)
         {
             var order = await _orderRepository.GetOrderByIdAsync(orderId);
-            if (order == null || order.Status != OrderStatus.Pending)
+            if (order == null || order.Status != OrderStatus.Pending || order.CartId != cartId)
             {
                 return false;
             }
@@ -316,7 +317,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
-            decimal discountTotal = cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0;
+            decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
             decimal taxAmount = (subTotal - discountTotal) * 0.1m;
             decimal shippingAmount = subTotal > 100 ? 0 : 10;
             decimal total = subTotal - discountTotal + taxAmount + shippingAmount;
