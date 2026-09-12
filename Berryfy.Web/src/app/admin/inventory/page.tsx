@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 ﻿import Link from 'next/link';
 import { getProducts } from '../../../lib/actions/product-actions';
 import { getInventoryHistory } from '../../../lib/actions/inventory-actions';
@@ -12,6 +13,39 @@ interface ProductWithHistory {
 
 export default async function AdminInventoryPage() {
   try {
+    return await loadAdminInventoryPage();
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading inventory page:', error);
+    return (
+      <div className="container-fluid">
+        <div className="text-center py-5">
+          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
+          <h2>Error Loading Inventory</h2>
+          <p className="text-muted">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+          <div className="d-flex gap-2 justify-content-center">
+            <Link href="/admin" className="btn btn-secondary">
+              <i className="bi bi-arrow-left me-2"></i>
+              Back to Dashboard
+            </Link>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="btn btn-primary"
+            >
+              <i className="bi bi-arrow-clockwise me-2"></i>
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+async function loadAdminInventoryPage() {
+  
     const products = await getProducts();
 
     const productsWithHistory: ProductWithHistory[] = await Promise.all(
@@ -321,31 +355,5 @@ export default async function AdminInventoryPage() {
         ))}
       </div>
     );
-  } catch (error) {
-    console.error('Error loading inventory page:', error);
-    return (
-      <div className="container-fluid">
-        <div className="text-center py-5">
-          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
-          <h2>Error Loading Inventory</h2>
-          <p className="text-muted">
-            {error instanceof Error ? error.message : 'An unexpected error occurred'}
-          </p>
-          <div className="d-flex gap-2 justify-content-center">
-            <Link href="/admin" className="btn btn-secondary">
-              <i className="bi bi-arrow-left me-2"></i>
-              Back to Dashboard
-            </Link>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="btn btn-primary"
-            >
-              <i className="bi bi-arrow-clockwise me-2"></i>
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
 } 
