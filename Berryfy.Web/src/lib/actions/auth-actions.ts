@@ -6,6 +6,7 @@ import { AuthService } from '../services/auth/service';
 import { LoginRequest, RegisterRequest } from '../../types/auth';
 import { User } from '../../types/user';
 import { cookieIsSecure } from '../cookie-is-secure-server';
+import { cache } from 'react';
 
 export async function loginAction(formData: FormData) {
   const email = formData.get('email') as string;
@@ -51,7 +52,7 @@ export async function loginAction(formData: FormData) {
 
       return { success: true };
     } else {
-      if (response.statusCode === 403) {
+      if (response.statusCode === 403 && response.statusMessage?.toLowerCase().includes('email not confirmed')) {
         return {
           error: response.statusMessage || 'Email not confirmed',
           emailNotConfirmed: true,
@@ -349,34 +350,23 @@ export async function logoutAction() {
   redirect('/');
 }
 
-export async function getCurrentUser(): Promise<User | null> {
+const getVerifiedCurrentUser = cache(async (): Promise<User | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
-  const userInfo = cookieStore.get('user_info')?.value;
 
-  if (!token || !userInfo) {
+  if (!token) {
     return null;
   }
 
   try {
-    const user = JSON.parse(userInfo) as User;
-    
-    if (!user.roles) {
-      user.roles = [];
-    }
-    
-    // TODO: make here api call instead
-    // const response = await AuthService.getCurrentUser(token);
-    // if (!response.isSuccess) {
-    //   return null;
-    // }
-
-    return user;
+    const response = await AuthService.getCurrentUser(token);
+    if (!response.isSuccess || !response.data) return null;
+    return { ...response.data, roles: response.data.roles ?? [] };
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
   }
-}
+});
 
 export async function getAuthToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -505,4 +495,8 @@ export async function changePasswordAction(formData: FormData) {
   } catch {
     return { error: 'An unexpected error occurred' };
   }
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  return getVerifiedCurrentUser();
 }
