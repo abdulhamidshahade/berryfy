@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPaymentById } from '../../../../lib/actions/payment-actions';
@@ -12,6 +13,16 @@ interface ReceiptPageProps {
 }
 
 export default async function ReceiptPage({ params }: ReceiptPageProps) {
+  try {
+    return await loadReceiptPage({ params });
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading payment:', error);
+    notFound();
+  }
+}
+
+async function loadReceiptPage({ params }: ReceiptPageProps) {
   const { id } = await params;
   const paymentId = parseInt(id);
 
@@ -19,7 +30,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     notFound();
   }
 
-  try {
+  
     const payment = await getPaymentById(paymentId);
     if (!payment) {
       notFound();
@@ -366,8 +377,5 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
         </div>
       </div>
     );
-  } catch (error) {
-    console.error('Error loading payment:', error);
-    notFound();
-  }
+  
 } 
