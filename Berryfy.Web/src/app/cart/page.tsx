@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import { getCart, getOrCreateCart } from '../../lib/actions/cart-actions';
 import { getProducts } from '../../lib/actions/product-actions';
 import CartItem from '../../components/cart/CartItem';
@@ -16,8 +17,44 @@ export default async function CartPage({
 }: {
   searchParams: Promise<{ confirm_clear?: string; error?: string; couponError?: string }>;
 }) {
-
   try {
+    return await loadCartPage({
+  searchParams,
+});
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error('Error loading cart page:', error);
+    return (
+      <div className="container py-5">
+        <div className="text-center">
+          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
+          <h2>Error Loading Cart</h2>
+          <p className="text-muted">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+          <div className="d-flex gap-2 justify-content-center">
+            <Link href="/products" className="btn btn-primary">
+              <i className="bi bi-arrow-left me-2"></i>
+              Continue Shopping
+            </Link>
+            <Link href="/cart" className="btn btn-outline-secondary">
+              <i className="bi bi-arrow-clockwise me-2"></i>
+              Refresh Page
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+async function loadCartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirm_clear?: string; error?: string; couponError?: string }>;
+}) {
+
+  
     const cart = await getCart();
     const allProducts = await getProducts();
 
@@ -177,7 +214,7 @@ export default async function CartPage({
                 <i className="bi bi-cart-x display-1 text-muted mb-4 d-block"></i>
                 <h2 className="mb-3">Your cart is empty</h2>
                 <p className="text-muted mb-4">
-                  Looks like you haven't added any items to your cart yet.
+                  Looks like you haven&apos;t added any items to your cart yet.
                 </p>
                 <Link href="/products" className="btn btn-primary btn-lg">
                   <i className="bi bi-bag-plus me-2"></i>
@@ -200,28 +237,5 @@ export default async function CartPage({
         </div>
       </div>
     );
-  } catch (error) {
-    console.error('Error loading cart page:', error);
-    return (
-      <div className="container py-5">
-        <div className="text-center">
-          <i className="bi bi-exclamation-triangle fs-1 text-danger mb-3 d-block"></i>
-          <h2>Error Loading Cart</h2>
-          <p className="text-muted">
-            {error instanceof Error ? error.message : 'An unexpected error occurred'}
-          </p>
-          <div className="d-flex gap-2 justify-content-center">
-            <Link href="/products" className="btn btn-primary">
-              <i className="bi bi-arrow-left me-2"></i>
-              Continue Shopping
-            </Link>
-            <Link href="/cart" className="btn btn-outline-secondary">
-              <i className="bi bi-arrow-clockwise me-2"></i>
-              Refresh Page
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
 } 
