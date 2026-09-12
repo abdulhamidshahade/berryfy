@@ -682,9 +682,9 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var userExists = await _userService.IsUserExistsByIdAsync(int.Parse(userId));
+            var currentUser = await _userService.GetUserById(int.Parse(userId));
 
-            if (!userExists)
+            if (currentUser == null)
             {
                 return NotFound(new ResponseDto<object>
                 {
@@ -694,22 +694,12 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-            var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-            var userRoles = User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
-
             return Ok(new ResponseDto<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "User retrieved successfully",
-                Data = new
-                {
-                    Id = int.Parse(userId),
-                    Email = userEmail,
-                    UserName = userName,
-                    Roles = userRoles
-                }
+                Data = currentUser
             });
         }
 
