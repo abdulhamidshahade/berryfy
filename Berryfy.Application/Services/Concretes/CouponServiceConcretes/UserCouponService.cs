@@ -4,6 +4,7 @@ using Berryfy.Application.Dtos.CouponDtos;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Domain.Repositories.CouponInterfaces;
+using Berryfy.Domain.Repositories.OrderInterfaces;
 
 namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 {
@@ -13,17 +14,20 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
         private readonly ICouponService _couponService;
         private readonly IMapper _mapper;
         private readonly IUserCouponRepository _userCouponRepository;
+        private readonly IOrderRepository _orderRepository;
 
 
         public UserCouponService(IUserService userService, 
             ICouponService couponService,
             IMapper mapper,
-            IUserCouponRepository userCouponRepository)
+            IUserCouponRepository userCouponRepository,
+            IOrderRepository orderRepository)
         {
             _userService = userService;
             _couponService = couponService;
             _mapper = mapper;
             _userCouponRepository = userCouponRepository;
+            _orderRepository = orderRepository;
         }
 
 
@@ -52,13 +56,11 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
         public async Task<bool> AddCouponToNewUsersAsync(int couponId)
         {
+            if (couponId <= 0 || !await _couponService.ExistsByIdAsync(couponId)) return false;
             var users = await _userService.GetAllUsers();
-
-            //TODO this is a temporary solution
-            var newUsers = users.Where(i => i.FirstName == "new").Select(i => i.Id).ToList();
-
-            foreach(var userId in newUsers)
+            foreach(var userId in users.Select(u => u.Id).Distinct())
             {
+                if (await _orderRepository.UserHasPaidOrderAsync(userId)) continue;
                 var addedCoupon = await AddCouponToUserAsync(userId, couponId);
 
                 if(addedCoupon == null)
