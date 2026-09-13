@@ -189,6 +189,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             var token = await _tokenService.GenerateToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
+            //TODO: add here login email alerting
+
             return new LoginResponseDto()
             {
                 User = userDto,
@@ -372,7 +374,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     return false;
                 }
 
-                var result = await _userManager.ResetPasswordAsync(user, requestDto.Token, requestDto.NewPassword);
+                var result = await PasswordSessionRevocation.ExecuteAsync(user,
+                    () => _userManager.ResetPasswordAsync(user, requestDto.Token, requestDto.NewPassword));
 
                 if (result.Succeeded)
                 {
@@ -534,7 +537,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 var user = await _userManager.FindByIdAsync(userId.ToString());
                 if (user == null) return false;
 
-                var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+                var result = await PasswordSessionRevocation.ExecuteAsync(user,
+                    () => _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword));
                 return result.Succeeded;
             }
             catch (Exception ex)
