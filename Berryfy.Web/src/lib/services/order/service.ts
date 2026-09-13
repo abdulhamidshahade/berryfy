@@ -1,7 +1,7 @@
 import { Order, OrderStatus } from "../../../types/order";
 import { IOrderService } from "./interface";
 import { ResponseDto } from "../../../types/responseDto";
-import { cookies } from 'next/headers';
+import { Payment } from '../../../types/payment';
 import { apiRequest } from "../../utils/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://localhost:7105/api';
@@ -29,7 +29,7 @@ export class OrderService implements IOrderService {
   }
 
   async getOrderByPaymentId(paymentId: number): Promise<Order> {
-    const res: ResponseDto<Order> = await apiRequest(`${API_BASE_ORDER}/payment/${paymentId}`, {
+    const res: ResponseDto<Payment> = await apiRequest(`${API_BASE_URL}/payments/${paymentId}`, {
       requireAuth: true,
     });
     
@@ -38,11 +38,10 @@ export class OrderService implements IOrderService {
       throw new Error(`Failed to fetch order by payment ID: ${res.statusMessage}`);
     }
     
-    const order: Order = await res.data;
-    if (!res.isSuccess || !res.data) {
-      throw new Error(res.statusMessage || 'Failed to fetch order by payment ID');
+    if (!res.data?.orderId) {
+      throw new Error('This payment has no associated order');
     }
-    return order;
+    return this.getById(res.data.orderId);
   }
 
   async getUserOrders(userId: number, page: number = 1, pageSize: number = 10): Promise<Order[]> {
@@ -155,8 +154,7 @@ export class OrderService implements IOrderService {
       throw new Error(`Failed to refund order: ${res.statusMessage}`);
     }
     
-    const result: boolean = await res.data;
-    return result;
+    return res.isSuccess;
   }
 
   async markOrderAsPaid(orderId: number, paymentTransactionId: number, paymentProvider: string): Promise<boolean> {
@@ -178,4 +176,4 @@ export class OrderService implements IOrderService {
     const json: boolean = await res.isSuccess;
     return json;
   }
-} 
+}
