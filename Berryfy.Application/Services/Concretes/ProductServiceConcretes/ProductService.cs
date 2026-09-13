@@ -71,7 +71,8 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
         public async Task<ProductDto> CreateAsync(CreateProductDto productDto, List<int> categories)
         {
-            if (productDto == null)
+            if (productDto == null || productDto.Price < 0 || productDto.StockQuantity < 0 ||
+                productDto.ReservedStock != 0 || productDto.LowStockThreshold < 0)
             {
                 return null;
             }
@@ -102,7 +103,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
         
         public async Task<ProductDto> UpdateAsync(int id, UpdateProductDto productDto, List<int> categories)
         {
-            if (productDto == null)
+            if (productDto == null || productDto.Price < 0 || productDto.LowStockThreshold < 0)
             {
                 return null;
             }
@@ -122,6 +123,9 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             }
 
             var mappedProduct = _mapper.Map<Product>(productDto);
+            // Inventory changes belong to the inventory workflow, which logs and validates them.
+            mappedProduct.StockQuantity = existingProduct.StockQuantity;
+            mappedProduct.ReservedStock = existingProduct.ReservedStock;
 
             await _unitOfWork.BeginTransactionAsync();
 
