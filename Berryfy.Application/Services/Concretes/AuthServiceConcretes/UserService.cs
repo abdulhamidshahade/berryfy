@@ -133,7 +133,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+                var result = await PasswordSessionRevocation.ExecuteAsync(user,
+                    () => _userManager.ResetPasswordAsync(user, token, newPassword));
                 if (result.Succeeded)
                 {
                     _logger.LogInformation($"Password reset successfully for user {user.UserName}");
