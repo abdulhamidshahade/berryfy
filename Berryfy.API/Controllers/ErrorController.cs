@@ -18,8 +18,6 @@ namespace Berryfy.API.Controllers
         }
 
         [Route("/error")]
-        [HttpGet]
-        [HttpPost]
         public IActionResult HandleError([FromServices] IHostEnvironment environment)
         {
             var feature = HttpContext.Features.Get<IExceptionHandlerFeature>();
@@ -31,13 +29,13 @@ namespace Berryfy.API.Controllers
             if (environment.IsDevelopment())
             {
                 return Problem(
-                    title: "An has been error occurred",
+                    title: "An error occurred",
                     detail: feature?.Error?.Message,
                     statusCode: StatusCodes.Status500InternalServerError);
             }
 
             return Problem(
-                title: "An has been error occurred",
+                title: "An error occurred",
                 statusCode: StatusCodes.Status500InternalServerError);
         }
     }
