@@ -40,7 +40,13 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             return await _context.Payments
                 .Include(p => p.User)
                 .Include(p => p.Order)
-                .FirstOrDefaultAsync(p => p.OrderId == orderId);
+                .Where(p => p.OrderId == orderId)
+                .OrderByDescending(p => p.Status == PaymentStatus.Completed ||
+                    p.Status == PaymentStatus.PartiallyRefunded || p.Status == PaymentStatus.Refunded)
+                .ThenByDescending(p => p.Status == PaymentStatus.Processing)
+                .ThenByDescending(p => p.CreatedAt)
+                .ThenByDescending(p => p.Id)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<Payment>> GetAllAsync()
