@@ -324,11 +324,11 @@ namespace Berryfy.API.Controllers
                 var result = await _orderService.UpdateOrderStatusAsync(mappedOrder, request.NewStatus);
                 if (!result)
                 {
-                    return StatusCode(500, new ResponseDto<OrderDto>
+                    return Conflict(new ResponseDto<OrderDto>
                     {
                         IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Failed to update order status"
+                        StatusCode = 409,
+                        StatusMessage = "Invalid order transition. Use cancellation or refund for returns; payment is required before fulfillment."
                     });
                 }
 
@@ -337,7 +337,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order status updated successfully",
-                    Data = order
+                    Data = await _orderService.GetOrderByIdAsync(orderId)
                 });
             }
             catch (Exception ex)
@@ -354,13 +354,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("reference/{referenceNumber}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<Order>>> GetOrderByReference(string referenceNumber)
+        public async Task<ActionResult<ResponseDto<OrderDto>>> GetOrderByReference(string referenceNumber)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(referenceNumber))
                 {
-                    return BadRequest(new ResponseDto<Order>
+                    return BadRequest(new ResponseDto<OrderDto>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -371,7 +371,7 @@ namespace Berryfy.API.Controllers
                 var order = await _orderService.GetOrderByReferenceNumberAsync(referenceNumber);
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<Order>
+                    return NotFound(new ResponseDto<OrderDto>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -379,17 +379,17 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<Order>
+                return Ok(new ResponseDto<OrderDto>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order retrieved successfully",
-                    Data = order
+                    Data = _mapper.Map<OrderDto>(order)
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<Order>
+                return StatusCode(500, new ResponseDto<OrderDto>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -401,23 +401,23 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("status/{status}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<Order>>>> GetOrdersByStatus(OrderStatus status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<ResponseDto<List<OrderDto>>>> GetOrdersByStatus(OrderStatus status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
                 var orders = await _orderService.GetOrdersByStatusAsync(status, page, pageSize);
 
-                return Ok(new ResponseDto<List<Order>>
+                return Ok(new ResponseDto<List<OrderDto>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Orders retrieved successfully",
-                    Data = orders
+                    Data = _mapper.Map<List<OrderDto>>(orders)
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<Order>>
+                return StatusCode(500, new ResponseDto<List<OrderDto>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
