@@ -805,11 +805,8 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
         public async Task<CartDto> RefreshCartAsync(int cartId)
         {
-            Cart? cart = null;
-
-
-
-            return _mapper.Map<CartDto>(cart);
+            return await GetCartByIdAsync(cartId, CartStatus.Active)
+                ?? await GetCartByIdAsync(cartId, CartStatus.PendingPayment);
         }
 
 
@@ -844,13 +841,13 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             try
             {
 
-                var cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment);
+                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
                 }
 
-                if (cart == null)
+                if (cart == null || !userId.HasValue || cart.UserId != userId)
                 {
                     return null;
                 }
@@ -873,6 +870,12 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 var coupon = await _couponService.GetByCodeAsync(couponCode);
 
                 if (coupon == null || !coupon.IsActive || await _userCouponService.IsCouponUsedByUser(userId.Value, couponCode))
+                {
+                    return null;
+                }
+
+                var assignedCoupons = await _userCouponService.GetCouponsByUserIdAsync(userId.Value);
+                if (assignedCoupons == null || !assignedCoupons.Any(c => c.Id == coupon.Id))
                 {
                     return null;
                 }
@@ -932,19 +935,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
         {
             try
             {
-                Cart? cart = null;
-
-                if (userId.HasValue)
-                {
-                    cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
-                }
-                else if (!string.IsNullOrEmpty(sessionId))
-                {
-                    cart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active);
-                }
-
-
-                if (cart == null)
+                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active)
+                    ?? await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                if (cart == null || (userId.HasValue
+                    ? cart.UserId != userId
+                    : cart.UserId.HasValue || string.IsNullOrWhiteSpace(sessionId) || cart.SessionId != sessionId))
                 {
                     return null;
                 }
