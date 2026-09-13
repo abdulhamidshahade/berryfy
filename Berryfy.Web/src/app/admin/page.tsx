@@ -7,6 +7,7 @@ import { getStatusColor, getStatusText } from './orders/page';
 import { OrderStatus } from '../../types/order';
 import { IUserService } from '../../lib/services/user/interface';
 import { UserService } from '../../lib/services/user/service';
+import SalesOverview from '../../components/admin/SalesOverview';
 export const dynamic = 'force-dynamic';
 export default async function AdminDashboard() {
   try {
@@ -50,7 +51,7 @@ async function loadAdminDashboard() {
 
     const userService:IUserService = new UserService();
 
-    const compLetedOrders = orders.filter(o => o.status === OrderStatus.Completed);
+    const compLetedOrders = orders.filter(o => o.isPaid && o.status !== OrderStatus.Refunded && o.status !== OrderStatus.Cancelled);
     const totalSales = compLetedOrders.reduce((sum, order) => sum + order.total, 0);
 
     return (
@@ -76,15 +77,15 @@ async function loadAdminDashboard() {
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-2">
                   <div>
-                    <h4 className="mb-1">{totalSales}</h4>
-                    <small className="opacity-75">Total Sales</small>
+                    <h4 className="mb-1">${totalSales.toFixed(2)}</h4>
+                    <small className="opacity-75">Recent Paid Order Totals</small>
                   </div>
                   <i className="bi bi-currency-dollar fs-1 opacity-75"></i>
                 </div>
                 <div className="mt-2">
                   <small className="opacity-75">
                     <i className="bi bi-arrow-up me-1"></i>
-                    12% vs last month (for testing)
+                    From the latest {orders.length} orders
                   </small>
                 </div>
               </div>
@@ -97,14 +98,14 @@ async function loadAdminDashboard() {
                 <div className="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-2">
                   <div>
                     <h4 className="mb-1">{orders.length}</h4>
-                    <small className="opacity-75">Total Orders</small>
+                    <small className="opacity-75">Recent Orders</small>
                   </div>
                   <i className="bi bi-receipt fs-1 opacity-75"></i>
                 </div>
                 <div className="mt-2">
                   <small className="opacity-75">
                     <i className="bi bi-arrow-up me-1"></i>
-                    8% vs last month (for testing)
+                    Latest 50 orders
                   </small>
                 </div>
               </div>
@@ -143,7 +144,7 @@ async function loadAdminDashboard() {
                 <div className="mt-2">
                   <small className="opacity-75">
                     <i className="bi bi-arrow-up me-1"></i>
-                    15% vs last month (for testing)
+                    Registered accounts
                   </small>
                 </div>
               </div>
@@ -275,12 +276,7 @@ async function loadAdminDashboard() {
                 <h5 className="mb-0">Sales Overview</h5>
               </div>
               <div className="card-body">
-                <div className="text-center py-5">
-                  <i className="bi bi-bar-chart fs-1 text-muted mb-3 d-block"></i>
-                  <h6>Sales Chart</h6>
-                  <p className="text-muted mb-3">Interactive sales chart will be displayed here</p>
-                  <small className="text-muted">Chart component integration coming soon</small>
-                </div>
+                <SalesOverview orders={orders} />
               </div>
             </div>
           </div>
