@@ -20,8 +20,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   const userRoles = user.roles || [];
   const hasAdminRole = userRoles.some(role => 
-    role.toLowerCase().includes('admin') || 
-    role.toLowerCase().includes('superadmin')
+    role === 'Admin' || role === 'SuperAdmin'
   );
 
   if (!hasAdminRole) {
@@ -32,6 +31,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   return (
     <div className="p-4">
+      <div className="alert alert-warning" role="status">
+        Settings are a temporary preview and reset when the server restarts.
+        Security, pricing, notification, and feature options do not change the store yet.
+        Export a copy to retain your choices. Cache refresh and readiness checks run real operations;
+        database backups require separate configuration.
+      </div>
       <div className="row">
         <div className="col-12">
           <SettingsManagement 
