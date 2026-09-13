@@ -20,6 +20,10 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
         public async Task<UserCoupon> AddCouponToUserAsync(int userId, int couponId)
         {
+            var existing = await _context.UserCoupons
+                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CouponId == couponId);
+            if (existing != null) return existing;
+
             var userCoupon = new UserCoupon
             {
                 UserId = userId,
@@ -39,17 +43,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
         public async Task<UserCoupon> AddUserToCouponAsync(int userId, int couponId)
         {
-            var userCoupon = new UserCoupon
-            {
-                UserId = userId,
-                CouponId = couponId,
-                IsUsed = false
-            };
-
-            await _context.UserCoupons.AddAsync(userCoupon);
-            await _unifOfWork.SaveDbChangesAsync();
-
-            return userCoupon;
+            return await AddCouponToUserAsync(userId, couponId);
         }
 
         public async Task<bool> DisableCouponForUserAsync(int userId, int couponId)
@@ -57,6 +51,8 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             var userCouponModel = await _context.UserCoupons.Where(i => i.UserId == userId && i.CouponId == couponId)
                 .FirstOrDefaultAsync();
 
+            if (userCouponModel == null) return false;
+            if (userCouponModel.IsUsed) return true;
             userCouponModel.IsUsed = true;
             return await _unifOfWork.SaveDbChangesAsync();
         }
@@ -102,6 +98,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 return false;
             }
 
+            if (userCoupon.IsUsed) return userCoupon.OrderId == orderId;
             userCoupon.IsUsed = true;
             userCoupon.UsedAt = DateTime.UtcNow;
             userCoupon.OrderId = orderId;
