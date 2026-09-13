@@ -32,7 +32,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
         public decimal SubTotal => CartItems?.Sum(i => i.Quantity * i.UnitPrice) ?? 0;
 
         [NotMapped]
-        public decimal DiscountTotal => CartCoupons?.Sum(c => c.DiscountAmount) ?? 0;
+        public decimal DiscountTotal => PricingPolicy.Discount(SubTotal, CartCoupons?.Sum(c => c.DiscountAmount) ?? 0);
 
         [NotMapped]
         public decimal TaxAmount => CalculateTax();
@@ -46,8 +46,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
 
         private decimal CalculateTax()
         {
-            var taxableAmount = SubTotal - DiscountTotal;
-            return taxableAmount > 0 ? taxableAmount * 0.1m : 0;
+            return PricingPolicy.Tax(SubTotal, DiscountTotal);
         }
 
     }
