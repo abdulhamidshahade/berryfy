@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { CartService } from "../services/cart/service";
 import { ICartService } from "../services/cart/interface";
 import { cookies } from "next/headers";
@@ -33,6 +33,7 @@ export async function getCart() {
   try {
     return await getOrCreateCart();
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Error getting cart:", error);
     return null;
   }
