@@ -99,8 +99,11 @@ namespace Berryfy.API.Controllers
                                 }
                             }
 
-                            await _orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing);
-                            await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed);
+                            if (!await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed))
+                                throw new InvalidOperationException("Could not finalize the order payment state");
+                            mappedOrder.isPaid = true;
+                            if (!await _orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing))
+                                throw new InvalidOperationException("Could not finalize the order status");
 
                             if (order.CartId > 0)
                             {
