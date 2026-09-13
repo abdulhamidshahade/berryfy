@@ -116,10 +116,12 @@ export default function ProductForm({
                       className="form-control"
                       id="stockQuantity"
                       name="stockQuantity"
-                      defaultValue={product?.stockQuantity || ""}
+                      defaultValue={product?.stockQuantity ?? ""}
+                      readOnly={isEdit}
                       required
                       placeholder="0"
                     />
+                    {isEdit && <small className="text-muted">Change stock from Inventory to record the adjustment.</small>}
                   </div>
 
                   <div className="col-md-4 mb-3">
@@ -133,6 +135,7 @@ export default function ProductForm({
                       id="reservedStock"
                       name="reservedStock"
                       defaultValue={product?.reservedStock || 0}
+                      readOnly
                       placeholder="0"
                     />
                   </div>
