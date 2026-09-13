@@ -135,6 +135,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
         public async Task<bool> UpdateOrderPaymentStatusAsync(int orderId, PaymentStatus paymentStatus)
         {
             var order = await _context.Orders.FirstOrDefaultAsync(v => v.Id == orderId);
+            if (order == null) return false;
             
             if(paymentStatus == PaymentStatus.Completed)
             {
@@ -154,7 +155,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
             return await _context.Orders
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
-                .Where(o => o.CartId == cartId && o.Status == OrderStatus.Pending)
+                .Where(o => o.CartId == cartId)
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
         }
