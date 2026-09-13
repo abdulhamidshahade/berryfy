@@ -51,8 +51,8 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
             decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
-            decimal taxAmount = (subTotal - discountTotal) * 0.1m;
-            decimal shippingAmount = subTotal > 100 ? 0 : 10;
+            decimal taxAmount = PricingPolicy.Tax(subTotal, discountTotal);
+            decimal shippingAmount = PricingPolicy.Shipping(subTotal);
 
             return new OrderTotal
             {
@@ -96,8 +96,8 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
             decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
-            decimal taxAmount = (subTotal - discountTotal) * 0.1m;
-            decimal shippingAmount = subTotal > 100 ? 0 : 10;
+            decimal taxAmount = PricingPolicy.Tax(subTotal, discountTotal);
+            decimal shippingAmount = PricingPolicy.Shipping(subTotal);
             decimal total = subTotal - discountTotal + taxAmount + shippingAmount;
 
             var referenceNumber = await GenerateUniqueReferenceNumberAsync();
@@ -166,49 +166,31 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
         public async Task<bool> UpdateOrderStatusAsync(Order order, OrderStatus newStatus)
         {
-            if((int)newStatus < 0 || (int)newStatus > 6)
+            if (order == null || !Enum.IsDefined(newStatus)) return false;
+
+            // Settlement and returns must use their dedicated workflows.
+            if (newStatus is OrderStatus.Cancelled or OrderStatus.Refunded) return false;
+            if (order.Status == newStatus) return true;
+            if (!order.isPaid) return false;
+
+            var allowed = (order.Status, newStatus) switch
             {
-                return false;
-            }
+                (OrderStatus.Pending, OrderStatus.Processing) => true,
+                (OrderStatus.Processing, OrderStatus.Shipped) => true,
+                (OrderStatus.Shipped, OrderStatus.Delivered) => true,
+                (OrderStatus.Delivered, OrderStatus.Completed) => true,
+                _ => false
+            };
+            if (!allowed) return false;
 
-            if (order == null)
+            var saved = await _orderRepository.UpdateOrderStatusAsync(order.Id, newStatus);
+            if (saved)
             {
-                return false;
+                order.Status = newStatus;
+                order.UpdatedAt = DateTime.UtcNow;
+                if (newStatus == OrderStatus.Completed) order.CompletedAt = DateTime.UtcNow;
             }
-
-            var oldStatus = order.Status;
-            order.Status = newStatus;
-            order.UpdatedAt = DateTime.UtcNow;
-
-            switch (newStatus)
-            {
-                case OrderStatus.Completed:
-                    order.CompletedAt = DateTime.UtcNow;
-                    break;
-                case OrderStatus.Cancelled:
-                    order.CancalledAt = DateTime.UtcNow;
-                    break;
-                case OrderStatus.Processing:
-                    if (oldStatus == OrderStatus.Pending)
-                    {
-                        //TODO Mark as processing - could trigger inventory allocation if needed
-                    }
-                    break;
-                case OrderStatus.Shipped:
-                    if (oldStatus == OrderStatus.Processing)
-                    {
-                        //TODO Order has been shipped - could trigger shipping notifications
-                    }
-                    break;
-                case OrderStatus.Delivered:
-                    if (oldStatus == OrderStatus.Shipped)
-                    {
-                        //TODO Order has been delivered - could trigger completion workflows
-                    }
-                    break;
-            }
-
-            return await _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status);
+            return saved;
         }
 
         public async Task<string> GenerateUniqueReferenceNumberAsync()
@@ -278,10 +260,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 return false;
             }
 
-            order.Status = OrderStatus.Processing;
-            order.UpdatedAt = DateTime.UtcNow;
-
-            var orderStatusUpdated = await UpdateOrderStatusAsync(order, order.Status);
+            var orderStatusUpdated = await UpdateOrderStatusAsync(order, OrderStatus.Processing);
 
             return orderStatusUpdated;
         }
@@ -318,8 +297,8 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
             decimal discountTotal = Math.Clamp(cart.CartCoupons?.Sum(coupon => coupon.DiscountAmount) ?? 0, 0, subTotal);
-            decimal taxAmount = (subTotal - discountTotal) * 0.1m;
-            decimal shippingAmount = subTotal > 100 ? 0 : 10;
+            decimal taxAmount = PricingPolicy.Tax(subTotal, discountTotal);
+            decimal shippingAmount = PricingPolicy.Shipping(subTotal);
             decimal total = subTotal - discountTotal + taxAmount + shippingAmount;
 
             order.SubTotal = subTotal;
