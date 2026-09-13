@@ -21,8 +21,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
   const userRoles = user.roles || [];
   const hasAdminRole = userRoles.some(role => 
-    role.toLowerCase().includes('admin') || 
-    role.toLowerCase().includes('superadmin')
+    role === 'Admin' || role === 'SuperAdmin'
   );
 
   if (!hasAdminRole) {

@@ -13,8 +13,7 @@ export async function GET(request: NextRequest) {
 
     const userRoles = user.roles || [];
     const hasAdminRole = userRoles.some(role => 
-      role.toLowerCase().includes('admin') || 
-      role.toLowerCase().includes('superadmin')
+      role === 'Admin' || role === 'SuperAdmin'
     );
 
     if (!hasAdminRole) {
@@ -46,10 +45,10 @@ export async function GET(request: NextRequest) {
     };
 
     const getHighestRole = (userRoles: string[]) => {
-      if (userRoles.some(role => role.toLowerCase().includes('superadmin'))) {
+      if (userRoles.some(role => role === 'SuperAdmin')) {
         return 'Super Admin';
       }
-      if (userRoles.some(role => role.toLowerCase().includes('admin'))) {
+      if (userRoles.some(role => role === 'Admin')) {
         return 'Admin';
       }
       return 'User';
@@ -82,4 +81,4 @@ export async function GET(request: NextRequest) {
     console.error('Error exporting users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}
