@@ -13,8 +13,7 @@ export async function GET(request: NextRequest) {
 
     const userRoles = user.roles || [];
     const hasAdminRole = userRoles.some((role: string) => 
-      role.toLowerCase().includes('admin') || 
-      role.toLowerCase().includes('superadmin')
+      role === 'Admin' || role === 'SuperAdmin'
     );
 
     if (!hasAdminRole) {
@@ -33,8 +32,7 @@ export async function GET(request: NextRequest) {
     const customers = users.filter((userItem: UserWithRoles) => {
       const userRoles = userItem.roles || [];
       return !userRoles.some((role: string) => 
-        role.toLowerCase().includes('admin') || 
-        role.toLowerCase().includes('superadmin')
+        role === 'Admin' || role === 'SuperAdmin'
       );
     });
 
