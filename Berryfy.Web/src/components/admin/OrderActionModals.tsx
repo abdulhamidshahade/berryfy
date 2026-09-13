@@ -40,14 +40,12 @@ export function StatusUpdateModal({ orderId, currentStatus, redirectTo }: OrderA
                   defaultValue={currentStatus}
                   required
                 >
-                  <option value={OrderStatus.Pending}>Pending</option>
-                  <option value={OrderStatus.Processing}>Processing</option>
-                  <option value={OrderStatus.Shipped}>Shipped</option>
-                  <option value={OrderStatus.Delivered}>Delivered</option>
-                  <option value={OrderStatus.Completed}>Completed</option>
-                  <option value={OrderStatus.Cancelled}>Cancelled</option>
-                  <option value={OrderStatus.Refunded}>Refunded</option>
+                  <option value={currentStatus}>{OrderStatus[currentStatus]}</option>
+                  {currentStatus < OrderStatus.Completed && (
+                    <option value={currentStatus + 1}>{OrderStatus[currentStatus + 1]}</option>
+                  )}
                 </select>
+                <p className="form-text">Payment is required before fulfillment. Use the separate cancellation or refund action for returns.</p>
               </div>
             </div>
             <div className="modal-footer">
