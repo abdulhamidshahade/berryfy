@@ -206,7 +206,7 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = builder.Configuration.GetValue("RateLimiting:DefaultQueueLimit", 10);
     });
-});
+}); 
 
 
 var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING"));
