@@ -209,7 +209,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 
-var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("postgres_connection_string"));
+var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING"));
 
 var app = builder.Build();
 
