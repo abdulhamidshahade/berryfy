@@ -4,23 +4,24 @@ using Berryfy.Application.Config;
 using Berryfy.Application.DI;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
+using Berryfy.Infrastructure;
 using Berryfy.Infrastructure.Data;
 using Berryfy.Infrastructure.DI;
-using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using Berryfy.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -206,8 +207,12 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = builder.Configuration.GetValue("RateLimiting:DefaultQueueLimit", 10);
     });
-}); 
+});
 
+builder.Configuration.AddJsonFile("appsettings.json", optional: true)
+    .AddUserSecrets(Assembly.GetExecutingAssembly())
+    .AddEnvironmentVariables()
+    .Build();
 
 var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING"));
 
