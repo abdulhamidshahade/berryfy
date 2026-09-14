@@ -20,6 +20,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Berryfy.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -207,6 +208,9 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+
+var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("postgres_connection_string"));
+
 var app = builder.Build();
 
 if (useForwardedHeaders)
@@ -373,3 +377,5 @@ app.UseSerilogRequestLogging();
 app.MapControllers();
 
 app.Run();
+
+return success ? 1 : 0;
