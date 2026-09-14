@@ -78,9 +78,7 @@ export default async function Navigation() {
             <Suspense fallback={<MiniCartFallback />}>
               <MiniCart />
             </Suspense>
-            <a href="https://github.com/abdulhamidshahade/berryfy" target="_blank" rel="noopener noreferrer" className="text-white-50 me-2">
-              <i className="bi bi-github fs-4"></i>
-            </a>
+            
             {user ? (
               <UserMenu user={user} />
             ) : (
@@ -89,6 +87,9 @@ export default async function Navigation() {
                 Sign In
               </Link>
             )}
+            <a href="https://github.com/abdulhamidshahade/berryfy" target="_blank" rel="noopener noreferrer" className="text-white-50 me-2">
+              <i className="bi bi-github fs-4"></i>
+            </a>
           </div>
         </div>
       </div>
