@@ -126,9 +126,6 @@ export default function LoginForm({ redirectTo = '/' }: LoginFormProps) {
           </div>
 
           <button type="submit" className="btn btn-primary w-100 mb-3">
-            <a href="https://github.com/abdulhamidshahade/berryfy" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-reset p-0 m-0">
-              <i className="bi bi-github me-2"></i>
-            </a>
             <i className="bi bi-box-arrow-in-right me-2"></i>
             Sign In
           </button>
