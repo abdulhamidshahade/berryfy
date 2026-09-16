@@ -7,13 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.API", "Berryfy.API\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Domain", "Berryfy.Domain\Berryfy.Domain.csproj", "{FEDB772B-0719-41DD-87AD-CBA62FF52F54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Infrastructure", "Berryfy.Infrastructure\Berryfy.Infrastructure.csproj", "{630367CE-4590-4AF5-A72C-93AB21A13E0D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Application", "Berryfy.Application\Berryfy.Application.csproj", "{32B24BC8-B08F-4A26-A729-1C3152A6C39B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Tests", "Berryfy.Tests\Berryfy.Tests.csproj", "{E4AAFC13-2C7E-45FB-83D4-006096FC22E0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Bot", "Berryfy.Bot\Berryfy.Bot.csproj", "{2651BA4C-9295-4EC6-83CD-385185A9DE30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Berryfy.Infrastructure", "Berryfy.Infrastructure\Berryfy.Infrastructure.csproj", "{35D429A6-2335-7ED5-79B2-A2B64184F552}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,6 @@ Global
 		{FEDB772B-0719-41DD-87AD-CBA62FF52F54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEDB772B-0719-41DD-87AD-CBA62FF52F54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEDB772B-0719-41DD-87AD-CBA62FF52F54}.Release|Any CPU.Build.0 = Release|Any CPU
-		{630367CE-4590-4AF5-A72C-93AB21A13E0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{630367CE-4590-4AF5-A72C-93AB21A13E0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{630367CE-4590-4AF5-A72C-93AB21A13E0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{630367CE-4590-4AF5-A72C-93AB21A13E0D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{32B24BC8-B08F-4A26-A729-1C3152A6C39B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{32B24BC8-B08F-4A26-A729-1C3152A6C39B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{32B24BC8-B08F-4A26-A729-1C3152A6C39B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -45,6 +41,10 @@ Global
 		{2651BA4C-9295-4EC6-83CD-385185A9DE30}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2651BA4C-9295-4EC6-83CD-385185A9DE30}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2651BA4C-9295-4EC6-83CD-385185A9DE30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35D429A6-2335-7ED5-79B2-A2B64184F552}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35D429A6-2335-7ED5-79B2-A2B64184F552}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35D429A6-2335-7ED5-79B2-A2B64184F552}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35D429A6-2335-7ED5-79B2-A2B64184F552}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
