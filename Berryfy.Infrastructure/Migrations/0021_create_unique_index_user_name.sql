@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX user_name_index ON users (normalized_user_name);
