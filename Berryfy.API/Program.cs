@@ -48,7 +48,7 @@ builder.Services.AddInfrastructureServices();
 builder.Services.AddHealthChecks()
     .AddCheck<Berryfy.Infrastructure.Data.DatabaseHealthCheck>("database");
 
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
+builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
@@ -214,7 +214,10 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: true)
     .AddEnvironmentVariables()
     .Build();
 
-var success = DatabaseMigrator.Run(Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING"));
+var migrationConnectionString = builder.Configuration.GetConnectionString("PostgreConnectionString")
+    ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
+    ?? throw new InvalidOperationException("PostgreSQL connection string is not configured.");
+DatabaseMigrator.Run(migrationConnectionString);
 
 var app = builder.Build();
 
@@ -239,81 +242,10 @@ if (useHsts && app.Environment.IsProduction())
 
 app.UseRateLimiter();
 
-var runMigrationsOnStartup = builder.Configuration.GetValue("Database:RunMigrationsOnStartup", false);
 Log.Information(
-    "Startup configuration → RunMigrationsOnStartup={RunMigrations}, RunSeedOnStartup={RunSeed}, Environment={Env}",
-    runMigrationsOnStartup,
+    "Startup configuration → RunSeedOnStartup={RunSeed}, Environment={Env}",
     builder.Configuration.GetValue("Database:RunSeedOnStartup", false),
     app.Environment.EnvironmentName);
-
-if (runMigrationsOnStartup)
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-        Log.Information("Applying database migrations...");
-
-        const int maxMigrationAttempts = 10;
-        Exception? lastMigrationEx = null;
-        for (var attempt = 1; attempt <= maxMigrationAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.MigrateAsync();
-                lastMigrationEx = null;
-                break;
-            }
-            catch (Exception migEx)
-            {
-                lastMigrationEx = migEx;
-                if (attempt < maxMigrationAttempts)
-                {
-                    Log.Warning(migEx,
-                        "Migration attempt {Attempt}/{Max} failed; retrying in 5 s…",
-                        attempt, maxMigrationAttempts);
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
-            }
-        }
-
-        if (lastMigrationEx != null)
-            throw lastMigrationEx;
-
-        Log.Information("Database migrations completed.");
-
-        if (!await context.Database.CanConnectAsync())
-        {
-            Log.Fatal("Cannot connect to database after migration.");
-            Environment.Exit(1);
-        }
-
-        var stillPending = (await context.Database.GetPendingMigrationsAsync()).ToList();
-        if (stillPending.Count > 0)
-        {
-            Log.Fatal(
-                "MigrateAsync() completed but {Count} migration(s) are still pending: {Migrations}. " +
-                "The database volume may be in an inconsistent state. " +
-                "Run 'docker-compose down -v' to reset volumes and try again.",
-                stillPending.Count, string.Join(", ", stillPending));
-            Environment.Exit(1);
-        }
-
-        Log.Information("All {Count} migrations applied successfully.",
-            (await context.Database.GetAppliedMigrationsAsync()).Count());
-    }
-    catch (Exception ex)
-    {
-        Log.Fatal(ex, "Database migration failed");
-        if (app.Environment.IsDevelopment())
-        {
-            throw;
-        }
-
-        Environment.Exit(1);
-    }
-}
 
 try
 {
@@ -382,5 +314,3 @@ app.UseSerilogRequestLogging();
 app.MapControllers();
 
 app.Run();
-
-return success ? 1 : 0;
