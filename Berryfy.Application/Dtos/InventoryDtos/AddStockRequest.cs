@@ -1,6 +1,4 @@
-﻿
-
-namespace Berryfy.Application.Dtos.InventoryDtos
+﻿namespace Berryfy.Application.Dtos.InventoryDtos
 {
     public class AddStockRequest
     {
