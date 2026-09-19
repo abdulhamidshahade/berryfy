@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX role_name_index ON roles (normalized_name);
