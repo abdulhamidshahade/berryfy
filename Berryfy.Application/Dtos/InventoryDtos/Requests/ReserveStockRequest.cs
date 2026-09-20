@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.InventoryDtos
+﻿namespace Berryfy.Application.Dtos.InventoryDtos.Requests
 {
-    public class ReleaseStockRequest
+    public class ReserveStockRequest
     {
         public int ProductId { get; set; }
         public int Quantity { get; set; }

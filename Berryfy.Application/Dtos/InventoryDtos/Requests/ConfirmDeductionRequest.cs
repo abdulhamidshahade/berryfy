@@ -1,4 +1,4 @@
-﻿namespace Berryfy.Application.Dtos.InventoryDtos
+﻿namespace Berryfy.Application.Dtos.InventoryDtos.Requests
 {
     public class ConfirmDeductionRequest
     {
