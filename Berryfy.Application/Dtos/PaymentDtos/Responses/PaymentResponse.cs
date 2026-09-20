@@ -1,8 +1,8 @@
 ﻿using Berryfy.Domain.Constants;
 
-namespace Berryfy.Application.Dtos.PaymentDtos
+namespace Berryfy.Application.Dtos.PaymentDtos.Responses
 {
-    public class PaymentDto
+    public class PaymentResponse
     {
         public int Id { get; set; }
         public int? UserId { get; set; }

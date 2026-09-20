@@ -1,9 +1,9 @@
 ﻿using Berryfy.Domain.Constants;
 using System.ComponentModel.DataAnnotations;
 
-namespace Berryfy.Application.Dtos.PaymentDtos
+namespace Berryfy.Application.Dtos.PaymentDtos.Requests
 {
-    public class CreatePaymentDto
+    public class CreatePayment
     {
         public int? OrderId { get; set; }
 
@@ -20,8 +20,6 @@ namespace Berryfy.Application.Dtos.PaymentDtos
         public string Currency { get; set; } = "USD";
 
         public string? ProviderPaymentMethodId { get; set; }
-
-        // Payment Details
         public string? CardLast4 { get; set; }
         public string? CardBrand { get; set; }
 

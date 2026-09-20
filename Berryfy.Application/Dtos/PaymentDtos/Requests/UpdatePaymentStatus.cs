@@ -1,8 +1,8 @@
 ﻿using Berryfy.Domain.Constants;
 
-namespace Berryfy.API.Controllers
+namespace Berryfy.Application.Dtos.PaymentDtos.Requests
 {
-    public class UpdatePaymentStatusDto
+    public class UpdatePaymentStatus
     {
         public PaymentStatus Status { get; set; }
         public string? Notes { get; set; }
