@@ -1,7 +1,8 @@
-﻿namespace Berryfy.Application.Dtos.ShopDtos
+﻿namespace Berryfy.Application.Dtos.ShopDtos.Responses
 {
-    public abstract class ShopBaseDto
+    public class ShopResponse
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public string LogoUrl { get; set; }
         public string Description { get; set; }
