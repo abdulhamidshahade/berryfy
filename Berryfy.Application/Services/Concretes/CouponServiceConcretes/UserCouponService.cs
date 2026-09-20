@@ -1,6 +1,6 @@
 using AutoMapper;
-using Berryfy.Application.Dtos.AuthDtos;
-using Berryfy.Application.Dtos.CouponDtos;
+using Berryfy.Application.Dtos.AuthDtos.Responses;
+using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Domain.Repositories.CouponInterfaces;
@@ -33,7 +33,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
         public async Task<bool> AddCouponToAllUsersAsync(int couponId)
         {
-            if(couponId <= 0)
+            if (couponId <= 0)
             {
                 return false;
             }
@@ -41,11 +41,11 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             var users = await _userService.GetAllUsers();
             List<int> allUserIds = users.Select(i => i.Id).ToList();
 
-            foreach(var userId in allUserIds)
+            foreach (var userId in allUserIds)
             {
                 var addedCouponToUser = await AddCouponToUserAsync(userId, couponId);
 
-                if(addedCouponToUser == null)
+                if (addedCouponToUser == null)
                 {
                     return false;
                 }
@@ -58,12 +58,12 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
         {
             if (couponId <= 0 || !await _couponService.ExistsByIdAsync(couponId)) return false;
             var users = await _userService.GetAllUsers();
-            foreach(var userId in users.Select(u => u.Id).Distinct())
+            foreach (var userId in users.Select(u => u.Id).Distinct())
             {
                 if (await _orderRepository.UserHasPaidOrderAsync(userId)) continue;
                 var addedCoupon = await AddCouponToUserAsync(userId, couponId);
 
-                if(addedCoupon == null)
+                if (addedCoupon == null)
                 {
                     return false;
                 }
@@ -72,7 +72,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return true;
         }
 
-        public async Task<UserCouponDto> AddCouponToUserAsync(int userId, int couponId)
+        public async Task<UserCouponResponse> AddCouponToUserAsync(int userId, int couponId)
         {
             if(userId <= 0 || couponId <= 0)
             {
@@ -88,7 +88,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             }
 
             var addedCouponToUser = await _userCouponRepository.AddCouponToUserAsync(userId, couponId);
-            var userCouponDto = _mapper.Map<UserCouponDto>(addedCouponToUser);
+            var userCouponDto = UserCouponResponse.MapFromUserCoupon(addedCouponToUser);
             return userCouponDto;
         }
 
@@ -117,8 +117,8 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 return false;
             }
 
-            List<CouponDto> userHasCoupons = _mapper.Map<List<CouponDto>>
-                (await _userCouponRepository.GetCouponsByUserIdAsync(userId));
+            List<CouponResponse> userHasCoupons = CouponResponse.MapFromCoupon(
+                (await _userCouponRepository.GetCouponsByUserIdAsync(userId)));
 
             if (!userHasCoupons.Any(i => i.Code == couponExists.Code))
             {
@@ -130,15 +130,15 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return disabledCoupon;
         }
 
-        public async Task<List<CouponDto>> GetCouponsByUserIdAsync(int userId)
+        public async Task<List<CouponResponse>> GetCouponsByUserIdAsync(int userId)
         {
             if (!await _userService.IsUserExistsByIdAsync(userId))
             {
                 return null;
             }
 
-            List<CouponDto> coupons = 
-                _mapper.Map<List<CouponDto>>(await _userCouponRepository.GetCouponsByUserIdAsync(userId));
+            List<CouponResponse> coupons = 
+                CouponResponse.MapFromCoupon(await _userCouponRepository.GetCouponsByUserIdAsync(userId));
 
             if(coupons == null)
             {
@@ -148,15 +148,15 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return coupons.ToList();
         }
 
-        public async Task<List<ApplicationUserDto>> GetUsersByCouponIdAsync(int couponId)
+        public async Task<List<UserResponse>> GetUsersByCouponIdAsync(int couponId)
         {
             if (!await _couponService.ExistsByIdAsync(couponId))
             {
                 return null;
             }
 
-            List<ApplicationUserDto> userList = 
-                _mapper.Map<List<ApplicationUserDto>>(await _userCouponRepository.GetUsersByCouponIdAsync(couponId));
+            List<UserResponse> userList = 
+                UserResponse.MapFromUser(await _userCouponRepository.GetUsersByCouponIdAsync(couponId));
 
             return userList.ToList();
         }
