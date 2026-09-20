@@ -1,8 +1,9 @@
-﻿using FluentValidation;
+﻿using Berryfy.Application.Dtos.AuthDtos.Requests;
+using FluentValidation;
 
 namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
 {
-    public class EmailConfirmationDtoValidator : AbstractValidator<EmailConfirmationDto>
+    public class EmailConfirmationDtoValidator : AbstractValidator<EmailConfirmation>
     {
         public EmailConfirmationDtoValidator()
         {

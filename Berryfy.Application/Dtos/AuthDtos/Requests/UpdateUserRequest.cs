@@ -1,6 +1,6 @@
-namespace Berryfy.Application.Dtos.AuthDtos
+namespace Berryfy.Application.Dtos.AuthDtos.Requests
 {
-    public class UpdateUserDto
+    public class UpdateUserRequest
     {
         public string Email { get; set; }
         public string UserName { get; set; }

@@ -1,8 +1,8 @@
-﻿namespace Berryfy.Application.Dtos.AuthDtos
+﻿namespace Berryfy.Application.Dtos.AuthDtos.Responses
 {
-    public class LoginResponseDto
+    public class LoginResponse
     {
-        public ApplicationUserDto User { get; set; }
+        public UserResponse User { get; set; }
         public string Token { get; set; }
         public string RefreshToken { get; set; }
         public string ErrorMessage { get; set; }

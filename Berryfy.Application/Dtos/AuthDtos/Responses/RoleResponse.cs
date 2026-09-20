@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.AuthDtos
+﻿namespace Berryfy.Application.Dtos.AuthDtos.Responses
 {
-    public class ApplicationRoleDto
+    public class RoleResponse
     {
         public int Id { get; set; }
         public string Name { get; set; }

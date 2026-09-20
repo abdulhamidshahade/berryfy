@@ -1,6 +1,6 @@
-namespace Berryfy.Application.Dtos.AuthDtos
+namespace Berryfy.Application.Dtos.AuthDtos.Requests
 {
-    public class ChangePasswordDto
+    public class ChangePassword
     {
         public string CurrentPassword { get; set; }
         public string NewPassword { get; set; }

@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.AuthDtos
+﻿namespace Berryfy.Application.Dtos.AuthDtos.Responses
 {
-    public class BulkAssignmentResultDto
+    public class BulkAssignmentResult
     {
         public int TotalUsers { get; set; }
         public int SuccessfulAssignments { get; set; }

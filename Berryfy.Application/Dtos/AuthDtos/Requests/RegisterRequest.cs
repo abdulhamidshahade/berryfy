@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.AuthDtos
+﻿namespace Berryfy.Application.Dtos.AuthDtos.Requests
 {
-    public class RegisterRequestDto
+    public class RegisterRequest
     {
         public string UserName { get; set; }
         public string FirstName { get; set; }

@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.AuthDtos
+﻿namespace Berryfy.Application.Dtos.AuthDtos.Requests
 {
-    public class ResetPasswordRequestDto
+    public class ResetPasswordRequest
     {
         public string Email { get; set; }
         public string Token { get; set; }

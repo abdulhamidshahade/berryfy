@@ -1,8 +1,9 @@
-﻿using FluentValidation;
+﻿using Berryfy.Application.Dtos.AuthDtos.Requests;
+using FluentValidation;
 
 namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
 {
-    public class ResetPasswordRequestDtoValidator : AbstractValidator<ResetPasswordRequestDto>
+    public class ResetPasswordRequestDtoValidator : AbstractValidator<ResetPasswordRequest>
     {
         public ResetPasswordRequestDtoValidator()
         {
