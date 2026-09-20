@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.CategoryDtos
+﻿namespace Berryfy.Application.Dtos.CategoryDtos.Requests
 {
-    public abstract class CategoryBaseDto
+    public class CreateCategoryRequest
     {
         public string Name { get; set; }
         public string Description { get; set; }
