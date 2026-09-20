@@ -1,4 +1,4 @@
-﻿namespace Berryfy.Application.Dtos.EmailDtos
+﻿namespace Berryfy.Application.Dtos.EmailDtos.Requests
 {
     public class SendEmailRequest
     {
