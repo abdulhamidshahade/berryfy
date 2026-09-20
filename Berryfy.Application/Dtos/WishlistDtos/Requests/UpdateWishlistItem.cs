@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Requests
 {
-    public class UpdateWishlistItemDto
+    public class UpdateWishlistItem
     {
         public string? Notes { get; set; }
         public int Priority { get; set; }

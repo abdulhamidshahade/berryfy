@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Responses
 {
-    public class WishlistDto
+    public class WishlistResponse
     {
         public int Id { get; set; }
         public int UserId { get; set; }
@@ -11,6 +11,6 @@
         public DateTime UpdatedDate { get; set; }
         public int ItemCount { get; set; }
         public decimal TotalValue { get; set; }
-        public List<WishlistItemDto> Items { get; set; }
+        public List<WishlistItem> Items { get; set; }
     }
 }

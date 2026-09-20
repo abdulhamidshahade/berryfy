@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Requests
 {
-    public class UpdateWishlistDto
+    public class UpdateWishlist
     {
         public string Name { get; set; }
         public bool IsPublic { get; set; }

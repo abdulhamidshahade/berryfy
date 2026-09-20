@@ -1,7 +1,7 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Responses
 {
 
-    public class RecentActivityDto
+    public class RecentActivity
     {
         public string Date { get; set; }
         public int NewWishlists { get; set; }

@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Requests
 {
-    public class AddToWishlistDto
+    public class AddToWishlist
     {
         public int ProductId { get; set; }
         public int? WishlistId { get; set; }

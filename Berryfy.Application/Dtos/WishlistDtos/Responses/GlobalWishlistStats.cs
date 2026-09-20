@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.WishlistDtos
+﻿namespace Berryfy.Application.Dtos.WishlistDtos.Responses
 {
-    public class GlobalWishlistStatsDto
+    public class GlobalWishlistStats
     {
         public int TotalUsers { get; set; }
         public int TotalWishlists { get; set; }
@@ -10,6 +10,6 @@
         public double AverageWishlistsPerUser { get; set; }
         public int PublicWishlists { get; set; }
         public int PrivateWishlists { get; set; }
-        public List<RecentActivityDto> RecentActivity { get; set; }
+        public List<RecentActivity> RecentActivity { get; set; }
     }
 }
