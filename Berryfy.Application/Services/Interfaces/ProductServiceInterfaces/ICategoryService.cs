@@ -1,14 +1,15 @@
-﻿using Berryfy.Application.Dtos.CategoryDtos;
+﻿using Berryfy.Application.Dtos.CategoryDtos.Requests;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
 
 namespace Berryfy.Application.Services.Interfaces.ProductServiceInterfaces
 {
     public interface ICategoryService
     {
-        Task<CategoryDto> GetByIdAsync(int id);
-        Task<CategoryDto> GetByNameAsync(string name);
-        Task<IEnumerable<CategoryDto>> GetAllAsync();
-        Task<CategoryDto> CreateAsync(CreateCategoryDto categoryDto);
-        Task<CategoryDto> UpdateAsync(int id, UpdateCategoryDto categoryDto);
+        Task<IEnumerable<CategoryResponse>> GetAllAsync();
+        Task<CategoryResponse> GetByIdAsync(int id);
+        Task<CategoryResponse> GetByNameAsync(string name);
+        Task<CategoryResponse> CreateAsync(CreateCategoryRequest categoryDto);
+        Task<CategoryResponse> UpdateAsync(int id, UpdateCategoryRequest categoryDto);
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
         Task<bool> ExistsByNameAsync(string name);
