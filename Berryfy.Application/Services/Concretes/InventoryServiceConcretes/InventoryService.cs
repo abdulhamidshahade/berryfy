@@ -12,15 +12,11 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
     {
         private readonly IProductRepository _productRepository;
         private readonly IInventoryRepository _inventoryRepository;
-        private readonly IUnitOfWork _unitOfWork;
-
         public InventoryService(IProductRepository productRepository,
-                                IInventoryRepository inventoryRepository,
-                                IUnitOfWork unitOfWork)
+                                IInventoryRepository inventoryRepository)
         {
             _productRepository = productRepository;
             _inventoryRepository = inventoryRepository;
-            _unitOfWork = unitOfWork;
         }
 
         public async Task<bool> IsInStockAsync(int productId, int quantity)
