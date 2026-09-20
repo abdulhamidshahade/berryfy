@@ -1,7 +1,8 @@
-﻿namespace Berryfy.Application.Dtos.ProductDtos
+﻿namespace Berryfy.Application.Dtos.ProductDtos.Requests
 {
-    public abstract class ProductBaseDto
+    public class UpdateProduct
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public decimal Price { get; set; }

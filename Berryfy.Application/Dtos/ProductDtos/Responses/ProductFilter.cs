@@ -1,6 +1,6 @@
-namespace Berryfy.Application.Dtos.ProductDtos
+namespace Berryfy.Application.Dtos.ProductDtos.Responses
 {
-    public class ProductFilterDto
+    public class ProductFilter
     {
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 12;
