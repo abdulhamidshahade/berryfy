@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.CouponDtos;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
+using Berryfy.Application.Dtos.CouponDtos.Requests;
+using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Domain.Entities.CouponEntities;
 
@@ -19,7 +21,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             _mapper = mapper;
         }
 
-        public async Task<CouponDto> GetByIdAsync(int id)
+        public async Task<CouponResponse> GetByIdAsync(int id)
         {
             if(id <= 0)
             {
@@ -33,10 +35,10 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CouponDto>(coupon);
+            return CouponResponse.MapFromCoupon(coupon);
         }
 
-        public async Task<CouponDto> GetByCodeAsync(string code)
+        public async Task<CouponResponse> GetByCodeAsync(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
             {
@@ -49,36 +51,36 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CouponDto>(coupon);
+            return CouponResponse.MapFromCoupon(coupon);
         }
 
-        public async Task<IEnumerable<CouponDto>> GetAllAsync()
+        public async Task<IEnumerable<CouponResponse>> GetAllAsync()
         {
             var coupons = await _couponRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<CouponDto>>(coupons);
+            return CouponResponse.MapFromCoupon(coupons);
         }
 
-        public async Task<CouponDto> CreateAsync(CreateCouponDto couponDto)
+        public async Task<CouponResponse> CreateAsync(CreateCoupon request)
         {
-            if (couponDto == null)
+            if (request == null)
             {
                 return null;
             }
 
-            if (await ExistsByCodeAsync(couponDto.Code))
+            if (await ExistsByCodeAsync(request.Code))
             {
                 return null;
             }
 
-            var coupon = _mapper.Map<Coupon>(couponDto);
+            var coupon = CreateCoupon.MapToCoupon(request);
             var createdCoupon = await _couponRepository.CreateAsync(coupon);
-            
-            return _mapper.Map<CouponDto>(createdCoupon);
+
+            return CouponResponse.MapFromCoupon(createdCoupon);
         }
 
-        public async Task<CouponDto> UpdateAsync(int id, UpdateCouponDto couponDto)
+        public async Task<CouponResponse> UpdateAsync(int id, UpdateCoupon request)
         {
-            if (couponDto == null)
+            if (request == null)
             {
                 return null;
             }
@@ -90,17 +92,17 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 return null;
             }
 
-            var isCouponExists = await GetByCodeAsync(couponDto.Code);
+            var isCouponExists = await GetByCodeAsync(request.Code);
 
-            if(isCouponExists != null && isCouponExists.Id != couponDto.Id)
+            if(isCouponExists != null && isCouponExists.Id != request.Id)
             {
                 return null;
             }
 
-            var mappedCoupon = _mapper.Map<Coupon>(couponDto);
+            var mappedCoupon = UpdateCoupon.MapToCoupon(request);
 
             var updatedCoupon = await _couponRepository.UpdateAsync(id, mappedCoupon);
-            return _mapper.Map<CouponDto>(updatedCoupon);
+            return CouponResponse.MapFromCoupon(updatedCoupon);
         }
 
         public async Task<bool> DeleteAsync(int id)
