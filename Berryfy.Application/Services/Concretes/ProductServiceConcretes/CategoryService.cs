@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.CategoryDtos;
+using Berryfy.Application.Dtos.CategoryDtos.Requests;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
-using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 
 namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
@@ -17,7 +17,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             _mapper = mapper;
         }
 
-        public async Task<CategoryDto> GetByIdAsync(int id)
+        public async Task<CategoryResponse> GetByIdAsync(int id)
         {
             var category = await _categoryRepository.GetByIdAsync(id);
 
@@ -26,10 +26,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CategoryDto>(category);
+            return _mapper.Map<CategoryResponse>(category);
         }
 
-        public async Task<CategoryDto> GetByNameAsync(string name)
+        public async Task<CategoryResponse> GetByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -43,37 +43,37 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CategoryDto>(category);
+            return _mapper.Map<CategoryResponse>(category);
         }
 
-        public async Task<IEnumerable<CategoryDto>> GetAllAsync()
+        public async Task<IEnumerable<CategoryResponse>> GetAllAsync()
         {
             var categories = await _categoryRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<CategoryDto>>(categories);
+            return _mapper.Map<IEnumerable<CategoryResponse>>(categories);
         }
 
-        public async Task<CategoryDto> CreateAsync(CreateCategoryDto categoryDto)
+        public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest categoryRequest)
         {
-            if (categoryDto == null)
+            if (categoryRequest == null)
             {
                 return null;
             }
 
-            if (await ExistsByNameAsync(categoryDto.Name))
+            if (await ExistsByNameAsync(categoryRequest.Name))
             {
                 return null;
             }
 
-            var category = _mapper.Map<Category>(categoryDto);
+            var category = CreateCategoryRequest.MapToCategory(categoryRequest);
 
             var createdCategory = await _categoryRepository.CreateAsync(category);
-            return _mapper.Map<CategoryDto>(createdCategory);
+            return CategoryResponse.MapFromCategory(createdCategory);
         }
 
 
-        public async Task<CategoryDto> UpdateAsync(int id, UpdateCategoryDto categoryDto)
+        public async Task<CategoryResponse> UpdateAsync(int id, UpdateCategoryRequest request)
         {
-            if (categoryDto == null)
+            if (request == null)
             {
                 return null;
             }
@@ -85,19 +85,19 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            var isNameExists = await GetByNameAsync(categoryDto.Name);
+            var isNameExists = await GetByNameAsync(request.Name);
 
             if(isNameExists != null && isNameExists.Id != id)
             {
                 return null;
             }
 
-            var mappedCategory = _mapper.Map<Category>(categoryDto);
+            var mappedCategory = UpdateCategoryRequest.MapToCategory(request);
 
             var updatedCategory = await _categoryRepository.UpdateAsync(id, mappedCategory);
 
 
-            return _mapper.Map<CategoryDto>(updatedCategory);
+            return CategoryResponse.MapFromCategory(updatedCategory);
         }
 
         
