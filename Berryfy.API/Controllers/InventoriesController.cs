@@ -1,6 +1,6 @@
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.InventoryDtos;
+using Berryfy.Application.Dtos.InventoryDtos.Requests;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
@@ -14,8 +14,7 @@ namespace Berryfy.API.Controllers
     {
         private readonly IInventoryService _inventoryService;
 
-        public InventoriesController(
-            IInventoryService inventoryService)
+        public InventoriesController(IInventoryService inventoryService)
         {
             _inventoryService = inventoryService;
         }
@@ -49,6 +48,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("check-stock/{productId}")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<object>>> CheckStock(int productId, [FromQuery] int quantity = 1)
@@ -77,6 +77,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+        
         [HttpPost("reserve-stock")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> ReserveStock([FromBody] ReserveStockRequest request)
@@ -121,6 +122,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("release-reserved-stock")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> ReleaseReservedStock([FromBody] ReleaseStockRequest request)
@@ -153,6 +155,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPost("confirm-deduction")]
         [AdminAndAbove]
@@ -220,6 +223,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPut("adjust-stock")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<bool>>> AdjustStock([FromBody] AdjustStockRequest request)
@@ -252,6 +256,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpGet("product/{productId}")]
         [AdminAndAbove]
@@ -290,6 +295,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("low-stock")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<List<Product>>>> GetLowStockProducts([FromQuery] int limit = 50)
@@ -318,6 +324,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("history/{productId}")]
         [AdminAndAbove]
         public async Task<ActionResult<ResponseDto<List<InventoryLog>>>> GetInventoryHistory(int productId, [FromQuery] int limit = 50)
@@ -345,6 +352,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPost("process-notifications")]
         [AdminAndAbove]
