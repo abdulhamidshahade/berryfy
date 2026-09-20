@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.CouponDtos
+﻿namespace Berryfy.Application.Dtos.CouponDtos.Responses
 {
-    public class UserCouponDto
+    public class UserCouponResponse
     {
         public int UserId { get; set; }
         public int CouponId { get; set; }

@@ -1,8 +1,8 @@
 ﻿using Berryfy.Domain.Constants;
 
-namespace Berryfy.Application.Dtos.CouponDtos
+namespace Berryfy.Application.Dtos.CouponDtos.Requests
 {
-    public abstract class CouponBaseDto
+    public class CreateCoupon
     {
         public string Code { get; set; }
         public decimal DiscountAmount { get; set; }
