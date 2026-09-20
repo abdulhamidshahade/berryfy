@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.OrderDtos
+﻿namespace Berryfy.Application.Dtos.OrderDtos.Requests
 {
-    public class CreateOrderDto
+    public class CreateOrder
     {
         public int UserId { get; set; }
         public int CartId { get; set; }

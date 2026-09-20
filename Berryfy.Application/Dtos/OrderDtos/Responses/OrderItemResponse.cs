@@ -1,6 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.OrderDtos
+﻿namespace Berryfy.Application.Dtos.OrderDtos.Responses
 {
-    public class OrderItemDto
+    public class OrderItemResponse
     {
         public int Id { get; set; }
         public int OrderId { get; set; }
