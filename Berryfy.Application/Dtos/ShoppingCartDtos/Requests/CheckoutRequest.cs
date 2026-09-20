@@ -1,4 +1,4 @@
-namespace Berryfy.Application.Dtos.ShoppingCartDtos
+namespace Berryfy.Application.Dtos.ShoppingCartDtos.Requests
 {
     public class CheckoutRequest
     {

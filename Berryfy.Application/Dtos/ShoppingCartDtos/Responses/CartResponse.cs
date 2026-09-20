@@ -1,8 +1,8 @@
 ﻿using Berryfy.Domain.Constants;
 
-namespace Berryfy.Application.Dtos.ShoppingCartDtos
+namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
 {
-    public class CartDto
+    public class CartResponse
     {
         public int Id { get; set; }
         public bool IsActive { get; set; }
@@ -12,8 +12,8 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos
 
         public DateTime? ExpiresAt { get; set; }
 
-        public List<CartItemDto> CartItems { get; set; }
-        public List<CartCouponDto> CartCoupons { get; set; } 
+        public List<CartItemResponse> CartItems { get; set; }
+        public List<CartCouponResponse> CartCoupons { get; set; } 
 
         public string? Note { get; set; }
         public decimal SubTotal { get; set; }

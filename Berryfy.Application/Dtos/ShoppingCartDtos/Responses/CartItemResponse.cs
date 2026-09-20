@@ -1,16 +1,14 @@
-﻿
+﻿using Berryfy.Application.Dtos.ProductDtos.Responses;
 
-using Berryfy.Application.Dtos.ProductDtos;
-
-namespace Berryfy.Application.Dtos.ShoppingCartDtos
+namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
 {
-    public class CartItemDto
+    public class CartItemResponse
     {
         public int Id { get; set; }
         public int ShoppingCartId { get; set; }
         public int ProductId { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public ProductDto Product { get; set; }
+        public ProductResponse Product { get; set; }
     }
 }

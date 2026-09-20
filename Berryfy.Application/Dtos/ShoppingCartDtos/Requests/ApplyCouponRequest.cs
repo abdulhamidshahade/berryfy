@@ -1,4 +1,4 @@
-﻿namespace Berryfy.API.Controllers
+﻿namespace Berryfy.Application.Dtos.ShoppingCartDtos.Requests
 {
     public class ApplyCouponRequest
     {
