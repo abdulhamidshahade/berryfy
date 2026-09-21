@@ -1,6 +1,6 @@
 ﻿
 using AutoMapper;
-using Berryfy.Application.Dtos.ProductDtos;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories;
@@ -26,7 +26,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             _productRepository = productRepository;
         }
 
-        public async Task<bool> AddProductCategoryAsync(ProductDto product, List<int> categories)
+        public async Task<bool> AddProductCategoryAsync(ProductResponse product, List<int> categories)
         {
             if(categories.Count == 0)
             {
@@ -40,7 +40,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             return created;
         }
 
-        public async Task<bool> UpdateProductCategoryAsync(ProductDto product, List<int> categories)
+        public async Task<bool> UpdateProductCategoryAsync(ProductResponse product, List<int> categories)
         {
             if (categories.Count == 0 || !await _productRepository.ExistsByIdAsync(product.Id))
             {
