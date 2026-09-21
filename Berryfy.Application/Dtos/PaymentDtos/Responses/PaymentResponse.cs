@@ -1,4 +1,5 @@
 ﻿using Berryfy.Domain.Constants;
+using Berryfy.Domain.Entities.PaymentEntities;
 
 namespace Berryfy.Application.Dtos.PaymentDtos.Responses
 {
@@ -41,5 +42,55 @@ namespace Berryfy.Application.Dtos.PaymentDtos.Responses
         public string? UserName { get; set; }
         public string? UserEmail { get; set; }
         public string? OrderReferenceNumber { get; set; }
+
+        public static PaymentResponse MapFromPayment(Payment payment)
+        {
+            return new PaymentResponse
+            {
+                Id = payment.Id,
+                UserId = payment.UserId,
+                OrderId = payment.OrderId,
+                TransactionId = payment.TransactionId,
+                Status = payment.Status,
+                Method = payment.Method,
+                Provider = payment.Provider,
+                Amount = payment.Amount,
+                Currency = payment.Currency,
+                ProviderTransactionId = payment.ProviderTransactionId,
+                ProviderPaymentMethodId = payment.ProviderPaymentMethodId,
+                CardLast4 = payment.CardLast4,
+                CardBrand = payment.CardBrand,
+                PayerEmail = payment.PayerEmail,
+                PayerName = payment.PayerName,
+                BillingAddress1 = payment.BillingAddress1,
+                BillingAddress2 = payment.BillingAddress2,
+                BillingCity = payment.BillingCity,
+                BillingState = payment.BillingState,
+                BillingPostalCode = payment.BillingPostalCode,
+                BillingCountry = payment.BillingCountry,
+                ProcessingFee = payment.ProcessingFee,
+                NetAmount = payment.NetAmount,
+                ProcessedAt = payment.ProcessedAt,
+                CompletedAt = payment.CompletedAt,
+                FailedAt = payment.FailedAt,
+                RefundedAt = payment.RefundedAt,
+                ErrorMessage = payment.ErrorMessage,
+                FailureReason = payment.FailureReason,
+                Metadata = payment.Metadata,
+                Notes = payment.Notes
+            };
+        }
+
+        public static List<PaymentResponse> MapFromPayment(IEnumerable<Payment> payments)
+        {
+            List<PaymentResponse> paymentResponses = new List<PaymentResponse>();
+
+            foreach(Payment payment in payments)
+            {
+                paymentResponses.Add(MapFromPayment(payment));
+            }
+
+            return paymentResponses;
+        }
     }
 }
