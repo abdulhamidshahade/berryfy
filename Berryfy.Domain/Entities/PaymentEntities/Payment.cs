@@ -66,7 +66,7 @@ namespace Berryfy.Domain.Entities.PaymentEntities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public ApplicationUser? User { get; set; }
+        public User? User { get; set; }
         public Order? Order { get; set; }
     }
 }
