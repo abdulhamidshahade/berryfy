@@ -1,15 +1,16 @@
-using Berryfy.Application.Dtos.OrderDtos;
+using Berryfy.Application.Dtos.OrderDtos.Requests;
+using Berryfy.Application.Dtos.OrderDtos.Responses;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.OrderEntities;
 namespace Berryfy.Application.Services.Interfaces.OrderServiceInterfaces
 {
     public interface IOrderService
     {
-        Task<OrderDto?> GetOrderByIdAsync(int orderId);
+        Task<OrderResponse?> GetOrderByIdAsync(int orderId);
 
-        Task<List<OrderDto>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10);
-        Task<List<OrderDto>> GetAllOrdersAsync(int page = 1, int pageSize = 50);
-        Task<Order?> CreateOrderFromCartAsync(int cartId, CreateOrderDto orderDto);
+        Task<List<OrderResponse>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10);
+        Task<List<OrderResponse>> GetAllOrdersAsync(int page = 1, int pageSize = 50);
+        Task<Order?> CreateOrderFromCartAsync(int cartId, CreateOrder orderDto);
         Task<bool> UpdateOrderStatusAsync(Order order, OrderStatus newStatus);
         Task<bool> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus);
         Task<bool> CancelOrderAsync(int orderId, string reason);
