@@ -52,9 +52,11 @@ namespace Berryfy.Domain.Entities.OrderEntities
         public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
 
-        public ApplicationUser User { get; set; }
+        public User User { get; set; }
         public Cart Cart { get; set; }
 
         public List<Payment> Payments { get; set; }
+
+        
     }
 }
