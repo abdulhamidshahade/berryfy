@@ -1,6 +1,7 @@
 ﻿using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.ProductDtos;
+using Berryfy.Application.Dtos.ProductDtos.Requests;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +34,7 @@ namespace Berryfy.API.Controllers
         [EndpointSummary("Fetches all products")]
         [EndpointDescription("Returns a paginated list of products. Supports page number and page size parameters.")]
         [EnableRateLimiting("DefaultPolicy")]
-        public async Task<ActionResult<ResponseDto<PaginationDto<ProductDto>>>> GetAll(
+        public async Task<ActionResult<ResponseDto<PaginationDto<ProductResponse>>>> GetAll(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 12,
             [FromQuery] string? searchTerm = null,
@@ -44,7 +45,7 @@ namespace Berryfy.API.Controllers
             [FromQuery] bool? isActive = true)
         {
 
-            var filter = new ProductFilterDto
+            var filter = new ProductFilter
             {
                 PageNumber = pageNumber,
                 PageSize = pageSize,
@@ -60,7 +61,7 @@ namespace Berryfy.API.Controllers
 
             if (!result.Data.Any())
             {
-                return NotFound(new ResponseDto<PaginationDto<ProductDto>>
+                return NotFound(new ResponseDto<PaginationDto<ProductResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -69,7 +70,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<PaginationDto<ProductDto>>
+            return Ok(new ResponseDto<PaginationDto<ProductResponse>>
             {
                 Data = result,
                 IsSuccess = true,
@@ -78,24 +79,25 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet]
         [Route("all")]
         [AllowAnonymous]
-        public async Task<ActionResult<ResponseDto<IEnumerable<ProductDto>>>> GetProducts()
+        public async Task<ActionResult<ResponseDto<IEnumerable<ProductResponse>>>> GetProducts()
         {
 
             var products = await _productService.GetAllAsync();
 
             if (!products.Any())
             {
-                return NotFound(new ResponseDto<IEnumerable<ProductDto>>
+                return NotFound(new ResponseDto<IEnumerable<ProductResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
                     StatusMessage = "No products found",
                 });
             }
-            var response = new ResponseDto<IEnumerable<ProductDto>>
+            var response = new ResponseDto<IEnumerable<ProductResponse>>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -106,16 +108,17 @@ namespace Berryfy.API.Controllers
             return Ok(response);
         }
 
+
         [HttpGet]
         [Route("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ResponseDto<ProductDto>>> GetById(int id)
+        public async Task<ActionResult<ResponseDto<ProductResponse>>> GetById(int id)
         {
             var product = await _productService.GetByIdAsync(id);
 
             if (product == null)
             {
-                return new ResponseDto<ProductDto>
+                return new ResponseDto<ProductResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -124,7 +127,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<ProductDto>
+            var response = new ResponseDto<ProductResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -132,20 +135,19 @@ namespace Berryfy.API.Controllers
                 Data = product
             };
             return Ok(response);
-
-
         }
+
 
         [HttpGet]
         [Route("name/{name}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ResponseDto<ProductDto>>> GetByName(string name)
+        public async Task<ActionResult<ResponseDto<ProductResponse>>> GetByName(string name)
         {
             var product = await _productService.GetByNameAsync(name);
 
             if (product == null)
             {
-                return new ResponseDto<ProductDto>
+                return new ResponseDto<ProductResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -154,7 +156,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<ProductDto>
+            var response = new ResponseDto<ProductResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -164,16 +166,17 @@ namespace Berryfy.API.Controllers
             return Ok(response);
         }
 
+
         [HttpPost]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<ProductDto>>> Create([FromBody] CreateProductDto productDto,
+        public async Task<ActionResult<ResponseDto<ProductResponse>>> Create([FromBody] CreateProduct productDto,
             [FromQuery] List<int> categories)
         {
             var createdProduct = await _productService.CreateAsync(productDto, categories);
 
             if (createdProduct == null)
             {
-                return new ResponseDto<ProductDto>
+                return new ResponseDto<ProductResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -183,7 +186,7 @@ namespace Berryfy.API.Controllers
 
             }
 
-            var response = new ResponseDto<ProductDto>
+            var response = new ResponseDto<ProductResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
@@ -194,17 +197,19 @@ namespace Berryfy.API.Controllers
             return response;
         }
 
+
+
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<ProductDto>>> Update(int id, [FromBody] UpdateProductDto productDto,
+        public async Task<ActionResult<ResponseDto<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto,
             [FromQuery] List<int> categories)
         {
             var updatedProduct = await _productService.UpdateAsync(id, productDto, categories);
 
             if (updatedProduct == null)
             {
-                return new ResponseDto<ProductDto>
+                return new ResponseDto<ProductResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -214,7 +219,7 @@ namespace Berryfy.API.Controllers
 
             }
 
-            var response = new ResponseDto<ProductDto>
+            var response = new ResponseDto<ProductResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -255,6 +260,7 @@ namespace Berryfy.API.Controllers
             return Ok(response);
         }
 
+
         [HttpGet]
         [Route("exists-by-id/{id}")]
         [AdminAndAbove]
@@ -284,6 +290,7 @@ namespace Berryfy.API.Controllers
             };
             return NotFound(notFoundResponse);
         }
+
 
         [HttpGet]
         [Route("exists-by-name/{name}")]
