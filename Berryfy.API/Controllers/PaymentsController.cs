@@ -1,11 +1,10 @@
-using AutoMapper;
 using Berryfy.Application.Authorization.Attributes;
-using Berryfy.Application.Dtos.PaymentDtos;
+using Berryfy.Application.Dtos.OrderDtos.Responses;
+using Berryfy.Application.Dtos.PaymentDtos.Requests;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.PaymentServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
-using Berryfy.Domain.Entities.OrderEntities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Berryfy.API.Controllers
@@ -17,26 +16,24 @@ namespace Berryfy.API.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IOrderService _orderService;
         private readonly ICartService _cartService;
-        private readonly IMapper _mapper;
         private readonly ILogger<PaymentsController> _logger;
 
         public PaymentsController(
             IPaymentService paymentService, 
             IOrderService orderService,
             ICartService cartService,
-            IMapper mapper,
             ILogger<PaymentsController> logger)
         {
             _paymentService = paymentService;
             _orderService = orderService;
             _cartService = cartService;
-            _mapper = mapper;
             _logger = logger;
         }
 
+
         [HttpPost("process")]
         [UserAndAbove]
-        public async Task<IActionResult> ProcessPayment([FromBody] CreatePaymentDto createPaymentDto)
+        public async Task<IActionResult> ProcessPayment([FromBody] CreatePayment createPaymentDto)
         {
             try
             {
@@ -75,7 +72,7 @@ namespace Berryfy.API.Controllers
                     var order = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
                     if (order != null)
                     {
-                        var mappedOrder = _mapper.Map<Order>(order);
+                        var mappedOrder = OrderResponse.MapToOrder(order);
                         
                         if (result.Data?.Success == true)
                         {
@@ -133,6 +130,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("{id}")]
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentById(int id)
@@ -153,6 +151,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payment", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpGet("transaction/{transactionId}")]
         [UserAndAbove]
@@ -175,6 +174,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("order/{orderId}")]
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentByOrderId(int orderId)
@@ -196,6 +196,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet]
         [AdminAndAbove]
         public async Task<IActionResult> GetAllPayments()
@@ -215,6 +216,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payments", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpGet("user/{userId}")]
         [UserAndAbove]
@@ -240,6 +242,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving user payments", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpGet("my-payments")]
         [UserAndAbove]
@@ -267,6 +270,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("status/{status}")]
         [AdminAndAbove]
         public async Task<IActionResult> GetPaymentsByStatus(PaymentStatus status)
@@ -286,6 +290,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payments by status", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpGet("date-range")]
         [AdminAndAbove]
@@ -307,6 +312,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("paginated")]
         [AdminAndAbove]
         public async Task<IActionResult> GetPaginatedPayments(int page = 1, int pageSize = 50)
@@ -327,9 +333,10 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPut("{id}/status")]
         [AdminAndAbove]
-        public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] UpdatePaymentStatusDto updateDto)
+        public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] UpdatePaymentStatus updateDto)
         {
             try
             {
@@ -352,9 +359,10 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("{id}/refund")]
         [AdminAndAbove]
-        public async Task<IActionResult> RefundPayment(int id, [FromBody] RefundPaymentDto refundDto)
+        public async Task<IActionResult> RefundPayment(int id, [FromBody] RefundPayment refundDto)
         {
             try
             {
@@ -377,6 +385,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpDelete("{id}")]
         [AdminAndAbove]
         public async Task<IActionResult> DeletePayment(int id)
@@ -396,6 +405,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while deleting payment", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpGet("stats/count")]
         [AdminAndAbove]
@@ -417,6 +427,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("stats/amount/total")]
         [AdminAndAbove]
         public async Task<IActionResult> GetTotalAmountByDateRange(DateTime startDate, DateTime endDate)
@@ -437,6 +448,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("search")]
         [AdminAndAbove]
         public async Task<IActionResult> SearchPayments(string searchTerm, int page = 1, int pageSize = 50)
@@ -456,6 +468,7 @@ namespace Berryfy.API.Controllers
                 return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while searching payments", Errors = new[] { ex.Message } });
             }
         }
+
 
         [HttpPost("{transactionId}/verify")]
         [AdminAndAbove]
