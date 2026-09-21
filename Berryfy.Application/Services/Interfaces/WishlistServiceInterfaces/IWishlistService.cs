@@ -1,22 +1,23 @@
-﻿using Berryfy.Application.Dtos.WishlistDtos;
+﻿using Berryfy.Application.Dtos.WishlistDtos.Requests;
+using Berryfy.Application.Dtos.WishlistDtos.Responses;
 
 namespace Berryfy.Application.Services.Interfaces.WishlistServiceInterfaces
 {
     public interface IWishlistService
     {
-        Task<WishlistDto> GetByIdAsync(int id);
-        Task<WishlistDto> GetUserDefaultWishlistAsync(int userId);
-        Task<IEnumerable<WishlistDto>> GetUserWishlistsAsync(int userId);
-        Task<WishlistDto> CreateAsync(int userId, CreateWishlistDto createWishlistDto);
-        Task<WishlistDto> UpdateAsync(int id, UpdateWishlistDto updateWishlistDto);
+        Task<WishlistResponse> GetByIdAsync(int id);
+        Task<WishlistResponse> GetUserDefaultWishlistAsync(int userId);
+        Task<IEnumerable<WishlistResponse>> GetUserWishlistsAsync(int userId);
+        Task<WishlistResponse> CreateAsync(int userId, CreateWishlist createWishlistDto);
+        Task<WishlistResponse> UpdateAsync(int id, UpdateWishlist updateWishlistDto);
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
 
-        Task<WishlistItemDto> AddItemAsync(int userId, AddToWishlistDto addToWishlistDto);
-        Task<WishlistItemDto> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItemDto updateItemDto);
+        Task<WishlistItem> AddItemAsync(int userId, AddToWishlist addToWishlistDto);
+        Task<WishlistItem> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItem updateItemDto);
         Task<bool> RemoveItemAsync(int wishlistId, int productId);
         Task<bool> IsProductInWishlistAsync(int userId, int productId);
-        Task<IEnumerable<WishlistItemDto>> GetWishlistItemsAsync(int wishlistId);
+        Task<IEnumerable<WishlistItem>> GetWishlistItemsAsync(int wishlistId);
 
 
         Task<bool> AddMultipleItemsAsync(int userId, int wishlistId, List<int> productIds);
@@ -24,11 +25,11 @@ namespace Berryfy.Application.Services.Interfaces.WishlistServiceInterfaces
         Task<bool> MoveItemsToWishlistAsync(int fromWishlistId, int toWishlistId, List<int> productIds);
         Task<bool> ClearWishlistAsync(int wishlistId);
 
-        Task<WishlistSummaryDto> GetUserSummaryAsync(int userId);
+        Task<WishlistSummary> GetUserSummaryAsync(int userId);
         Task<bool> ShareWishlistAsync(int wishlistId, bool isPublic);
-        Task<WishlistDto> DuplicateWishlistAsync(int wishlistId, string newName);
+        Task<WishlistResponse> DuplicateWishlistAsync(int wishlistId, string newName);
 
-        Task<IEnumerable<WishlistDto>> GetAllWishlistsAsync();
-        Task<GlobalWishlistStatsDto> GetGlobalStatsAsync();
+        Task<IEnumerable<WishlistResponse>> GetAllWishlistsAsync();
+        Task<GlobalWishlistStats> GetGlobalStatsAsync();
     }
 }
