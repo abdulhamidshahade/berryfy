@@ -1,31 +1,29 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.PaymentDtos;
 using Berryfy.Application.Dtos;
 using Berryfy.Application.Services.Interfaces.PaymentServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.PaymentEntities;
 using Berryfy.Domain.Repositories.PaymentInterfaces;
 using Microsoft.Extensions.Logging;
+using Berryfy.Application.Dtos.PaymentDtos.Requests;
+using Berryfy.Application.Dtos.PaymentDtos.Responses;
 
 namespace Berryfy.Application.Services.Concretes.PaymentConcretes
 {
     public class PaymentService : IPaymentService
     {
         private readonly IPaymentRepository _paymentRepository;
-        private readonly IMapper _mapper;
         private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(
             IPaymentRepository paymentRepository,
-            IMapper mapper,
             ILogger<PaymentService> logger)
         {
             _paymentRepository = paymentRepository;
-            _mapper = mapper;
             _logger = logger;
         }
 
-        public async Task<ResponseDto<PaymentResponseDto>> ProcessPaymentAsync(CreatePaymentDto createPaymentDto, int? userId, string? sessionId)
+        public async Task<ResponseDto<PaymentResponseDto>> ProcessPaymentAsync(CreatePayment createPaymentDto, int? userId, string? sessionId)
         {
             try
             {
@@ -78,7 +76,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var createdPayment = await _paymentRepository.CreateAsync(payment);
-                var paymentDto = _mapper.Map<PaymentDto>(createdPayment);
+                var paymentDto = PaymentResponse.MapFromPayment(createdPayment);
 
                 var response = new PaymentResponseDto
                 {
@@ -108,22 +106,22 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentDto>> GetPaymentByIdAsync(int id)
+        public async Task<ResponseDto<PaymentResponse>> GetPaymentByIdAsync(int id)
         {
             try
             {
                 var payment = await _paymentRepository.GetByIdAsync(id);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentDto>
+                    return new ResponseDto<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
                     };
                 }
 
-                var paymentDto = _mapper.Map<PaymentDto>(payment);
-                return new ResponseDto<PaymentDto>
+                var paymentDto = PaymentResponse.MapFromPayment(payment);
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -132,7 +130,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by ID: {PaymentId}", id);
-                return new ResponseDto<PaymentDto>
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -140,22 +138,22 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentDto>> GetPaymentByTransactionIdAsync(string transactionId)
+        public async Task<ResponseDto<PaymentResponse>> GetPaymentByTransactionIdAsync(string transactionId)
         {
             try
             {
                 var payment = await _paymentRepository.GetByTransactionIdAsync(transactionId);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentDto>
+                    return new ResponseDto<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
                     };
                 }
 
-                var paymentDto = _mapper.Map<PaymentDto>(payment);
-                return new ResponseDto<PaymentDto>
+                var paymentDto = PaymentResponse.MapFromPayment(payment);
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -164,7 +162,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by transaction ID: {TransactionId}", transactionId);
-                return new ResponseDto<PaymentDto>
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -172,22 +170,22 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentDto>> GetPaymentByOrderIdAsync(int orderId)
+        public async Task<ResponseDto<PaymentResponse>> GetPaymentByOrderIdAsync(int orderId)
         {
             try
             {
                 var payment = await _paymentRepository.GetByOrderIdAsync(orderId);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentDto>
+                    return new ResponseDto<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found for this order"
                     };
                 }
 
-                var paymentDto = _mapper.Map<PaymentDto>(payment);
-                return new ResponseDto<PaymentDto>
+                var paymentDto = PaymentResponse.MapFromPayment(payment);
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -196,7 +194,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by order ID: {OrderId}", orderId);
-                return new ResponseDto<PaymentDto>
+                return new ResponseDto<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -204,14 +202,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetAllPaymentsAsync()
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetAllPaymentsAsync()
         {
             try
             {
                 var payments = await _paymentRepository.GetAllAsync();
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -220,7 +218,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all payments");
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments"
@@ -228,14 +226,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetPaymentsByUserIdAsync(int userId)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByUserIdAsync(int userId)
         {
             try
             {
                 var payments = await _paymentRepository.GetByUserIdAsync(userId);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -244,7 +242,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by user ID: {UserId}", userId);
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving user payments"
@@ -252,14 +250,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetPaymentsByStatusAsync(PaymentStatus status)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByStatusAsync(PaymentStatus status)
         {
             try
             {
                 var payments = await _paymentRepository.GetByStatusAsync(status);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -268,7 +266,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by status: {Status}", status);
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments by status"
@@ -276,14 +274,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             try
             {
                 var payments = await _paymentRepository.GetByDateRangeAsync(startDate, endDate);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -292,7 +290,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by date range");
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments by date range"
@@ -300,14 +298,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.GetPaginatedAsync(pageNumber, pageSize);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -316,7 +314,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments");
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving paginated payments"
@@ -324,14 +322,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.GetPaginatedByUserIdAsync(userId, pageNumber, pageSize);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -340,7 +338,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments by user ID: {UserId}", userId);
-                return new ResponseDto<IEnumerable<PaymentDto>>
+                return new ResponseDto<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving user payments"
@@ -379,7 +377,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var updatedPayment = await _paymentRepository.UpdateAsync(payment);
-                var paymentDto = _mapper.Map<PaymentDto>(updatedPayment);
+                var paymentDto = PaymentResponse.MapFromPayment(updatedPayment);
 
                 var response = new PaymentResponseDto
                 {
@@ -450,7 +448,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var updatedPayment = await _paymentRepository.UpdateAsync(payment);
-                var paymentDto = _mapper.Map<PaymentDto>(updatedPayment);
+                var paymentDto = PaymentResponse.MapFromPayment(updatedPayment);
 
                 var response = new PaymentResponseDto
                 {
@@ -572,19 +570,19 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentDto>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
+        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.SearchAsync(searchTerm, pageNumber, pageSize);
-                var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
+                var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentDto>> { IsSuccess = true, Data = paymentDtos };
+                return new ResponseDto<IEnumerable<PaymentResponse>> { IsSuccess = true, Data = paymentDtos };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching payments with term: {SearchTerm}", searchTerm);
-                return new ResponseDto<IEnumerable<PaymentDto>> { IsSuccess = false, StatusMessage = "An error occurred while searching payments" };
+                return new ResponseDto<IEnumerable<PaymentResponse>> { IsSuccess = false, StatusMessage = "An error occurred while searching payments" };
             }
         }
 
@@ -607,7 +605,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     await _paymentRepository.UpdateAsync(payment);
                 }
 
-                var paymentDto = _mapper.Map<PaymentDto>(payment);
+                var paymentDto = PaymentResponse.MapFromPayment(payment);
                 var response = new PaymentResponseDto
                 {
                     Success = verificationResult.Success,
