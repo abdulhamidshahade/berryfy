@@ -1,16 +1,17 @@
 ﻿using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.ProductDtos;
+using Berryfy.Application.Dtos.ProductDtos.Requests;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
 
 namespace Berryfy.Application.Services.Interfaces.ProductServiceInterfaces
 {
     public interface IProductService
     {
-        Task<IReadOnlyList<ProductDto>> GetAllAsync();
-        Task<PaginationDto<ProductDto>> GetPaginatedAsync(ProductFilterDto filter);
-        Task<ProductDto> GetByIdAsync(int id);
-        Task<ProductDto> GetByNameAsync(string name);
-        Task<ProductDto> CreateAsync(CreateProductDto productDto, List<int> categories);
-        Task<ProductDto> UpdateAsync(int id, UpdateProductDto productDto, List<int> categories);
+        Task<IReadOnlyList<ProductResponse>> GetAllAsync();
+        Task<PaginationDto<ProductResponse>> GetPaginatedAsync(ProductFilter filter);
+        Task<ProductResponse> GetByIdAsync(int id);
+        Task<ProductResponse> GetByNameAsync(string name);
+        Task<ProductResponse> CreateAsync(CreateProduct productDto, List<int> categories);
+        Task<ProductResponse> UpdateAsync(int id, UpdateProduct productDto, List<int> categories);
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsByIdAsync(int id);
         Task<bool> ExistsByNameAsync(string name);
