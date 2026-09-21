@@ -1,13 +1,14 @@
 using AutoMapper;
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.OrderDtos;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.OrderEntities;
 using Microsoft.AspNetCore.Mvc;
+using Berryfy.Application.Dtos.OrderDtos.Requests;
+using Berryfy.Application.Dtos.OrderDtos.Responses;
 
 namespace Berryfy.API.Controllers
 {
@@ -16,22 +17,20 @@ namespace Berryfy.API.Controllers
     public class OrdersController : BaseController
     {
         private readonly IOrderService _orderService;
-        private readonly IMapper _mapper;
         private readonly ICartService _cartService;
 
         public OrdersController(
             IOrderService orderService,
-            IMapper mapper,
             ICartService cartService)
         {
             _orderService = orderService;
-            _mapper = mapper;
             _cartService = cartService;
         }
 
+
         [HttpPost]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<Order>>> CreateOrder([FromBody] CreateOrderDto request)
+        public async Task<ActionResult<ResponseDto<Order>>> CreateOrder([FromBody] CreateOrder request)
         {
             try
             {
@@ -84,16 +83,17 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("{id}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<OrderDto>>> GetOrderById(int id)
+        public async Task<ActionResult<ResponseDto<OrderResponse>>> GetOrderById(int id)
         {
             try
             {
                 var order = await _orderService.GetOrderByIdAsync(id);
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<OrderDto>
+                    return NotFound(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -103,7 +103,7 @@ namespace Berryfy.API.Controllers
 
                 if (!CanAccessUserResource(order.UserId)) return Forbid();
 
-                return Ok(new ResponseDto<OrderDto>
+                return Ok(new ResponseDto<OrderResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -113,7 +113,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<OrderDto>
+                return StatusCode(500, new ResponseDto<OrderResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -123,9 +123,10 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("user/{userId:int}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<List<OrderDto>>>> GetUserOrders(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<ResponseDto<List<OrderResponse>>>> GetUserOrders(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
@@ -136,7 +137,7 @@ namespace Berryfy.API.Controllers
 
                 var orders = await _orderService.GetUserOrdersAsync(userId, page, pageSize);
 
-                return Ok(new ResponseDto<List<OrderDto>>
+                return Ok(new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -146,7 +147,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<OrderDto>>
+                return StatusCode(500, new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -155,6 +156,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPut("{orderId}/cancel")]
         [AdminAndAbove]
@@ -207,6 +209,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPut("{orderId}/refund")]
         [AdminAndAbove]
@@ -261,6 +264,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("calculate-totals")]
         [UserAndAbove]
         public async Task<ActionResult<ResponseDto<OrderTotal>>> CalculateOrderTotals([FromQuery] int cartId)
@@ -303,16 +307,17 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPut("{orderId}/update-status")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<OrderDto>>> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusRequest request)
+        public async Task<ActionResult<ResponseDto<OrderResponse>>> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusRequest request)
         {
             try
             {
                 var order = await _orderService.GetOrderByIdAsync(orderId);
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<OrderDto>
+                    return NotFound(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -320,11 +325,11 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                var mappedOrder = _mapper.Map<Order>(order);
+                var mappedOrder = OrderResponse.MapToOrder(order);
                 var result = await _orderService.UpdateOrderStatusAsync(mappedOrder, request.NewStatus);
                 if (!result)
                 {
-                    return Conflict(new ResponseDto<OrderDto>
+                    return Conflict(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 409,
@@ -332,7 +337,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<OrderDto>
+                return Ok(new ResponseDto<OrderResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -342,7 +347,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<OrderDto>
+                return StatusCode(500, new ResponseDto<OrderResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -352,15 +357,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("reference/{referenceNumber}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<OrderDto>>> GetOrderByReference(string referenceNumber)
+        public async Task<ActionResult<ResponseDto<OrderResponse>>> GetOrderByReference(string referenceNumber)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(referenceNumber))
                 {
-                    return BadRequest(new ResponseDto<OrderDto>
+                    return BadRequest(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -371,7 +377,7 @@ namespace Berryfy.API.Controllers
                 var order = await _orderService.GetOrderByReferenceNumberAsync(referenceNumber);
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<OrderDto>
+                    return NotFound(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -379,17 +385,17 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<OrderDto>
+                return Ok(new ResponseDto<OrderResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order retrieved successfully",
-                    Data = _mapper.Map<OrderDto>(order)
+                    Data = OrderResponse.MapFromOrder(order)
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<OrderDto>
+                return StatusCode(500, new ResponseDto<OrderResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -399,25 +405,26 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("status/{status}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<OrderDto>>>> GetOrdersByStatus(OrderStatus status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<ResponseDto<List<OrderResponse>>>> GetOrdersByStatus(OrderStatus status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
                 var orders = await _orderService.GetOrdersByStatusAsync(status, page, pageSize);
 
-                return Ok(new ResponseDto<List<OrderDto>>
+                return Ok(new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Orders retrieved successfully",
-                    Data = _mapper.Map<List<OrderDto>>(orders)
+                    Data = OrderResponse.MapFromOrder(orders)
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<OrderDto>>
+                return StatusCode(500, new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -427,15 +434,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("admin/all")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<OrderDto>>>> GetAllOrdersForAdmin([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        public async Task<ActionResult<ResponseDto<List<OrderResponse>>>> GetAllOrdersForAdmin([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         {
             try
             {
                 var orders = await _orderService.GetAllOrdersAsync(page, pageSize);
 
-                return Ok(new ResponseDto<List<OrderDto>>
+                return Ok(new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -445,7 +453,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<OrderDto>>
+                return StatusCode(500, new ResponseDto<List<OrderResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -454,6 +462,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPut("{orderId}/process")]
         [AdminAndAbove]
@@ -491,9 +500,11 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
+
         [HttpPut("{orderId}/sync-with-cart")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<OrderDto>>> SyncOrderWithCart(int orderId)
+        public async Task<ActionResult<ResponseDto<OrderResponse>>> SyncOrderWithCart(int orderId)
         {
             try
             {
@@ -502,7 +513,7 @@ namespace Berryfy.API.Controllers
                 
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<OrderDto>
+                    return NotFound(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -517,7 +528,7 @@ namespace Berryfy.API.Controllers
 
                 if (order.CartId <= 0)
                 {
-                    return BadRequest(new ResponseDto<OrderDto>
+                    return BadRequest(new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -528,7 +539,7 @@ namespace Berryfy.API.Controllers
                 var result = await _orderService.SyncOrderWithCartAsync(orderId, order.CartId);
                 if (!result)
                 {
-                    return StatusCode(500, new ResponseDto<OrderDto>
+                    return StatusCode(500, new ResponseDto<OrderResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -537,7 +548,7 @@ namespace Berryfy.API.Controllers
                 }
 
                 var updatedOrder = await _orderService.GetOrderByIdAsync(orderId);
-                return Ok(new ResponseDto<OrderDto>
+                return Ok(new ResponseDto<OrderResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -547,7 +558,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<OrderDto>
+                return StatusCode(500, new ResponseDto<OrderResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
