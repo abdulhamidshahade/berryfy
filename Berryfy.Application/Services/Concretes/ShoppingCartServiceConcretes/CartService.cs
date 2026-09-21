@@ -1,5 +1,4 @@
 using AutoMapper;
-using Berryfy.Application.Dtos.ShoppingCartDtos;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
@@ -7,19 +6,20 @@ using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Entities.ShoppingCartEntities;
-using Berryfy.Application.Dtos.CouponDtos;
 using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.OrderInterfaces;
 using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Berryfy.Application.Dtos.CouponDtos.Responses;
+using Berryfy.Application.Dtos.ShoppingCartDtos.Responses;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
 
 namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 {
     public class CartService : ICartService
     {
 
-        private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICartRepository _cartRepository;
         private readonly ILogger<CartService> _logger;
@@ -30,8 +30,6 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
         private readonly IOrderRepository _orderRepository;
 
         public CartService(
-                           IMapper mapper,
-                           IUnitOfWork unitOfWork,
                            ICartRepository cartRepository,
                            ILogger<CartService> logger,
                            IConfiguration configuration,
@@ -42,7 +40,6 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                            IOrderRepository orderRepository
                            )
         {
-            _mapper = mapper;
             _unitOfWork = unitOfWork;
             _cartRepository = cartRepository;
             _logger = logger;
@@ -53,7 +50,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             _orderRepository = orderRepository;
         }
 
-        private static decimal GetPercentageRate(CouponDto coupon)
+        private static decimal GetPercentageRate(CouponResponse coupon)
         {
             if (coupon.Value > 0)
             {
@@ -68,7 +65,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             return 0;
         }
 
-        private static decimal GetFixedDiscountAmount(CouponDto coupon)
+        private static decimal GetFixedDiscountAmount(CouponResponse coupon)
         {
             if (coupon.Value > 0)
             {
@@ -78,7 +75,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             return coupon.DiscountAmount > 0 ? coupon.DiscountAmount : 0;
         }
 
-        private static decimal ComputePercentageDiscount(CouponDto coupon, decimal cartSubTotal)
+        private static decimal ComputePercentageDiscount(CouponResponse coupon, decimal cartSubTotal)
         {
             var rate = GetPercentageRate(coupon);
             return rate > 0
@@ -86,13 +83,13 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 : 0;
         }
 
-        private static decimal ComputeFixedDiscount(CouponDto coupon, decimal cartSubTotal)
+        private static decimal ComputeFixedDiscount(CouponResponse coupon, decimal cartSubTotal)
         {
             var amt = GetFixedDiscountAmount(coupon);
             return amt > 0 ? Math.Min(amt, cartSubTotal) : 0;
         }
 
-        private static decimal ComputeDiscountAmount(CouponDto coupon, decimal cartSubTotal)
+        private static decimal ComputeDiscountAmount(CouponResponse coupon, decimal cartSubTotal)
         {
             if (cartSubTotal <= 0)
             {
@@ -108,7 +105,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
         }
 
 
-        public async Task<CartDto> GetCartByUserIdAsync(int userId, CartStatus? status = CartStatus.Active)
+        public async Task<CartResponse> GetCartByUserIdAsync(int userId, CartStatus? status = CartStatus.Active)
         {
             if (userId <= 0)
             {
@@ -121,11 +118,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
 
-            var mappedCart = _mapper.Map<CartDto>(dbCart);
+            var mappedCart = CartResponse.MapFromCart(dbCart);
 
             return mappedCart;
         }
-        public async Task<CartDto> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
+        public async Task<CartResponse> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
         {
             if (string.IsNullOrEmpty(sessionId))
             {
@@ -140,7 +137,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 dbCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, status);
             }
 
-            return _mapper.Map<CartDto>(dbCart);
+            return CartResponse.MapFromCart(dbCart);
         }
 
         public async Task MergeCartAsync(int userId, string sessionId)
@@ -230,7 +227,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             _logger.LogInformation("Merged guest session {SessionId} into user {UserId} cart {UserCartId}", sessionId, userId, userCart.Id);
         }
 
-        public async Task<CartDto> GetCartByIdAsync(int cartId, CartStatus status)
+        public async Task<CartResponse> GetCartByIdAsync(int cartId, CartStatus status)
         {
 
             var dbCart = await _cartRepository.GetCartByIdAsync(cartId, status);
@@ -240,19 +237,19 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
 
-            var mappedCart = _mapper.Map<CartDto>(dbCart);
+            var mappedCart = CartResponse.MapFromCart(dbCart);
 
             return mappedCart;
         }
 
 
-        public async Task<CartDto> CreateCartAsync(int? userId, string? sessionId)
+        public async Task<CartResponse> CreateCartAsync(int? userId, string? sessionId)
         {
-            CartDto? cart = null;
+            CartResponse? cart = null;
 
             if (userId.HasValue)
             {
-                cart = _mapper.Map<CartDto>(await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active));
+                cart = CartResponse.MapFromCart(await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active));
 
                 if (cart != null)
                 {
@@ -262,7 +259,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 else
                 {
                     var createdCart = await _cartRepository.CreateCartAsync(userId, CartStatus.Active);
-                    return _mapper.Map<CartDto>(createdCart);
+                    return CartResponse.MapFromCart(createdCart);
                 }
 
             }
@@ -270,7 +267,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             else if (!string.IsNullOrEmpty(sessionId))
             {
 
-                cart = _mapper.Map<CartDto>(await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active));
+                cart = CartResponse.MapFromCart(await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active));
 
                 if (cart != null)
                 {
@@ -279,7 +276,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 else
                 {
                     var createdCart = await _cartRepository.CreateCartAsync(sessionId, CartStatus.Active);
-                    return _mapper.Map<CartDto>(createdCart);
+                    return CartResponse.MapFromCart(createdCart);
                 }
             }
 
@@ -288,7 +285,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
         }
-        public async Task<CartDto?> AddItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
+        public async Task<CartResponse?> AddItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
         {
             try
             {
@@ -302,7 +299,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 }
 
                 var product = await _productService.GetByIdAsync(productId);
-                var mappedProduct = _mapper.Map<Product>(product);
+                var mappedProduct = ProductResponse.MapToProduct(product);
 
                 if (mappedProduct == null)
                 {
@@ -392,7 +389,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     _logger.LogInformation("Successfully added item to cart: CartId={CartId}, ProductId={ProductId}, Quantity={Quantity}",
                         cartId, productId, quantity);
 
-                    return _mapper.Map<CartDto>(updatedCart);
+                    return CartResponse.MapFromCart(updatedCart);
                 }
                 catch
                 {
@@ -414,7 +411,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
         }
-        public async Task<CartDto> UpdateItemQuantityAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
+        public async Task<CartResponse> UpdateItemQuantityAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
         {
 
             if (quantity <= 0)
@@ -459,7 +456,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
             if (quantityDifference == 0)
             {
-                return _mapper.Map<CartDto>(cart);
+                return CartResponse.MapFromCart(cart);
             }
 
             if (quantityDifference > 0)
@@ -497,7 +494,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CartDto>(updatedQuantity);
+            return CartResponse.MapFromCart(updatedQuantity);
         }
 
 
@@ -803,16 +800,16 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             }
         }
 
-        public async Task<CartDto> RefreshCartAsync(int cartId)
+        public async Task<CartResponse> RefreshCartAsync(int cartId)
         {
             return await GetCartByIdAsync(cartId, CartStatus.Active)
                 ?? await GetCartByIdAsync(cartId, CartStatus.PendingPayment);
         }
 
 
-        public async Task<CartItemDto> GetItemAsync(int cartId, int productId)
+        public async Task<CartItemResponse> GetItemAsync(int cartId, int productId)
         {
-            CartDto? cart = null;
+            CartResponse? cart = null;
 
             cart = await GetCartByIdAsync(cartId, CartStatus.Active);
             if (cart == null)
@@ -832,11 +829,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CartItemDto>(item);
+            return item;
         }
 
 
-        public async Task<CartDto> ApplyCouponAsync(int cartId, int? userId, string couponCode)
+        public async Task<CartResponse> ApplyCouponAsync(int cartId, int? userId, string couponCode)
         {
             try
             {
@@ -922,7 +919,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     return null;
                 }
 
-                return _mapper.Map<CartDto>(updatedCart);
+                return _mapper.Map<CartResponse>(updatedCart);
             }
             catch (Exception ex)
             {
@@ -931,7 +928,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             }
         }
 
-        public async Task<CartDto> RemoveCouponAsync(int cartId, int? userId, string? sessionId, int couponId)
+        public async Task<CartResponse> RemoveCouponAsync(int cartId, int? userId, string? sessionId, int couponId)
         {
             try
             {
@@ -958,7 +955,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     throw new InvalidOperationException("Failed to remove coupon from cart");
                 }
 
-                return _mapper.Map<CartDto>(updatedCart);
+                return _mapper.Map<CartResponse>(updatedCart);
             }
             catch (Exception ex)
             {
