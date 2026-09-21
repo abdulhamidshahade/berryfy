@@ -25,7 +25,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
 
         public virtual Cart Cart { get; set; } = null!;
         public virtual Coupon Coupon { get; set; } = null!;
-        public virtual ApplicationUser? User { get; set; }
+        public virtual User? User { get; set; }
 
 
 
