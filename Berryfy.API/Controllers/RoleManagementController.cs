@@ -1,6 +1,7 @@
 ﻿using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.AuthDtos;
+using Berryfy.Application.Dtos.AuthDtos.Requests;
+using Berryfy.Application.Dtos.AuthDtos.Responses;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,6 +44,7 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpDelete("roles/{roleName}")]
         public async Task<IActionResult> DeleteRole(string roleName)
         {
@@ -65,6 +67,7 @@ namespace Berryfy.API.Controllers
                 StatusMessage = $"Failed to delete role '{roleName}'."
             });
         }
+
 
         [HttpPost("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRoleToUser(int userId, string roleName)
@@ -89,6 +92,7 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpDelete("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string roleName)
         {
@@ -112,6 +116,7 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("users/{userId}/roles")]
         public async Task<IActionResult> GetUserRoles(int userId)
         {
@@ -126,13 +131,14 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("roles")]
         [SuperAdminOnly]
         public async Task<IActionResult> GetAllRoles()
         {
             var roles = await _roleManagementService.GetAllRolesAsync();
 
-            return Ok(new ResponseDto<List<ApplicationRoleDto>>
+            return Ok(new ResponseDto<List<RoleResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -141,12 +147,13 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("roles/{roleName}/users")]
         public async Task<IActionResult> GetUsersInRole(string roleName)
         {
             var users = await _roleManagementService.GetUsersInRoleAsync(roleName);
 
-            return Ok(new ResponseDto<List<ApplicationUserDto>>
+            return Ok(new ResponseDto<List<UserResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -154,6 +161,7 @@ namespace Berryfy.API.Controllers
                 Data = users
             });
         }
+
 
         [HttpGet("users/{userId}/roles/{roleName}/check")]
         public async Task<IActionResult> IsUserInRole(int userId, string roleName)
@@ -169,6 +177,7 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpPost("initialize-default-roles")]
         public async Task<IActionResult> InitializeDefaultRoles()
         {
@@ -182,12 +191,13 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _roleManagementService.GetAllUsersAsync();
 
-            return Ok(new ResponseDto<List<ApplicationUserWithRolesDto>>
+            return Ok(new ResponseDto<List<UserWithRolesResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -196,6 +206,7 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("users/{userId}")]
         public async Task<IActionResult> GetUser(int userId)
         {
@@ -203,7 +214,7 @@ namespace Berryfy.API.Controllers
 
             if (user == null)
             {
-                return NotFound(new ResponseDto<ApplicationUserWithRolesDto>
+                return NotFound(new ResponseDto<UserWithRolesResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -211,7 +222,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<ApplicationUserWithRolesDto>
+            return Ok(new ResponseDto<UserWithRolesResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -220,12 +231,13 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpGet("stats")]
         public async Task<IActionResult> GetRoleStats()
         {
             var stats = await _roleManagementService.GetRoleStatsAsync();
 
-            return Ok(new ResponseDto<RoleStatsDto>
+            return Ok(new ResponseDto<RoleStats>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -233,6 +245,7 @@ namespace Berryfy.API.Controllers
                 Data = stats
             });
         }
+
 
         [HttpPut("roles/{oldRoleName}")]
         public async Task<IActionResult> UpdateRole(string oldRoleName, [FromBody] string newRoleName)
@@ -257,12 +270,13 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpPost("bulk-assign")]
         public async Task<IActionResult> BulkAssignRole([FromBody] BulkAssignRoleRequest request)
         {
             if (request == null || request.UserIds == null || !request.UserIds.Any() || string.IsNullOrWhiteSpace(request.RoleName))
             {
-                return BadRequest(new ResponseDto<BulkAssignmentResultDto>
+                return BadRequest(new ResponseDto<BulkAssignmentResult>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -274,7 +288,7 @@ namespace Berryfy.API.Controllers
 
             if (result.IsSuccess)
             {
-                return Ok(new ResponseDto<BulkAssignmentResultDto>
+                return Ok(new ResponseDto<BulkAssignmentResult>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -283,7 +297,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<BulkAssignmentResultDto>
+            return BadRequest(new ResponseDto<BulkAssignmentResult>
             {
                 IsSuccess = false,
                 StatusCode = 400,
