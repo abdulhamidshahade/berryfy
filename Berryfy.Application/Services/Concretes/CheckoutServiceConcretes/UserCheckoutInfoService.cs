@@ -1,4 +1,5 @@
-using Berryfy.Application.Dtos.CheckoutDtos;
+using Berryfy.Application.Dtos.CheckoutDtos.Requests;
+using Berryfy.Application.Dtos.CheckoutDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CheckoutServiceInterfaces;
 using Berryfy.Domain.Entities.CheckoutEntities;
 using Berryfy.Domain.Repositories.CheckoutInterfaces;
@@ -14,7 +15,7 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
             _repository = repository;
         }
 
-        public async Task<UserCheckoutInfoDto?> GetCheckoutInfoAsync(int userId)
+        public async Task<UserCheckoutInfoResponse?> GetCheckoutInfoAsync(int userId)
         {
             var checkoutInfo = await _repository.GetByUserIdAsync(userId);
 
@@ -26,7 +27,7 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
             return MapToDto(checkoutInfo);
         }
 
-        public async Task<UserCheckoutInfoDto> SaveCheckoutInfoAsync(int userId, SaveCheckoutInfoDto dto)
+        public async Task<UserCheckoutInfoResponse> SaveCheckoutInfoAsync(int userId, SaveCheckoutInfo dto)
         {
             var existing = await _repository.GetByUserIdAsync(userId);
 
@@ -71,7 +72,7 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
             }
         }
 
-        public async Task<UserCheckoutInfoDto> SavePaymentBillingInfoAsync(int userId, SavePaymentBillingDto dto)
+        public async Task<UserCheckoutInfoResponse> SavePaymentBillingInfoAsync(int userId, SavePaymentBilling dto)
         {
             var existing = await _repository.GetByUserIdAsync(userId);
 
@@ -129,9 +130,9 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
             return await _repository.DeleteAsync(existing.Id);
         }
 
-        private UserCheckoutInfoDto MapToDto(UserCheckoutInfo entity)
+        private UserCheckoutInfoResponse MapToDto(UserCheckoutInfo entity)
         {
-            return new UserCheckoutInfoDto
+            return new UserCheckoutInfoResponse
             {
                 Id = entity.Id,
                 UserId = entity.UserId,
