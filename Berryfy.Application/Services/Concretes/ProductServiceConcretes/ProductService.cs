@@ -1,10 +1,7 @@
-﻿
-using AutoMapper;
-using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.ProductDtos;
+﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.ProductDtos.Requests;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
-using Berryfy.Domain.Entities.ProductEntities;
-using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Microsoft.Extensions.Logging;
 
@@ -13,33 +10,30 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
     public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepository;
-        private readonly IMapper _mapper;
         private readonly IProductCategoryService _productCategoryService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ProductService> _logger;
 
         public ProductService(IProductRepository productRepository,
-                              IMapper mapper,
                               IProductCategoryService productCategoryService,
                               IUnitOfWork unitOfWork,
                               ILogger<ProductService> logger
         )
         {
             _productRepository = productRepository;
-            _mapper = mapper;
             _productCategoryService = productCategoryService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
         
-        public async Task<IReadOnlyList<ProductDto>> GetAllAsync()
+        public async Task<IReadOnlyList<ProductResponse>> GetAllAsync()
         {
             var products = await _productRepository.GetAllAsync();
-            return _mapper.Map<IReadOnlyList<ProductDto>>(products);
+            return ProductResponse.MapFromProduct(products);
         }
 
-        public async Task<ProductDto> GetByIdAsync(int id)
+        public async Task<ProductResponse> GetByIdAsync(int id)
         {
             var product = await _productRepository.GetByIdAsync(id);
 
@@ -48,10 +42,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<ProductDto>(product);
+            return ProductResponse.MapFromProduct(product);
         }
 
-        public async Task<ProductDto> GetByNameAsync(string name)
+        public async Task<ProductResponse> GetByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -65,11 +59,11 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<ProductDto>(product);
+            return ProductResponse.MapFromProduct(product);
         }
 
 
-        public async Task<ProductDto> CreateAsync(CreateProductDto productDto, List<int> categories)
+        public async Task<ProductResponse> CreateAsync(CreateProduct productDto, List<int> categories)
         {
             if (productDto == null || productDto.Price < 0 || productDto.StockQuantity < 0 ||
                 productDto.ReservedStock != 0 || productDto.LowStockThreshold < 0)
@@ -84,10 +78,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             await _unitOfWork.BeginTransactionAsync();
 
-            var product = _mapper.Map<Product>(productDto);
+            var product = CreateProduct.MapToProduct(productDto);
             var createdProduct = await _productRepository.CreateAsync(product);
 
-            var productToDto = _mapper.Map<ProductDto>(createdProduct);
+            var productToDto = ProductResponse.MapFromProduct(createdProduct);
 
             if (!await _productCategoryService.AddProductCategoryAsync(productToDto, categories))
             {
@@ -97,11 +91,11 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             await _unitOfWork.CommitTransactionAsync();
 
-            return _mapper.Map<ProductDto>(await _productRepository.GetByIdAsync(createdProduct.Id));
+            return ProductResponse.MapFromProduct(await _productRepository.GetByIdAsync(createdProduct.Id));
         }
 
         
-        public async Task<ProductDto> UpdateAsync(int id, UpdateProductDto productDto, List<int> categories)
+        public async Task<ProductResponse> UpdateAsync(int id, UpdateProduct productDto, List<int> categories)
         {
             if (productDto == null || productDto.Price < 0 || productDto.LowStockThreshold < 0)
             {
@@ -122,7 +116,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            var mappedProduct = _mapper.Map<Product>(productDto);
+            var mappedProduct = UpdateProduct.MapToProduct(productDto);
             // Inventory changes belong to the inventory workflow, which logs and validates them.
             mappedProduct.StockQuantity = existingProduct.StockQuantity;
             mappedProduct.ReservedStock = existingProduct.ReservedStock;
@@ -131,7 +125,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             var updatedProduct = await _productRepository.UpdateAsync(id, mappedProduct);
 
-            var productToDto = _mapper.Map<ProductDto>(updatedProduct);
+            var productToDto = ProductResponse.MapFromProduct(updatedProduct);
 
             if (!await _productCategoryService.UpdateProductCategoryAsync(productToDto, categories))
             {
@@ -143,7 +137,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             var returnProduct = await _productRepository.GetByIdAsync(updatedProduct.Id);
 
-            return _mapper.Map<ProductDto>(returnProduct);
+            return ProductResponse.MapFromProduct(returnProduct);
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -172,7 +166,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             return await _productRepository.ExistsByNameAsync(name);
         }
 
-        public async Task<PaginationDto<ProductDto>> GetPaginatedAsync(ProductFilterDto filter)
+        public async Task<PaginationDto<ProductResponse>> GetPaginatedAsync(ProductFilter filter)
         {
             _logger.LogInformation("Getting paginated products with filter: {MaxPrice}", filter.MaxPrice);
             var products = await _productRepository.GetFilteredAsync(
@@ -194,8 +188,8 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 filter.IsActive
             );
 
-            var productDtos = _mapper.Map<IReadOnlyList<ProductDto>>(products);
-            var paginationResult = new PaginationDto<ProductDto>(
+            var productDtos = ProductResponse.MapFromProduct(products);
+            var paginationResult = new PaginationDto<ProductResponse>(
                 productDtos,
                 filter.PageNumber,
                 filter.PageSize,
