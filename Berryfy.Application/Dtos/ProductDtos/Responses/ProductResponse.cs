@@ -1,4 +1,5 @@
 ﻿using Berryfy.Application.Dtos.CategoryDtos.Responses;
+using Berryfy.Domain.Entities.ProductEntities;
 
 namespace Berryfy.Application.Dtos.ProductDtos.Responses
 {
@@ -17,6 +18,34 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
-        public List<CategoryResponse> ProductCategories { get; set; }
+
+        public static ProductResponse MapFromProduct(Product product)
+        {
+            return new ProductResponse
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                StockQuantity = product.StockQuantity,
+                ImageUrl = product.ImageUrl,
+                ReservedStock = product.ReservedStock,
+                LowStockThreshold = product.LowStockThreshold,
+                IsActive = product.IsActive,
+                SKU = product.SKU
+            };
+        }
+
+        public static List<ProductResponse> MapFromProduct(IEnumerable<Product> products)
+        {
+            List<ProductResponse> productResponses = new List<ProductResponse>();
+
+            foreach(Product product in products)
+            {
+                productResponses.Add(MapFromProduct(product));
+            }
+
+            return productResponses;
+        }
     }
 }
