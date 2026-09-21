@@ -1,4 +1,5 @@
 ﻿using Berryfy.Domain.Constants;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 
 namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
 {
@@ -20,5 +21,22 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
         public decimal DiscountTotal { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal Total { get; set; }
+
+        public static CartResponse MapFromCart(Cart cart)
+        {
+            return new CartResponse
+            {
+                Id = cart.Id,
+                UserId = cart.UserId,
+                SessionId = cart.SessionId,
+                Status = cart.Status,
+                ExpiresAt = cart.ExpiresAt,
+                Note = cart.Note,
+                SubTotal = cart.SubTotal,
+                DiscountTotal = cart.DiscountTotal,
+                TaxAmount = cart.TaxAmount,
+                Total = cart.Total
+            };
+        }
     }
 }
