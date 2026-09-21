@@ -1,5 +1,4 @@
 using AutoMapper;
-using Berryfy.Application.Dtos.OrderDtos;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
@@ -8,13 +7,14 @@ using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.OrderEntities;
 using Berryfy.Domain.Repositories.OrderInterfaces;
 using Microsoft.Extensions.Logging;
+using Berryfy.Application.Dtos.OrderDtos.Requests;
+using Berryfy.Application.Dtos.OrderDtos.Responses;
 
 namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 {
     public class OrderService : IOrderService
     {
         private readonly ICartService _cartService;
-        private readonly IMapper _mapper;
         private readonly IOrderRepository _orderRepository;
         private readonly IInventoryService _inventoryService;
         private readonly IOrderCancellationService _orderCancellationService;
@@ -22,7 +22,6 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
         private readonly ILogger<OrderService> _logger;
 
         public OrderService(ICartService cartService,
-                            IMapper mapper,
                             IOrderRepository orderRepository,
                             IInventoryService inventoryService,
                             IOrderCancellationService orderCancellationService,
@@ -30,7 +29,6 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                             ILogger<OrderService> logger)
         {
             _cartService = cartService;
-            _mapper = mapper;
             _orderRepository = orderRepository;
             _inventoryService = inventoryService;
             _orderCancellationService = orderCancellationService;
@@ -70,7 +68,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             return result.IsSuccess;
         }
 
-        public async Task<Order?> CreateOrderFromCartAsync(int cartId, CreateOrderDto orderDto)
+        public async Task<Order?> CreateOrderFromCartAsync(int cartId, CreateOrder orderDto)
         {
             var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
             if (cart == null)
@@ -210,11 +208,11 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             return referenceNumber;
         }
 
-        public async Task<OrderDto?> GetOrderByIdAsync(int orderId)
+        public async Task<OrderResponse?> GetOrderByIdAsync(int orderId)
         {
             var order = await _orderRepository.GetOrderByIdAsync(orderId);
 
-            return _mapper.Map<OrderDto>(order);
+            return OrderResponse.MapFromOrder(order);
         }
 
         public async Task<Order?> GetOrderByReferenceNumberAsync(string referenceNumber)
@@ -229,19 +227,19 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             return orders;
         }
 
-        public async Task<List<OrderDto>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
+        public async Task<List<OrderResponse>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
         {
             var orders = await _orderRepository.GetUserOrdersAsync(userId, page, pageSize);
 
-            var mappedOrder = _mapper.Map<List<OrderDto>>(orders);
+            var mappedOrder = OrderResponse.MapFromOrder(orders);
             return mappedOrder;
         }
 
-        public async Task<List<OrderDto>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
+        public async Task<List<OrderResponse>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
         {
             var orders = await _orderRepository.GetAllOrdersAsync(page, pageSize);
 
-            var mappedOrders = _mapper.Map<List<OrderDto>>(orders);
+            var mappedOrders = OrderResponse.MapFromOrder(orders);
             return mappedOrders;
         }
 
