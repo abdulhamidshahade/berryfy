@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.ShopDtos;
+using Berryfy.Application.Dtos.ShopDtos.Requests;
+using Berryfy.Application.Dtos.ShopDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ShopServiceInterfaces;
 using Berryfy.Domain.Entities.ShopEntities;
 using Berryfy.Domain.Repositories.ShopInterfaces;
@@ -9,13 +10,10 @@ namespace Berryfy.Application.Services.Concretes.ShopServiceConcretes
     public class ShopService : IShopService
     {
         private readonly IShopRepository _shopRepository;
-        private readonly IMapper _mapper;
 
-        public ShopService(IShopRepository shopRepository,
-                           IMapper mapper)
+        public ShopService(IShopRepository shopRepository)
         {
             _shopRepository = shopRepository;
-            _mapper = mapper;
         }
 
         public async Task<Shop> GetShopAsync(int id)
@@ -35,7 +33,7 @@ namespace Berryfy.Application.Services.Concretes.ShopServiceConcretes
             return shop;
         }
 
-        public async Task<ShopDto> UpdateShopAsync(int id, UpdateShopDto shop)
+        public async Task<ShopResponse> UpdateShopAsync(int id, UpdateShop shop)
         {
 
             if(shop == null || id <= 0)
@@ -50,13 +48,13 @@ namespace Berryfy.Application.Services.Concretes.ShopServiceConcretes
                 return null;
             }
 
-            var mappedShop = _mapper.Map<Shop>(shop);
+            var mappedShop = UpdateShop.MapToShop(shop);
 
             var updatedShop = await _shopRepository.UpdateShopAsync(mappedShop);
 
             if(updatedShop != null)
             {
-                return _mapper.Map<ShopDto>(updatedShop);
+                return ShopResponse.MapFromShop(updatedShop);
             }
 
             return null;
