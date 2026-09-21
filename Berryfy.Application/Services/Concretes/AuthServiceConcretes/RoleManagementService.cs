@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.AuthDtos;
+using Berryfy.Application.Dtos.AuthDtos.Responses;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
+using Berryfy.Domain.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,21 +12,21 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 {
     public class RoleManagementService : IRoleManagementService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<ApplicationRole> _roleManager;
-        private readonly IMapper _mapper;
+        private readonly UserManager<User> _userManager;
+        private readonly RoleManager<Role> _roleManager;
         private readonly ILogger<RoleManagementService> _logger;
+        private readonly IRoleRepository _roleRepository;
 
         public RoleManagementService(
-            UserManager<ApplicationUser> userManager,
-            RoleManager<ApplicationRole> roleManager,
-            IMapper mapper,
-            ILogger<RoleManagementService> logger)
+            UserManager<User> userManager,
+            RoleManager<Role> roleManager,
+            ILogger<RoleManagementService> logger,
+            IRoleRepository roleRepository)
         {
             _userManager = userManager;
             _roleManager = roleManager;
-            _mapper = mapper;
             _logger = logger;
+            _roleRepository = roleRepository;
         }
 
         public async Task<bool> CreateRoleAsync(string roleName)
@@ -38,7 +39,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 if (await _roleManager.RoleExistsAsync(roleName))
                     return true;
 
-                var role = new ApplicationRole(roleName);
+                var role = new Role(roleName);
                 var result = await _roleManager.CreateAsync(role);
 
                 if (result.Succeeded)
@@ -186,12 +187,12 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<List<ApplicationRoleDto>> GetAllRolesAsync()
+        public async Task<List<RoleResponse>> GetAllRolesAsync()
         {
             try
             {
                 var roles = await _roleManager.Roles.ToListAsync();
-                return _mapper.Map<List<ApplicationRoleDto>>(roles) ;
+                return RoleResponse.MapFromRole(roles);
             }
             catch (Exception ex)
             {
@@ -200,17 +201,17 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<List<ApplicationUserDto>> GetUsersInRoleAsync(string roleName)
+        public async Task<List<UserResponse>> GetUsersInRoleAsync(string roleName)
         {
             try
             {
                 var users = await _userManager.GetUsersInRoleAsync(roleName);
-                return _mapper.Map<List<ApplicationUserDto>>(users);
+                return UserResponse.MapFromUser(users);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error getting users in role '{roleName}'");
-                return new List<ApplicationUserDto>();
+                return new List<UserResponse>();
             }
         }
 
@@ -248,17 +249,17 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<List<ApplicationUserWithRolesDto>> GetAllUsersAsync()
+        public async Task<List<UserWithRolesResponse>> GetAllUsersAsync()
         {
             try
             {
                 var users = await _userManager.Users.ToListAsync();
-                var userDtos = new List<ApplicationUserWithRolesDto>();
+                var userDtos = new List<UserWithRolesResponse>();
 
                 foreach (var user in users)
                 {
                     var roles = await _userManager.GetRolesAsync(user);
-                    var userDto = _mapper.Map<ApplicationUserWithRolesDto>(user);
+                    var userDto = UserWithRolesResponse.MapFromUser(user);
                     userDto.Roles = roles.ToList();
                     userDtos.Add(userDto);
                 }
@@ -268,11 +269,11 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all users");
-                return new List<ApplicationUserWithRolesDto>();
+                return new List<UserWithRolesResponse>();
             }
         }
 
-        public async Task<ApplicationUserWithRolesDto> GetUserByIdAsync(int userId)
+        public async Task<UserWithRolesResponse> GetUserByIdAsync(int userId)
         {
             try
             {
@@ -281,7 +282,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     return null;
 
                 var roles = await _userManager.GetRolesAsync(user);
-                var userDto = _mapper.Map<ApplicationUserWithRolesDto>(user);
+                var userDto = UserWithRolesResponse.MapFromUser(user);
                 userDto.Roles = roles.ToList();
 
                 return userDto;
@@ -293,39 +294,24 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<RoleStatsDto> GetRoleStatsAsync()
+        public async Task<RoleStats> GetRoleStatsAsync()
         {
             try
             {
-                var totalRoles = await _roleManager.Roles.CountAsync();
-                var totalUsers = await _userManager.Users.CountAsync();
+                var result = await _roleRepository.GetRoleStatsAsync();
 
-                var usersWithRoles = 0;
-                var users = await _userManager.Users.ToListAsync();
-
-                foreach (var user in users)
+                return new RoleStats
                 {
-                    var userRoles = await _userManager.GetRolesAsync(user);
-                    if (userRoles.Any())
-                    {
-                        usersWithRoles++;
-                    }
-                }
-
-                var usersWithoutRoles = totalUsers - usersWithRoles;
-
-                return new RoleStatsDto
-                {
-                    TotalRoles = totalRoles,
-                    TotalUsers = totalUsers,
-                    UsersWithRoles = usersWithRoles,
-                    UsersWithoutRoles = usersWithoutRoles
+                    TotalRoles = result.TotalRoles,
+                    TotalUsers = result.TotalUsers,
+                    UsersWithRoles = result.UsersWithRoles,
+                    UsersWithoutRoles = result.UsersWithoutRoles
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting role statistics");
-                return new RoleStatsDto();
+                return new RoleStats();
             }
         }
 
@@ -371,9 +357,9 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<BulkAssignmentResultDto> BulkAssignRoleAsync(List<int> userIds, string roleName)
+        public async Task<BulkAssignmentResult> BulkAssignRoleAsync(List<int> userIds, string roleName)
         {
-            var result = new BulkAssignmentResultDto
+            var result = new BulkAssignmentResult
             {
                 TotalUsers = userIds?.Count ?? 0
             };
