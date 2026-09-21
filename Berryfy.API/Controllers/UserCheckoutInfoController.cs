@@ -1,6 +1,7 @@
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.CheckoutDtos;
+using Berryfy.Application.Dtos.CheckoutDtos.Requests;
+using Berryfy.Application.Dtos.CheckoutDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CheckoutServiceInterfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,14 +18,15 @@ namespace Berryfy.API.Controllers
             _checkoutInfoService = checkoutInfoService;
         }
 
+
         [HttpGet]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<UserCheckoutInfoDto?>>> Get()
+        public async Task<ActionResult<ResponseDto<UserCheckoutInfoResponse?>>> Get()
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue)
             {
-                return Unauthorized(new ResponseDto<UserCheckoutInfoDto?>
+                return Unauthorized(new ResponseDto<UserCheckoutInfoResponse?>
                 {
                     IsSuccess = false,
                     StatusCode = 401,
@@ -34,7 +36,7 @@ namespace Berryfy.API.Controllers
 
             var info = await _checkoutInfoService.GetCheckoutInfoAsync(userId.Value);
 
-            return Ok(new ResponseDto<UserCheckoutInfoDto?>
+            return Ok(new ResponseDto<UserCheckoutInfoResponse?>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -43,14 +45,15 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpPost("checkout")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<UserCheckoutInfoDto>>> SaveCheckout([FromBody] SaveCheckoutInfoDto? dto)
+        public async Task<ActionResult<ResponseDto<UserCheckoutInfoResponse>>> SaveCheckout([FromBody] SaveCheckoutInfo? dto)
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue)
             {
-                return Unauthorized(new ResponseDto<UserCheckoutInfoDto>
+                return Unauthorized(new ResponseDto<UserCheckoutInfoResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 401,
@@ -60,7 +63,7 @@ namespace Berryfy.API.Controllers
 
             if (dto == null)
             {
-                return BadRequest(new ResponseDto<UserCheckoutInfoDto>
+                return BadRequest(new ResponseDto<UserCheckoutInfoResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -70,7 +73,7 @@ namespace Berryfy.API.Controllers
 
             var saved = await _checkoutInfoService.SaveCheckoutInfoAsync(userId.Value, dto);
 
-            return Ok(new ResponseDto<UserCheckoutInfoDto>
+            return Ok(new ResponseDto<UserCheckoutInfoResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -79,14 +82,15 @@ namespace Berryfy.API.Controllers
             });
         }
 
+
         [HttpPost("billing")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<UserCheckoutInfoDto>>> SaveBilling([FromBody] SavePaymentBillingDto? dto)
+        public async Task<ActionResult<ResponseDto<UserCheckoutInfoResponse>>> SaveBilling([FromBody] SavePaymentBilling? dto)
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue)
             {
-                return Unauthorized(new ResponseDto<UserCheckoutInfoDto>
+                return Unauthorized(new ResponseDto<UserCheckoutInfoResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 401,
@@ -96,7 +100,7 @@ namespace Berryfy.API.Controllers
 
             if (dto == null)
             {
-                return BadRequest(new ResponseDto<UserCheckoutInfoDto>
+                return BadRequest(new ResponseDto<UserCheckoutInfoResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -106,7 +110,7 @@ namespace Berryfy.API.Controllers
 
             var saved = await _checkoutInfoService.SavePaymentBillingInfoAsync(userId.Value, dto);
 
-            return Ok(new ResponseDto<UserCheckoutInfoDto>
+            return Ok(new ResponseDto<UserCheckoutInfoResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -114,6 +118,7 @@ namespace Berryfy.API.Controllers
                 Data = saved
             });
         }
+
 
         [HttpDelete]
         [UserAndAbove]
