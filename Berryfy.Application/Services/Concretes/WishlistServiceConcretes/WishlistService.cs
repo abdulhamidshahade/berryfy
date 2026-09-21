@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
-using Berryfy.Application.Dtos.CategoryDtos;
-using Berryfy.Application.Dtos.ProductDtos;
-using Berryfy.Application.Dtos.WishlistDtos;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
+using Berryfy.Application.Dtos.ProductDtos.Responses;
+using Berryfy.Application.Dtos.WishlistDtos.Requests;
+using Berryfy.Application.Dtos.WishlistDtos.Responses;
 using Berryfy.Application.Services.Interfaces.WishlistServiceInterfaces;
 using Berryfy.Domain.Entities.WishlistEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -14,33 +15,32 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
         private readonly IWishlistRepository _wishlistRepository;
         private readonly IProductRepository _productRepository;
 
-        public WishlistService(IWishlistRepository wishlistRepository, IProductRepository productRepository,
-            IMapper mapper)
+        public WishlistService(IWishlistRepository wishlistRepository, IProductRepository productRepository)
         {
             _wishlistRepository = wishlistRepository;
             _productRepository = productRepository;
 
         }
 
-        public async Task<WishlistDto> GetByIdAsync(int id)
+        public async Task<WishlistResponse> GetByIdAsync(int id)
         {
             var wishlist = await _wishlistRepository.GetByIdAsync(id);
             return wishlist == null ? null : MapToDto(wishlist);
         }
 
-        public async Task<WishlistDto> GetUserDefaultWishlistAsync(int userId)
+        public async Task<WishlistResponse> GetUserDefaultWishlistAsync(int userId)
         {
             var wishlist = await _wishlistRepository.GetUserDefaultWishlistAsync(userId);
             return MapToDto(wishlist);
         }
 
-        public async Task<IEnumerable<WishlistDto>> GetUserWishlistsAsync(int userId)
+        public async Task<IEnumerable<WishlistResponse>> GetUserWishlistsAsync(int userId)
         {
             var wishlists = await _wishlistRepository.GetUserWishlistsAsync(userId);
             return wishlists.Select(MapToDto);
         }
 
-        public async Task<WishlistDto> CreateAsync(int userId, CreateWishlistDto createWishlistDto)
+        public async Task<WishlistResponse> CreateAsync(int userId, CreateWishlist createWishlistDto)
         {
             var wishlist = new Wishlist
             {
@@ -60,7 +60,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return MapToDto(createdWishlist);
         }
 
-        public async Task<WishlistDto> UpdateAsync(int id, UpdateWishlistDto updateWishlistDto)
+        public async Task<WishlistResponse> UpdateAsync(int id, UpdateWishlist updateWishlistDto)
         {
             var wishlist = await _wishlistRepository.GetByIdAsync(id);
             if (wishlist == null) return null;
@@ -100,7 +100,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return await _wishlistRepository.ExistsAsync(id);
         }
 
-        public async Task<WishlistItemDto> AddItemAsync(int userId, AddToWishlistDto addToWishlistDto)
+        public async Task<Dtos.WishlistDtos.Responses.WishlistItem> AddItemAsync(int userId, AddToWishlist addToWishlistDto)
         {
             Wishlist wishlist;
             if (addToWishlistDto.WishlistId.HasValue)
@@ -119,7 +119,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlist.Id, addToWishlistDto.ProductId);
             if (existingItem != null) return MapToItemDto(existingItem);
 
-            var wishlistItem = new WishlistItem
+            var wishlistItem = new Domain.Entities.WishlistEntities.WishlistItem
             {
                 WishlistId = wishlist.Id,
                 ProductId = addToWishlistDto.ProductId,
@@ -131,7 +131,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return MapToItemDto(addedItem);
         }
 
-        public async Task<WishlistItemDto> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItemDto updateItemDto)
+        public async Task<Dtos.WishlistDtos.Responses.WishlistItem> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItem updateItemDto)
         {
             var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlistId, productId);
             if (existingItem == null) return null;
@@ -153,7 +153,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return await _wishlistRepository.IsProductInWishlistAsync(userId, productId);
         }
 
-        public async Task<IEnumerable<WishlistItemDto>> GetWishlistItemsAsync(int wishlistId)
+        public async Task<IEnumerable<Dtos.WishlistDtos.Responses.WishlistItem>> GetWishlistItemsAsync(int wishlistId)
         {
             var items = await _wishlistRepository.GetWishlistItemsAsync(wishlistId);
             return items.Select(MapToItemDto);
@@ -172,7 +172,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlistId, productId);
                 if (existingItem != null) continue;
 
-                var wishlistItem = new WishlistItem
+                var wishlistItem = new Domain.Entities.WishlistEntities.WishlistItem
                 {
                     WishlistId = wishlistId,
                     ProductId = productId,
@@ -227,14 +227,14 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return true;
         }
 
-        public async Task<WishlistSummaryDto> GetUserSummaryAsync(int userId)
+        public async Task<WishlistSummary> GetUserSummaryAsync(int userId)
         {
             var totalWishlists = await _wishlistRepository.GetUserWishlistCountAsync(userId);
             var totalItems = await _wishlistRepository.GetUserTotalItemsAsync(userId);
             var totalValue = await _wishlistRepository.GetUserTotalValueAsync(userId);
             var recentWishlists = (await GetUserWishlistsAsync(userId)).Take(3).ToList();
 
-            return new WishlistSummaryDto
+            return new WishlistSummary
             {
                 TotalWishlists = totalWishlists,
                 TotalItems = totalItems,
@@ -253,7 +253,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return true;
         }
 
-        public async Task<WishlistDto> DuplicateWishlistAsync(int wishlistId, string newName)
+        public async Task<WishlistResponse> DuplicateWishlistAsync(int wishlistId, string newName)
         {
             var originalWishlist = await _wishlistRepository.GetByIdAsync(wishlistId);
             if (originalWishlist == null) return null;
@@ -271,7 +271,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
 
             foreach (var item in originalWishlist.WishlistItems)
             {
-                var newItem = new WishlistItem
+                var newItem = new Domain.Entities.WishlistEntities.WishlistItem
                 {
                     WishlistId = createdWishlist.Id,
                     ProductId = item.ProductId,
@@ -285,16 +285,16 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return await GetByIdAsync(createdWishlist.Id);
         }
 
-        public async Task<IEnumerable<WishlistDto>> GetAllWishlistsAsync()
+        public async Task<IEnumerable<WishlistResponse>> GetAllWishlistsAsync()
         {
             var allWishlists = await _wishlistRepository.GetAllWishlistsAsync();
             return allWishlists.Select(MapToDto);
         }
 
-        public async Task<GlobalWishlistStatsDto> GetGlobalStatsAsync()
+        public async Task<GlobalWishlistStats> GetGlobalStatsAsync()
         {
             var globalStats = await _wishlistRepository.GetGlobalStatsAsync();
-            return new GlobalWishlistStatsDto
+            return new GlobalWishlistStats
             {
                 AverageItemsPerWishlist = globalStats.AverageItemsPerWishlist,
                 TotalUsers = globalStats.TotalUsers,
@@ -304,7 +304,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 AverageWishlistsPerUser = globalStats.AverageWishlistsPerUser,
                 PublicWishlists = globalStats.PublicWishlists,
                 PrivateWishlists = globalStats.PrivateWishlists,
-                RecentActivity = globalStats.RecentActivity.Select(a => new RecentActivityDto
+                RecentActivity = globalStats.RecentActivity.Select(a => new RecentActivity
                 {
                     Date = a.Date,
                     NewWishlists = a.NewWishlists,
@@ -313,9 +313,9 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             };
         }
 
-        private WishlistDto MapToDto(Wishlist wishlist)
+        private WishlistResponse MapToDto(Wishlist wishlist)
         {
-            return new WishlistDto
+            return new WishlistResponse
             {
                 Id = wishlist.Id,
                 UserId = wishlist.UserId,
@@ -326,13 +326,13 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 UpdatedDate = wishlist.UpdatedAt,
                 ItemCount = wishlist.WishlistItems?.Count ?? 0,
                 TotalValue = wishlist.WishlistItems?.Sum(x => x.Product?.Price ?? 0) ?? 0,
-                Items = wishlist.WishlistItems?.Select(MapToItemDto).ToList() ?? new List<WishlistItemDto>()
+                Items = wishlist.WishlistItems?.Select(MapToItemDto).ToList() ?? new List<Dtos.WishlistDtos.Responses.WishlistItem>()
             };
         }
 
-        private WishlistItemDto MapToItemDto(WishlistItem item)
+        private Dtos.WishlistDtos.Responses.WishlistItem MapToItemDto(Domain.Entities.WishlistEntities.WishlistItem item)
         {
-            return new WishlistItemDto
+            return new Dtos.WishlistDtos.Responses.WishlistItem
             {
                 Id = item.Id,
                 WishlistId = item.WishlistId,
@@ -344,9 +344,9 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             };
         }
 
-        private ProductDto MapToProductDto(Domain.Entities.ProductEntities.Product product)
+        private ProductResponse MapToProductDto(Domain.Entities.ProductEntities.Product product)
         {
-            return new ProductDto
+            return new ProductResponse
             {
                 Id = product.Id,
                 Name = product.Name,
@@ -354,12 +354,12 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 Price = product.Price,
                 ImageUrl = product.ImageUrl,
                 IsActive = product.IsActive,
-                ProductCategories = product.ProductCategories?.Select(pc => new CategoryDto
+                ProductCategories = product.ProductCategories?.Select(pc => new CategoryResponse
                 {
                     Id = pc.Category.Id,
                     Name = pc.Category.Name,
                     Description = pc.Category.Description
-                }).ToList() ?? new List<CategoryDto>()
+                }).ToList() ?? new List<CategoryResponse>()
             };
         }
     }
