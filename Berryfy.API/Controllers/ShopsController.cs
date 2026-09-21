@@ -1,9 +1,10 @@
 ﻿using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.ShopDtos;
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Services.Interfaces.ShopServiceInterfaces;
 using Berryfy.Domain.Entities.ShopEntities;
 using Microsoft.AspNetCore.Mvc;
+using Berryfy.Application.Dtos.ShopDtos.Responses;
+using Berryfy.Application.Dtos.ShopDtos.Requests;
 
 namespace Berryfy.API.Controllers
 {
@@ -48,13 +49,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<ShopDto>>> Update(int id, [FromBody] UpdateShopDto shopDto)
+        public async Task<ActionResult<ResponseDto<ShopResponse>>> Update(int id, [FromBody] UpdateShop shopDto)
         {
             var updatedShop = await _shopService.UpdateShopAsync(id, shopDto);
 
             if (updatedShop == null)
             {
-                return new ResponseDto<ShopDto>
+                return new ResponseDto<ShopResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -63,7 +64,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<ShopDto>
+            var response = new ResponseDto<ShopResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
