@@ -1,4 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.ProductDtos.Requests
+﻿using Berryfy.Domain.Entities.ProductEntities;
+
+namespace Berryfy.Application.Dtos.ProductDtos.Requests
 {
     public class UpdateProduct
     {
@@ -15,5 +17,22 @@
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
+
+        public static Product MapToProduct(UpdateProduct request)
+        {
+            return new Product
+            {
+                Id = request.Id,
+                Name = request.Name,
+                Description = request.Description,
+                Price = request.Price,
+                StockQuantity = request.StockQuantity,
+                ImageUrl = request.ImageUrl,
+                ReservedStock = request.ReservedStock,
+                LowStockThreshold = request.LowStockThreshold,
+                IsActive = request.IsActive,
+                SKU = request.SKU
+            };
+        }
     }
 }
