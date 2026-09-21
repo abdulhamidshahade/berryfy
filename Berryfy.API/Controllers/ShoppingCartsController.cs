@@ -1,6 +1,5 @@
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
-using Berryfy.Application.Dtos.ShoppingCartDtos;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
@@ -9,6 +8,8 @@ using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Berryfy.Application.Dtos.ShoppingCartDtos.Requests;
+using Berryfy.Application.Dtos.ShoppingCartDtos.Responses;
 
 namespace Berryfy.API.Controllers
 {
@@ -34,7 +35,7 @@ namespace Berryfy.API.Controllers
                     return;
                 }
 
-                CartDto? cart = null;
+                CartResponse? cart = null;
                 foreach (var status in Enum.GetValues<CartStatus>())
                 {
                     cart = await _cartService.GetCartByIdAsync(cartId, status);
@@ -56,6 +57,7 @@ namespace Berryfy.API.Controllers
             await next();
         }
 
+
         public ShoppingCartsController(
             IUserCouponService userCouponService,
             ICartService cartService,
@@ -70,15 +72,16 @@ namespace Berryfy.API.Controllers
             _checkoutOrchestrationService = checkoutOrchestrationService;
         }
 
+
         [HttpGet("user-id")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> GetCartByUserId([FromQuery] CartStatus? status = null)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> GetCartByUserId([FromQuery] CartStatus? status = null)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 if (!userId.HasValue)
                 {
-                    return Unauthorized(new ResponseDto<CartDto>
+                    return Unauthorized(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 401,
@@ -86,7 +89,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                CartDto cart = null;
+                CartResponse cart = null;
                 
                 if (status.HasValue)
                 {
@@ -108,7 +111,7 @@ namespace Berryfy.API.Controllers
                     cart = await _cartService.CreateCartAsync(userId, null);
                     if (cart == null)
                     {
-                        return StatusCode(500, new ResponseDto<CartDto>
+                        return StatusCode(500, new ResponseDto<CartResponse>
                         {
                             IsSuccess = false,
                             StatusCode = 500,
@@ -117,7 +120,7 @@ namespace Berryfy.API.Controllers
                     }
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -127,7 +130,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -137,15 +140,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("current")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> GetCurrentCart()
+        public async Task<ActionResult<ResponseDto<CartResponse>>> GetCurrentCart()
         {
             try
             {
                 var userId = GetCurrentUserId();
                 if (!userId.HasValue)
                 {
-                    return Unauthorized(new ResponseDto<CartDto>
+                    return Unauthorized(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 401,
@@ -165,7 +169,7 @@ namespace Berryfy.API.Controllers
                     cart = await _cartService.CreateCartAsync(userId, null);
                     if (cart == null)
                     {
-                        return StatusCode(500, new ResponseDto<CartDto>
+                        return StatusCode(500, new ResponseDto<CartResponse>
                         {
                             IsSuccess = false,
                             StatusCode = 500,
@@ -174,7 +178,7 @@ namespace Berryfy.API.Controllers
                     }
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -184,7 +188,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -194,15 +198,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("session-id")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> GetCartBySessionId()
+        public async Task<ActionResult<ResponseDto<CartResponse>>> GetCartBySessionId()
         {
             try
             {
                 var sessionId = GetSessionId();
                 if (string.IsNullOrWhiteSpace(sessionId))
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -216,7 +221,7 @@ namespace Berryfy.API.Controllers
                     cart = await _cartService.CreateCartAsync(null, sessionId);
                     if (cart == null)
                     {
-                        return StatusCode(500, new ResponseDto<CartDto>
+                        return StatusCode(500, new ResponseDto<CartResponse>
                         {
                             IsSuccess = false,
                             StatusCode = 500,
@@ -225,7 +230,7 @@ namespace Berryfy.API.Controllers
                     }
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -235,7 +240,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -247,11 +252,11 @@ namespace Berryfy.API.Controllers
 
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> GetCartByCartId(int id, [FromQuery] CartStatus? status = null)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> GetCartByCartId(int id, [FromQuery] CartStatus? status = null)
         {
             try
             {
-                CartDto cart = null;
+                CartResponse cart = null;
                 
                 if (status.HasValue)
                 {
@@ -268,7 +273,7 @@ namespace Berryfy.API.Controllers
                 
                 if (cart == null)
                 {
-                    return NotFound(new ResponseDto<CartDto>
+                    return NotFound(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -276,7 +281,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -286,7 +291,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -296,8 +301,9 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("create")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> CreateCart()
+        public async Task<ActionResult<ResponseDto<CartResponse>>> CreateCart()
         {
             try
             {
@@ -306,7 +312,7 @@ namespace Berryfy.API.Controllers
 
                 if (!userId.HasValue && string.IsNullOrWhiteSpace(sessionId))
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -317,7 +323,7 @@ namespace Berryfy.API.Controllers
                 var cart = await _cartService.CreateCartAsync(userId, sessionId);
                 if (cart == null)
                 {
-                    return StatusCode(500, new ResponseDto<CartDto>
+                    return StatusCode(500, new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -325,7 +331,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return CreatedAtAction(nameof(GetCartByCartId), new { id = cart.Id }, new ResponseDto<CartDto>
+                return CreatedAtAction(nameof(GetCartByCartId), new { id = cart.Id }, new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 201,
@@ -335,7 +341,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -345,14 +351,15 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("add-item")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> AddItemToCart([FromBody] AddItemRequest itemRequest)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> AddItemToCart([FromBody] AddItemRequest itemRequest)
         {
             try
             {
                 if (itemRequest.Quantity <= 0)
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -363,7 +370,7 @@ namespace Berryfy.API.Controllers
                 var isInStock = await _inventoryService.IsInStockAsync(itemRequest.ProductId, itemRequest.Quantity);
                 if (!isInStock)
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -380,7 +387,7 @@ namespace Berryfy.API.Controllers
 
                 if (updatedCart == null)
                 {
-                    return StatusCode(500, new ResponseDto<CartDto>
+                    return StatusCode(500, new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -388,7 +395,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -398,7 +405,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -408,14 +415,15 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPut("{cartId}/update")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> UpdateItemQuantity(int cartId, [FromBody] AddItemRequest itemRequest)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> UpdateItemQuantity(int cartId, [FromBody] AddItemRequest itemRequest)
         {
             try
             {
                 if (itemRequest.Quantity < 0)
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -427,7 +435,7 @@ namespace Berryfy.API.Controllers
                 {
                     var removed = await _cartService.RemoveItemAsync(cartId, GetCurrentUserId(), GetSessionId(), itemRequest.ProductId);
                     if (!removed) return BadRequest();
-                    return Ok(new ResponseDto<CartDto>
+                    return Ok(new ResponseDto<CartResponse>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -444,7 +452,7 @@ namespace Berryfy.API.Controllers
 
                 if (updatedCart == null)
                 {
-                    return StatusCode(500, new ResponseDto<CartDto>
+                    return StatusCode(500, new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -452,7 +460,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -462,7 +470,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -471,6 +479,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpDelete("{cartId}/remove/{productId}")]
         public async Task<ActionResult<ResponseDto<bool>>> RemoveItemFromCart(int cartId, int productId)
@@ -508,6 +517,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpDelete("{cartId}/clear")]
         public async Task<ActionResult<ResponseDto<bool>>> ClearCart(int cartId)
         {
@@ -543,6 +553,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPost("{cartId}/complete")]
         [AdminAndAbove]
@@ -582,16 +593,15 @@ namespace Berryfy.API.Controllers
         }
 
 
-
         [HttpGet("{cartId}/item/{productId}")]
-        public async Task<ActionResult<ResponseDto<CartItemDto>>> GetCartItem(int cartId, int productId)
+        public async Task<ActionResult<ResponseDto<CartItemResponse>>> GetCartItem(int cartId, int productId)
         {
             try
             {
                 var item = await _cartService.GetItemAsync(cartId, productId);
                 if (item == null)
                 {
-                    return NotFound(new ResponseDto<CartItemDto>
+                    return NotFound(new ResponseDto<CartItemResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -599,7 +609,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartItemDto>
+                return Ok(new ResponseDto<CartItemResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -609,7 +619,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartItemDto>
+                return StatusCode(500, new ResponseDto<CartItemResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -619,15 +629,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("{cartId}/apply-coupon")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<CartDto>>> ApplyCoupon(int cartId, [FromBody] ApplyCouponRequest request)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> ApplyCoupon(int cartId, [FromBody] ApplyCouponRequest request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request?.CouponCode))
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -638,7 +649,7 @@ namespace Berryfy.API.Controllers
                 var cart = await _cartService.ApplyCouponAsync(cartId, GetCurrentUserId(), request.CouponCode);
                 if (cart == null)
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -646,7 +657,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -656,7 +667,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -666,15 +677,16 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpDelete("{cartId}/remove-coupon/{couponId}")]
-        public async Task<ActionResult<ResponseDto<CartDto>>> RemoveCoupon(int cartId, int couponId)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> RemoveCoupon(int cartId, int couponId)
         {
             try
             {
                 var cart = await _cartService.RemoveCouponAsync(cartId, GetCurrentUserId(), GetSessionId(), couponId);
                 if (cart == null)
                 {
-                    return StatusCode(500, new ResponseDto<CartDto>
+                    return StatusCode(500, new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -682,7 +694,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -692,7 +704,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -701,6 +713,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
+
 
         [HttpPost("{cartId}/checkout")]
         [UserAndAbove]
@@ -745,7 +758,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                var createOrderDto = new Application.Dtos.OrderDtos.CreateOrderDto
+                var createOrderDto = new Application.Dtos.OrderDtos.Requests.CreateOrder
                 {
                     UserId = GetCurrentUserId() ?? 0,
                     CartId = cartId,
@@ -803,16 +816,17 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("{cartId}/reactivate")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<CartDto>>> ReactivateCart(int cartId, [FromQuery] int orderId)
+        public async Task<ActionResult<ResponseDto<CartResponse>>> ReactivateCart(int cartId, [FromQuery] int orderId)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 if (!userId.HasValue)
                 {
-                    return Unauthorized(new ResponseDto<CartDto>
+                    return Unauthorized(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 401,
@@ -823,7 +837,7 @@ namespace Berryfy.API.Controllers
                 var order = await _orderService.GetOrderByIdAsync(orderId);
                 if (order == null)
                 {
-                    return NotFound(new ResponseDto<CartDto>
+                    return NotFound(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -838,7 +852,7 @@ namespace Berryfy.API.Controllers
 
                 if (order.CartId != cartId)
                 {
-                    return BadRequest(new ResponseDto<CartDto>
+                    return BadRequest(new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -849,7 +863,7 @@ namespace Berryfy.API.Controllers
                 var success = await _cartService.ReactivateCartAsync(cartId, orderId);
                 if (!success)
                 {
-                    return StatusCode(500, new ResponseDto<CartDto>
+                    return StatusCode(500, new ResponseDto<CartResponse>
                     {
                         IsSuccess = false,
                         StatusCode = 500,
@@ -859,7 +873,7 @@ namespace Berryfy.API.Controllers
 
                 var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
                 
-                return Ok(new ResponseDto<CartDto>
+                return Ok(new ResponseDto<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -869,7 +883,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<CartDto>
+                return StatusCode(500, new ResponseDto<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
