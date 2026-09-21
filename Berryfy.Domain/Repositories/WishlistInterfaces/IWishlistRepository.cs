@@ -25,6 +25,6 @@ namespace Berryfy.Domain.Repositories.WishlistInterfaces
         Task<decimal> GetUserTotalValueAsync(int userId);
 
         Task<IEnumerable<Wishlist>> GetAllWishlistsAsync();
-        Task<GlobalWishlistStats> GetGlobalStatsAsync();
+        //Task<GlobalWishlistStats> GetGlobalStatsAsync();
     }
 }
