@@ -1,4 +1,6 @@
-﻿namespace Berryfy.Application.Dtos.ShopDtos.Responses
+﻿using Berryfy.Domain.Entities.ShopEntities;
+
+namespace Berryfy.Application.Dtos.ShopDtos.Responses
 {
     public class ShopResponse
     {
@@ -13,5 +15,21 @@
 
         public string Currency { get; set; }
         public string Language { get; set; }
+
+        public static ShopResponse MapFromShop(Shop shop)
+        {
+            return new ShopResponse
+            {
+                Id = shop.Id,
+                Name = shop.Name,
+                LogoUrl = shop.LogoUrl,
+                Description = shop.Description,
+                Email = shop.Email,
+                Phone = shop.Phone,
+                Address = shop.Address,
+                Currency = shop.Currency,
+                Language = shop.Language
+            };
+        }
     }
 }
