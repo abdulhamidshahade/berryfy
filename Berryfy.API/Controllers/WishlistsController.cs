@@ -1,5 +1,5 @@
 using Berryfy.Application.Authorization.Attributes;
-using Berryfy.Application.Dtos.WishlistDtos;
+using Berryfy.Application.Dtos.WishlistDtos.Requests;
 using Berryfy.Application.Services.Interfaces.WishlistServiceInterfaces;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -27,6 +27,7 @@ namespace Berryfy.API.Controllers
                 && userId > 0;
         }
 
+
         [HttpGet]
         [UserAndAbove]
         public async Task<IActionResult> GetUserWishlists()
@@ -44,6 +45,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpGet("{id}")]
         [UserAndAbove]
@@ -110,7 +112,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [UserAndAbove]
-        public async Task<IActionResult> CreateWishlist([FromBody] CreateWishlistDto createWishlistDto)
+        public async Task<IActionResult> CreateWishlist([FromBody] CreateWishlist createWishlistDto)
         {
             try
             {
@@ -133,7 +135,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPut("{id}")]
         [UserAndAbove]
-        public async Task<IActionResult> UpdateWishlist(int id, [FromBody] UpdateWishlistDto updateWishlistDto)
+        public async Task<IActionResult> UpdateWishlist(int id, [FromBody] UpdateWishlist updateWishlistDto)
         {
             try
             {
@@ -158,6 +160,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpDelete("{id}")]
         [UserAndAbove]
@@ -187,9 +190,10 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPost("items/add")]
         [UserAndAbove]
-        public async Task<IActionResult> AddItem([FromBody] AddToWishlistDto addToWishlistDto)
+        public async Task<IActionResult> AddItem([FromBody] AddToWishlist addToWishlistDto)
         {
             try
             {
@@ -214,7 +218,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPut("{wishlistId}/items/{productId}")]
         [UserAndAbove]
-        public async Task<IActionResult> UpdateItem(int wishlistId, int productId, [FromBody] UpdateWishlistItemDto updateItemDto)
+        public async Task<IActionResult> UpdateItem(int wishlistId, int productId, [FromBody] UpdateWishlistItem updateItemDto)
         {
             try
             {
@@ -236,6 +240,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpDelete("{wishlistId}/items/{productId}")]
         [UserAndAbove]
@@ -262,6 +267,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpGet("check-product/{productId}")]
         [UserAndAbove]
         public async Task<IActionResult> CheckProductInWishlist(int productId)
@@ -279,6 +285,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpPost("{wishlistId}/items/bulk-add")]
         [UserAndAbove]
@@ -305,6 +312,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpDelete("{wishlistId}/items/bulk-remove")]
         [UserAndAbove]
         public async Task<IActionResult> RemoveMultipleItems(int wishlistId, [FromBody] List<int> productIds)
@@ -327,6 +335,7 @@ namespace Berryfy.API.Controllers
             }
         }
 
+
         [HttpPut("{wishlistId}/share")]
         [UserAndAbove]
         public async Task<IActionResult> ShareWishlist(int wishlistId, [FromBody] bool isPublic)
@@ -348,6 +357,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpPost("{wishlistId}/duplicate")]
         [UserAndAbove]
@@ -373,6 +383,7 @@ namespace Berryfy.API.Controllers
                 return BadRequest(new { IsSuccess = false, StatusMessage = ex.Message });
             }
         }
+
 
         [HttpDelete("{wishlistId}/clear")]
         [UserAndAbove]
