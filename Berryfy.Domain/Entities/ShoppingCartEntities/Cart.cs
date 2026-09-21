@@ -42,7 +42,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
 
 
         public List<CartCoupon> CartCoupons { get; set; } = new List<CartCoupon>();
-        public ApplicationUser User { get; set; }
+        public User User { get; set; }
 
         private decimal CalculateTax()
         {
