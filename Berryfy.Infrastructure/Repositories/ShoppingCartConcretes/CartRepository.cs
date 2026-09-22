@@ -3,6 +3,7 @@ using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Entities.CouponEntities;
 using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -14,13 +15,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         public CartRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<Cart> CreateCartAsync(int? userId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO ShoppingCarts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
+                INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
                 VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
                 RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
 
@@ -57,7 +58,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<Cart> CreateCartAsync(string? sessionId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO ShoppingCarts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
+                INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
                 VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
                 RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
 
@@ -95,7 +96,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             if (userId.HasValue)
             {
-                const string sql = "DELETE FROM ShoppingCarts WHERE UserId = @UserId AND Status = @Status";
+                const string sql = "DELETE FROM shopping_carts WHERE UserId = @UserId AND Status = @Status";
 
                 await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync();
@@ -109,7 +110,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                const string sql = "DELETE FROM ShoppingCarts WHERE SessionId = @SessionId AND Status = @Status";
+                const string sql = "DELETE FROM shopping_carts WHERE SessionId = @SessionId AND Status = @Status";
 
                 await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync();
@@ -144,11 +145,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountAmount AS Cp_DiscountAmount,
                     cpn.DiscountValue AS Cp_MinimumOrderAmount, cpn.Type AS Cp_Type, cpn.Value AS Cp_Value,
                     cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM ShoppingCarts c
-                LEFT JOIN CartItems ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN Products p ON ci.ProductId = p.Id
-                LEFT JOIN CartCoupons cc ON c.Id = cc.CartId
-                LEFT JOIN Coupons cpn ON cc.CouponId = cpn.Id
+                FROM shopping_carts c
+                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
+                LEFT JOIN products p ON ci.ProductId = p.Id
+                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
+                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
                 WHERE c.UserId = @UserId AND c.Status = @Status
                 ORDER BY c.Id, ci.Id, cc.Id";
 
@@ -290,11 +291,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountType AS Cp_DiscountType,
                     cpn.DiscountAmount AS Cp_DiscountAmount, cpn.Type AS Cp_Type, cpn.Value AS Cp_Value,
                     cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM ShoppingCarts c
-                LEFT JOIN CartItems ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN Products p ON ci.ProductId = p.Id
-                LEFT JOIN CartCoupons cc ON c.Id = cc.CartId
-                LEFT JOIN Coupons cpn ON cc.CouponId = cpn.Id
+                FROM shopping_carts c
+                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
+                LEFT JOIN products p ON ci.ProductId = p.Id
+                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
+                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
                 WHERE c.SessionId = @SessionId AND c.Status = @Status
                 ORDER BY c.Id, ci.Id, cc.Id";
 
@@ -420,7 +421,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             const string sql = @"
                 SELECT
                     c.Id, c.UserId, c.SessionId, c.Status, c.CreatedAt, c.UpdatedAt, c.Version
-                FROM ShoppingCarts c
+                FROM shopping_carts c
                 ORDER BY c.Id";
 
             await using var connection = new NpgsqlConnection(_connectionString);
@@ -456,7 +457,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<Cart> UpdateCartAsync(Cart cart)
         {
             const string sql = @"
-                UPDATE ShoppingCarts
+                UPDATE shopping_carts
                 SET UserId = @UserId,
                     SessionId = @SessionId,
                     Status = @Status,
@@ -496,7 +497,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             if (Id <= 0)
                 return false;
 
-            const string sql = "DELETE FROM ShoppingCarts WHERE Id = @Id AND Status = @Status";
+            const string sql = "DELETE FROM shopping_carts WHERE Id = @Id AND Status = @Status";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -515,7 +516,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 return null;
 
             const string sql = @"
-                UPDATE ShoppingCarts
+                UPDATE shopping_carts
                 SET Status = @Status,
                     UpdatedAt = @UpdatedAt,
                     Version = Version + 1
@@ -570,11 +571,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountType AS Cp_DiscountType,
                     cpn.DiscountValue AS Cp_DiscountValue, cpn.StartDate AS Cp_StartDate, cpn.EndDate AS Cp_EndDate,
                     cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM ShoppingCarts c
-                LEFT JOIN CartItems ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN Products p ON ci.ProductId = p.Id
-                LEFT JOIN CartCoupons cc ON c.Id = cc.CartId
-                LEFT JOIN Coupons cpn ON cc.CouponId = cpn.Id
+                FROM shopping_carts c
+                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
+                LEFT JOIN products p ON ci.ProductId = p.Id
+                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
+                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
                 WHERE c.Id = @CartId AND c.Status = @Status
                 ORDER BY c.Id, ci.Id, cc.Id";
 
@@ -719,7 +720,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             cartItem.UpdatedAt = DateTime.UtcNow;
 
             const string updateItemSql = @"
-                UPDATE CartItems
+                UPDATE cart_items
                 SET Quantity = @Quantity,
                     UpdatedAt = @UpdatedAt
                 WHERE Id = @Id
@@ -760,7 +761,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 return null;
 
             const string sql = @"
-                INSERT INTO CartItems (ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt)
+                INSERT INTO cart_items (ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt)
                 VALUES (@ShoppingCartId, @ProductId, @UserId, @SessionId, @Quantity, @UnitPrice, @CreatedAt, @UpdatedAt)
                 RETURNING Id, ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt";
 
@@ -817,7 +818,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             if (cartItem == null)
                 return false;
 
-            const string sql = "DELETE FROM CartItems WHERE Id = @Id";
+            const string sql = "DELETE FROM cart_items WHERE Id = @Id";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -837,7 +838,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             foreach (var item in items)
             {
                 const string sql = @"
-                    UPDATE CartItems
+                    UPDATE cart_items
                     SET Quantity = @Quantity,
                         UnitPrice = @UnitPrice,
                         UpdatedAt = @UpdatedAt
@@ -864,8 +865,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             const string sql = @"
                 SELECT COUNT(1)
-                FROM CartItems ci
-                JOIN ShoppingCarts c ON ci.ShoppingCartId = c.Id
+                FROM cart_items ci
+                JOIN shopping_carts c ON ci.ShoppingCartId = c.Id
                 WHERE ci.ShoppingCartId != @CartId
                   AND ci.ProductId = @ProductId
                   AND ci.UserId = @UserId";
@@ -886,7 +887,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             const string getCartSql = @"
                 SELECT Id
-                FROM ShoppingCarts
+                FROM shopping_carts
                 WHERE UserId = @UserId AND Status = @Status";
 
             Cart? cart = null;
@@ -913,7 +914,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             const string getItemSql = @"
                 SELECT Id
-                FROM CartItems
+                FROM cart_items
                 WHERE ShoppingCartId = @CartId AND ProductId = @ProductId AND UserId = @UserId";
 
             await using var command2 = new NpgsqlCommand(getItemSql, connection);
@@ -927,7 +928,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             int itemId = Convert.ToInt32(itemIdObj);
 
-            const string deleteSql = "DELETE FROM CartItems WHERE Id = @Id";
+            const string deleteSql = "DELETE FROM cart_items WHERE Id = @Id";
 
             await using var command3 = new NpgsqlCommand(deleteSql, connection);
             command3.Parameters.AddWithValue("Id", itemId);
@@ -938,7 +939,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         public async Task<bool> IsConverted(int cartId)
         {
-            const string sql = "SELECT COUNT(1) FROM ShoppingCarts WHERE Id = @Id AND Status = @Status";
+            const string sql = "SELECT COUNT(1) FROM shopping_carts WHERE Id = @Id AND Status = @Status";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
