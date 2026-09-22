@@ -3,8 +3,8 @@ using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.OrderEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.OrderInterfaces;
+using Berryfy.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System.ComponentModel;
@@ -17,7 +17,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
 
         public OrderRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<Order?> GetOrderByIdAsync(int orderId)
