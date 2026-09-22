@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.Base;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.Base;
 
 using Berryfy.Domain.Entities.ProductEntities;
 
@@ -20,8 +21,8 @@ namespace Berryfy.Domain.Entities.OrderEntities
         public decimal DiscountAmount { get; set; }
 
 
-        public Order Order { get; set; }
-        public Product Product { get; set; }
+        [JsonIgnore] public Order Order { get; set; }
+        [JsonIgnore] public Product Product { get; set; }
 
 
 
