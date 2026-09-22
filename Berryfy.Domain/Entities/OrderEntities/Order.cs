@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Constants;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.PaymentEntities;
@@ -49,13 +50,12 @@ namespace Berryfy.Domain.Entities.OrderEntities
 
 
 
-        public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        [JsonIgnore] public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
+        [JsonIgnore] public User User { get; set; }
+        [JsonIgnore] public Cart Cart { get; set; }
 
-        public User User { get; set; }
-        public Cart Cart { get; set; }
-
-        public List<Payment> Payments { get; set; }
+        [JsonIgnore] public List<Payment> Payments { get; set; }
 
         
     }
