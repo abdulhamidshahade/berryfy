@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Constants;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.ShoppingCartEntities;
 
@@ -21,8 +22,8 @@ namespace Berryfy.Domain.Entities.CouponEntities
 
         public bool IsForNewUsersOnly { get; set; }
 
-        public List<UserCoupon> UserCoupons { get; set; }
+        [JsonIgnore] public List<UserCoupon> UserCoupons { get; set; }
 
-        public List<CartCoupon> CartCoupons { get; set; }
+        [JsonIgnore] public List<CartCoupon> CartCoupons { get; set; }
     }
 }
