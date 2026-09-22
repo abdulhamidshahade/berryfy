@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.Base;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.Base;
 
 namespace Berryfy.Domain.Entities.ProductEntities
 {
@@ -12,6 +13,6 @@ namespace Berryfy.Domain.Entities.ProductEntities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public List<ProductCategory> ProductCategories { get; set; }
+        [JsonIgnore] public List<ProductCategory> ProductCategories { get; set; }
     }
 }
