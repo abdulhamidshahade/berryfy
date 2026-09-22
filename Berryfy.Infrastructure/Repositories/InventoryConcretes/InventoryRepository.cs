@@ -3,6 +3,7 @@ using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
 using Microsoft.EntityFrameworkCore;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -14,7 +15,7 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public InventoryRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<InventoryLog> CreateInventory(InventoryLog inventoryLog)
