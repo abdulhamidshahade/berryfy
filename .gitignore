@@ -364,28 +364,33 @@ FodyWeavers.xsd
 
 
 #Ignore appsettings.json in BlueBerry24.API Layer
-BlueBerry24.API/appsettings.json
+#BlueBerry24.API/appsettings.json
 
 #Ignore appsettings.Development.json in BlueBerry24.API Layer
-BlueBerry24.API/appsettings.Development.json
+#BlueBerry24.API/appsettings.Development.json
 
 #Ignore launchSettings.json in BlueBerry24.API Layer
-BlueBerry24.API/Properties/launchSettings.json
+#BlueBerry24.API/Properties/launchSettings.json
 
 #Ignore BlueBerry24.API.http in BlueBerry24.API Layer
-BlueBerry24.API/BlueBerry24.API.http
+#BlueBerry24.API/BlueBerry24.API.http
 
 # EF Core migrations must be committed so the Docker image includes them
 
 #Ignore appsettings.json in BlueBerry24.Bot Layer
-BlueBerry24.Bot/appsettings.json
+#BlueBerry24.Bot/appsettings.json
 
 #Ignore appsettings.Development.json in BlueBerry24.Bot Layer
-BlueBerry24.Bot/appsettings.Development.json
+#BlueBerry24.Bot/appsettings.Development.json
 
 #Ignore launchSettings.json in BlueBerry24.Bot Layer
-BlueBerry24.Bot/Properties/launchSettings.json
+#BlueBerry24.Bot/Properties/launchSettings.json
 
+#Ignore appsettings.json in Berryfy.API Layer
+Berryfy.API/appsettings.json
+
+#Ignore appsettings.json in Berryfy.API Layer
+Berryfy.API/appsettings.Production.json
 
 
 # Docker / Compose secrets (copy .env.example to .env and fill in values)
