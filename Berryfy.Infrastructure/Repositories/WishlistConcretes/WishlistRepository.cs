@@ -2,9 +2,10 @@ using Berryfy.Domain.Entities.WishlistEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Repositories.WishlistInterfaces;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using Berryfy.Application.Dtos.WishlistDtos.Responses;
+using Berryfy.Application.Dtos.WishlistDtos;
 
 namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
 {
@@ -14,7 +15,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
 
         public WishlistRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<Wishlist> GetByIdAsync(int id)
@@ -858,7 +859,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 FROM Wishlists w
                 LEFT JOIN WishlistItems wi ON w.Id = wi.WishlistId
                 LEFT JOIN Products p ON wi.ProductId = p.Id
-                LEFT JOIN AspNetUsers u ON w.UserId = u.Id
+                LEFT JOIN users u ON w.user_id = u.id
                 ORDER BY w.UpdatedAt DESC, w.Id, wi.Id";
 
             await using var connection = new NpgsqlConnection(_connectionString);
@@ -957,7 +958,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            await using var userCommand = new NpgsqlCommand("SELECT COUNT(1) FROM \"AspNetUsers\"", connection);
+            await using var userCommand = new NpgsqlCommand("SELECT COUNT(1) FROM users", connection);
             totalUsers = Convert.ToInt32(await userCommand.ExecuteScalarAsync());
 
             await using var wishlistCommand = new NpgsqlCommand("SELECT COUNT(1) FROM Wishlists", connection);
