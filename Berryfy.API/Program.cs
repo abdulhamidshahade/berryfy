@@ -43,14 +43,14 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddAutoMapper(cfg => { }, typeof(Berryfy.Application.Mapping.AssemblyMarker));
 
 builder.Services.AddApplicationServices(builder.Host, builder.Configuration);
-builder.Services.AddInfrastructureServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
+
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddHealthChecks()
     .AddCheck<Berryfy.Infrastructure.Data.DatabaseHealthCheck>("database");
 
-builder.Services.AddIdentity<User, Role>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+
 
 builder.Services.Configure<ResendSettings>(builder.Configuration.GetSection(ResendSettings.Name));
 builder.Services.AddHttpClient<Resend.ResendClient>();
