@@ -1,4 +1,4 @@
-
+using System.Text.Json.Serialization;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.Base;
 
@@ -8,10 +8,10 @@ namespace Berryfy.Domain.Entities.CouponEntities
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public User User { get; set; }
+        [JsonIgnore] public User User { get; set; }
 
         public int CouponId { get; set; }
-        public Coupon Coupon { get; set; }
+        [JsonIgnore] public Coupon Coupon { get; set; }
         public bool IsUsed { get; set; }
         public DateTime? UsedAt { get; set; }
         public int? OrderId { get; set; }
