@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Constants;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.OrderEntities;
 using System.ComponentModel.DataAnnotations;
@@ -66,7 +67,7 @@ namespace Berryfy.Domain.Entities.PaymentEntities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public User? User { get; set; }
-        public Order? Order { get; set; }
+        [JsonIgnore] public User? User { get; set; }
+        [JsonIgnore] public Order? Order { get; set; }
     }
 }
