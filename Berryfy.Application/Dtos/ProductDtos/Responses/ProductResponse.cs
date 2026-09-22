@@ -18,6 +18,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
+        public List<CategoryResponse> ProductCategories { get; set; } = new();
 
         public static ProductResponse MapFromProduct(Product product)
         {
@@ -33,6 +34,28 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
                 LowStockThreshold = product.LowStockThreshold,
                 IsActive = product.IsActive,
                 SKU = product.SKU
+            };
+        }
+
+        public static Product MapToProduct(ProductResponse response)
+        {
+            if (response == null)
+            {
+                return null!;
+            }
+
+            return new Product
+            {
+                Id = response.Id,
+                Name = response.Name,
+                Description = response.Description,
+                Price = response.Price,
+                StockQuantity = response.StockQuantity,
+                ImageUrl = response.ImageUrl,
+                ReservedStock = response.ReservedStock,
+                LowStockThreshold = response.LowStockThreshold,
+                IsActive = response.IsActive,
+                SKU = response.SKU
             };
         }
 
