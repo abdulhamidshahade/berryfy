@@ -1,5 +1,6 @@
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -11,7 +12,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public ProductRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<IReadOnlyList<Product>> GetAllAsync()
