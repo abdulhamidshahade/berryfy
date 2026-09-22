@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Constants;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.ProductEntities;
 
@@ -10,7 +11,7 @@ namespace Berryfy.Domain.Entities.InventoryEntities
 
         public int ProductId { get; set; }
 
-        public Product Product { get; set; }
+        [JsonIgnore] public Product Product { get; set; }
 
         public int CurrentStockQuantity { get; set; }
 
