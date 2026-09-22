@@ -4,6 +4,7 @@ using Berryfy.Domain.Entities.PaymentEntities;
 using Berryfy.Domain.Repositories.PaymentInterfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System.Data;
@@ -17,7 +18,7 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public PaymentRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<Payment?> GetByIdAsync(int id)
