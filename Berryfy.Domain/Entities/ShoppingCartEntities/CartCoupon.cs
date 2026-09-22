@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.AuthEntities;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.CouponEntities;
 
@@ -23,9 +24,9 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
         public DateTime AppliedAt { get; set; }
 
 
-        public virtual Cart Cart { get; set; } = null!;
-        public virtual Coupon Coupon { get; set; } = null!;
-        public virtual User? User { get; set; }
+        [JsonIgnore] public virtual Cart Cart { get; set; } = null!;
+        [JsonIgnore] public virtual Coupon Coupon { get; set; } = null!;
+        [JsonIgnore] public virtual User? User { get; set; }
 
 
 
