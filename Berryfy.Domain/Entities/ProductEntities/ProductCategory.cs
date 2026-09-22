@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.Base;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.Base;
 
 namespace Berryfy.Domain.Entities.ProductEntities
 {
@@ -6,10 +7,10 @@ namespace Berryfy.Domain.Entities.ProductEntities
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
-        public Product Product { get; set; }
+        [JsonIgnore] public Product Product { get; set; }
 
         public int CategoryId { get; set; }
-        public Category Category { get; set; }
+        [JsonIgnore] public Category Category { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
