@@ -1,5 +1,5 @@
-﻿using Berryfy.Domain.Entities.WishlistEntities;
-using Berryfy.Application.Dtos.WishlistDtos;
+﻿using Berryfy.Application.Dtos.WishlistDtos;
+using Berryfy.Domain.Entities.WishlistEntities;
 
 namespace Berryfy.Domain.Repositories.WishlistInterfaces
 {
@@ -25,6 +25,6 @@ namespace Berryfy.Domain.Repositories.WishlistInterfaces
         Task<decimal> GetUserTotalValueAsync(int userId);
 
         Task<IEnumerable<Wishlist>> GetAllWishlistsAsync();
-        //Task<GlobalWishlistStats> GetGlobalStatsAsync();
+        Task<GlobalWishlistStats> GetGlobalStatsAsync();
     }
 }
