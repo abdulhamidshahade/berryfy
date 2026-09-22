@@ -1,18 +1,17 @@
-using Berryfy.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
+using System.Data;
 
 namespace Berryfy.Domain.Repositories
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork, IAsyncDisposable
     {
-        private readonly ApplicationDbContext _context;
-        private IDbContextTransaction _currentTransaction;
-        public UnitOfWork(ApplicationDbContext context
-                          )
-        {
-            _context = context;
-        }
+        private readonly NpgsqlConnection _connection;
+        private NpgsqlTransaction _currentTransaction;
 
+        public UnitOfWork(NpgsqlConnection connection)
+        {
+            _connection = connection;
+        }
 
         public async Task BeginTransactionAsync()
         {
@@ -20,10 +19,15 @@ namespace Berryfy.Domain.Repositories
             {
                 return;
             }
-            _currentTransaction = await _context.Database.BeginTransactionAsync();
-        }
 
-        
+            // Ensure the connection is open before starting a transaction
+            if (_connection.State != ConnectionState.Open)
+            {
+                await _connection.OpenAsync();
+            }
+
+            _currentTransaction = await _connection.BeginTransactionAsync();
+        }
 
         public async Task<bool> CommitTransactionAsync()
         {
@@ -44,8 +48,6 @@ namespace Berryfy.Domain.Repositories
             }
         }
 
-        
-
         public async Task RollbackTransactionAsync()
         {
             if (_currentTransaction == null)
@@ -64,14 +66,18 @@ namespace Berryfy.Domain.Repositories
             }
         }
 
-        public async Task<bool> SaveDbChangesAsync()
+        public async ValueTask DisposeAsync()
         {
-            return await _context.SaveChangesAsync() > 0;
-        }
+            if (_currentTransaction != null)
+            {
+                await _currentTransaction.DisposeAsync();
+                _currentTransaction = null;
+            }
 
-        public IExecutionStrategy BeginTransactionAsyncStrategy()
-        {
-            return _context.Database.CreateExecutionStrategy();
+            if (_connection != null && _connection.State != ConnectionState.Closed)
+            {
+                await _connection.DisposeAsync();
+            }
         }
     }
 }
