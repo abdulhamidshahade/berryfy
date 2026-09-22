@@ -1,13 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using System.Data;
 
 namespace Berryfy.Domain.Repositories
 {
-    public interface IUnitOfWork
+    public interface IUnitOfWork : IAsyncDisposable
     {
+
         Task BeginTransactionAsync();
         Task<bool> CommitTransactionAsync();
         Task RollbackTransactionAsync();
-        Task<bool> SaveDbChangesAsync();
-        IExecutionStrategy BeginTransactionAsyncStrategy();
+        ValueTask DisposeAsync();
     }
 }
