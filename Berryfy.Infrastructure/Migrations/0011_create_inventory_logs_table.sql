@@ -7,7 +7,7 @@ CREATE TABLE inventory_logs
 		change_type INTEGER NOT NULL,
 		reference_id INTEGER NOT NULL,
 		reference_type TEXT NOT NULL,
-		performed_by_user_id INTEGER REFERENCES "AspNetUsers"("Id"),
+		performed_by_user_id INTEGER REFERENCES users(id),
 		notes TEXT NOT NULL,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
