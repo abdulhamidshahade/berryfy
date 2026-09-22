@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Constants;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.OrderEntities;
@@ -10,14 +11,14 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
     public class Cart : IAuditableEntity
     {
         public int Id { get; set; }
-        public List<CartItem> CartItems { get; set; } = new List<CartItem>();
+        [JsonIgnore] public List<CartItem> CartItems { get; set; } = new List<CartItem>();
         public int? UserId { get; set; }
         public string? SessionId { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public Order? Order { get; set; }
+        [JsonIgnore] public Order? Order { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
 
@@ -41,8 +42,8 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
         public decimal Total => SubTotal - DiscountTotal + TaxAmount;
 
 
-        public List<CartCoupon> CartCoupons { get; set; } = new List<CartCoupon>();
-        public User User { get; set; }
+        [JsonIgnore] public List<CartCoupon> CartCoupons { get; set; } = new List<CartCoupon>();
+        [JsonIgnore] public User User { get; set; }
 
         private decimal CalculateTax()
         {
