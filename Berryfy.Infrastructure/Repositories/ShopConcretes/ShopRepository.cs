@@ -1,5 +1,6 @@
 using Berryfy.Domain.Entities.ShopEntities;
 using Berryfy.Domain.Repositories.ShopInterfaces;
+using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -11,7 +12,7 @@ namespace Berryfy.Infrastructure.Repositories.ShopConcretes
 
         public ShopRepository(IConfiguration config)
         {
-            _connectionString = config.GetConnectionString("PostgreSQLServer");
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<Shop> GetShopAsync(int id)
