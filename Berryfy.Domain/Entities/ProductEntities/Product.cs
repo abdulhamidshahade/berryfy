@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.Base;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.OrderEntities;
 using Berryfy.Domain.Entities.ShoppingCartEntities;
@@ -19,9 +20,9 @@ namespace Berryfy.Domain.Entities.ProductEntities
         public string SKU { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        public List<InventoryLog> InventoryLogs { get; set; }
-        public List<ProductCategory> ProductCategories { get; set; }
-        public List<CartItem> CartItems { get; set; }
-        public List<OrderItem> OrderItems { get; set; }
+        [JsonIgnore] public List<InventoryLog> InventoryLogs { get; set; }
+        [JsonIgnore] public List<ProductCategory> ProductCategories { get; set; }
+        [JsonIgnore] public List<CartItem> CartItems { get; set; }
+        [JsonIgnore] public List<OrderItem> OrderItems { get; set; }
     }
 }
