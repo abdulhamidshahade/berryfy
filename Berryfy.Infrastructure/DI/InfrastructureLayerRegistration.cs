@@ -1,4 +1,5 @@
 using Berryfy.Domain.Repositories;
+using Berryfy.Domain.Repositories.AuthInterfaces;
 using Berryfy.Domain.Repositories.CheckoutInterfaces;
 using Berryfy.Domain.Repositories.CouponInterfaces;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
@@ -9,6 +10,7 @@ using Berryfy.Domain.Repositories.ShopInterfaces;
 using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
 using Berryfy.Domain.Repositories.WishlistInterfaces;
 using Berryfy.Infrastructure.Data;
+using Berryfy.Infrastructure.Repositories.AuthConcretes;
 using Berryfy.Infrastructure.Repositories.CheckoutConcretes;
 using Berryfy.Infrastructure.Repositories.CouponConcretes;
 using Berryfy.Infrastructure.Repositories.InventoryConcretes;
@@ -18,47 +20,30 @@ using Berryfy.Infrastructure.Repositories.ProductConcretes;
 using Berryfy.Infrastructure.Repositories.ShopConcretes;
 using Berryfy.Infrastructure.Repositories.ShoppingCartConcretes;
 using Berryfy.Infrastructure.Repositories.WishlistConcretes;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
-// TODO: Use here Microsoft.Extensions.DependencyInjection namespace
+using Npgsql;
 
 namespace Berryfy.Infrastructure.DI
 {
     public static class InfrastructureLayerRegistration
     {
-        public static IServiceCollection AddInfrastructureServices(this IServiceCollection serviceDescriptors)
+        public static IServiceCollection AddInfrastructureServices(this IServiceCollection serviceDescriptors, IConfiguration configuration)
         {
+            var connStr = PostgresConnectionStrings.Resolve(configuration);
+            var dataSource = NpgsqlDataSource.Create(connStr);
+            serviceDescriptors.AddSingleton(dataSource);
 
-            serviceDescriptors.AddDbContext<ApplicationDbContext>((provider, options) =>
+            serviceDescriptors.AddScoped(sp =>
             {
-                var configuration = provider.GetRequiredService<IConfiguration>();
-                var connectionString = configuration.GetConnectionString("MSSQLServer");
-
-                options.UseSqlServer(connectionString,
-                    sqloptions => {
-                        sqloptions.MigrationsAssembly("Berryfy.Infrastructure");
-
-                        sqloptions.EnableRetryOnFailure(
-                            maxRetryCount: 10,
-                            maxRetryDelay: TimeSpan.FromSeconds(30),
-                            errorNumbersToAdd: new[] { 4060 }); // 4060 = database not yet online (startup timing)
-                        sqloptions.CommandTimeout(120);
-                    });
-
-                options.EnableSensitiveDataLogging(false);
-
-                options.EnableServiceProviderCaching();
-                options.EnableDetailedErrors(false);
-
-                options.ConfigureWarnings(warnings =>
-                    warnings.Log(RelationalEventId.MultipleCollectionIncludeWarning));
+                var source = sp.GetRequiredService<NpgsqlDataSource>();
+                return source.CreateConnection();
             });
 
             serviceDescriptors.AddScoped<ICouponRepository, CouponRepository>();
             serviceDescriptors.AddScoped<IUserCouponRepository, UserCouponRepository>();
+            serviceDescriptors.AddScoped<IUserRepository, UserRepository>();
+            serviceDescriptors.AddScoped<IRoleRepository, RoleRepository>();
 
             serviceDescriptors.AddScoped<ICategoryRepository, CategoryRepository>();
             serviceDescriptors.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
@@ -85,6 +70,14 @@ namespace Berryfy.Infrastructure.DI
                 ));
 
             serviceDescriptors.AddScoped<DataSeeder>();
+
+            serviceDescriptors.AddScoped<Npgsql.NpgsqlConnection>(sp =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var connStr = config.GetConnectionString("Postgres"); // update key as used in appsettings
+                return new Npgsql.NpgsqlConnection(connStr);
+            });
+
 
             return serviceDescriptors;
         }
