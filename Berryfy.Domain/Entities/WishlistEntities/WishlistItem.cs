@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.Base;
+﻿using System.Text.Json.Serialization;
+using Berryfy.Domain.Entities.Base;
 using Berryfy.Domain.Entities.ProductEntities;
 using System.ComponentModel.DataAnnotations;
 namespace Berryfy.Domain.Entities.WishlistEntities
@@ -17,8 +18,8 @@ namespace Berryfy.Domain.Entities.WishlistEntities
 
         public int Priority { get; set; } = 1; // 1=Low, 2=Medium, 3=High
 
-        public Wishlist Wishlist { get; set; }
-        public Product Product { get; set; }
+        [JsonIgnore] public Wishlist Wishlist { get; set; }
+        [JsonIgnore] public Product Product { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
