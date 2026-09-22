@@ -1,134 +1,257 @@
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.CouponEntities;
-using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.CouponInterfaces;
 using Berryfy.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 {
     public class UserCouponRepository : IUserCouponRepository
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IUnitOfWork _unifOfWork;
+        private readonly string _connectionString;
 
-        public UserCouponRepository(ApplicationDbContext context, IUnitOfWork unitOfWork)
+        public UserCouponRepository(IConfiguration config)
         {
-            _context = context;
-            _unifOfWork = unitOfWork;
+            _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
         public async Task<UserCoupon> AddCouponToUserAsync(int userId, int couponId)
         {
-            var existing = await _context.UserCoupons
-                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CouponId == couponId);
-            if (existing != null) return existing;
+            const string findSql = @"
+                SELECT id, user_id, coupon_id, is_used, used_at, order_id, created_at, updated_at
+                FROM user_coupons
+                WHERE user_id = @UserId AND coupon_id = @CouponId
+                LIMIT 1";
 
-            var userCoupon = new UserCoupon
+            await using var connection = await OpenConnectionAsync();
+            await using (var findCommand = new NpgsqlCommand(findSql, connection))
             {
-                UserId = userId,
-                CouponId = couponId,
-                IsUsed = false,
-            };
-
-            await _context.UserCoupons.AddAsync(userCoupon);
-
-            if(await _unifOfWork.SaveDbChangesAsync())
-            {
-                return userCoupon;
+                findCommand.Parameters.AddWithValue("UserId", userId);
+                findCommand.Parameters.AddWithValue("CouponId", couponId);
+                await using var reader = await findCommand.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return MapUserCoupon(reader);
+                }
             }
 
-            return null;
+            const string insertSql = @"
+                INSERT INTO user_coupons (user_id, coupon_id, is_used, created_at, updated_at)
+                VALUES (@UserId, @CouponId, false, @CreatedAt, @UpdatedAt)
+                RETURNING id, user_id, coupon_id, is_used, used_at, order_id, created_at, updated_at";
+
+            var now = DateTime.UtcNow;
+            await using var insertCommand = new NpgsqlCommand(insertSql, connection);
+            insertCommand.Parameters.AddWithValue("UserId", userId);
+            insertCommand.Parameters.AddWithValue("CouponId", couponId);
+            insertCommand.Parameters.AddWithValue("CreatedAt", now);
+            insertCommand.Parameters.AddWithValue("UpdatedAt", now);
+
+            await using var insertReader = await insertCommand.ExecuteReaderAsync();
+            if (await insertReader.ReadAsync())
+            {
+                return MapUserCoupon(insertReader);
+            }
+
+            throw new InvalidOperationException("Failed to assign coupon to user.");
         }
 
-        public async Task<UserCoupon> AddUserToCouponAsync(int userId, int couponId)
+        public Task<UserCoupon> AddUserToCouponAsync(int userId, int couponId)
         {
-            return await AddCouponToUserAsync(userId, couponId);
+            return AddCouponToUserAsync(userId, couponId);
         }
 
         public async Task<bool> DisableCouponForUserAsync(int userId, int couponId)
         {
-            var userCouponModel = await _context.UserCoupons.Where(i => i.UserId == userId && i.CouponId == couponId)
-                .FirstOrDefaultAsync();
+            const string sql = @"
+                UPDATE user_coupons
+                SET is_used = true, updated_at = @UpdatedAt
+                WHERE user_id = @UserId AND coupon_id = @CouponId AND is_used = false";
 
-            if (userCouponModel == null) return false;
-            if (userCouponModel.IsUsed) return true;
-            userCouponModel.IsUsed = true;
-            return await _unifOfWork.SaveDbChangesAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("CouponId", couponId);
+            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
+            return await command.ExecuteNonQueryAsync() > 0;
         }
 
         public async Task<IReadOnlyList<Coupon>> GetCouponsByUserIdAsync(int userId)
         {
-            var coupons = await _context.UserCoupons.Where(i => i.UserId == userId)
-                .Select(c => c.Coupon)
-                .ToListAsync();
+            const string sql = @"
+                SELECT c.*
+                FROM user_coupons uc
+                INNER JOIN coupons c ON c.id = uc.coupon_id
+                WHERE uc.user_id = @UserId
+                ORDER BY c.id";
+
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("UserId", userId);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var coupons = new List<Coupon>();
+            while (await reader.ReadAsync())
+            {
+                coupons.Add(MapCoupon(reader));
+            }
 
             return coupons;
         }
 
-        public async Task<IReadOnlyList<ApplicationUser>> GetUsersByCouponIdAsync(int couponId)
+        public async Task<IReadOnlyList<User>> GetUsersByCouponIdAsync(int couponId)
         {
-            var users = await _context.UserCoupons.Where(c => c.CouponId == couponId)
-                .Select(u => u.User)
-                .ToListAsync();
+            const string sql = @"
+                SELECT u.*
+                FROM user_coupons uc
+                INNER JOIN users u ON u.id = uc.user_id
+                WHERE uc.coupon_id = @CouponId
+                ORDER BY u.id";
+
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("CouponId", couponId);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var users = new List<User>();
+            while (await reader.ReadAsync())
+            {
+                users.Add(MapUser(reader));
+            }
 
             return users;
         }
 
         public async Task<bool> IsCouponUsedByUserAsync(int userId, string couponCode)
         {
-            var coupon = await _context.UserCoupons.Where(i => i.UserId == userId && i.Coupon.Code == couponCode)
-                .FirstOrDefaultAsync();
+            const string sql = @"
+                SELECT uc.is_used
+                FROM user_coupons uc
+                INNER JOIN coupons c ON c.id = uc.coupon_id
+                WHERE uc.user_id = @UserId AND c.code = @CouponCode
+                LIMIT 1";
 
-            if(coupon == null)
-            {
-                return false;
-            }
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("CouponCode", couponCode);
 
-            return coupon.IsUsed;
+            var result = await command.ExecuteScalarAsync();
+            return result is bool isUsed && isUsed;
         }
 
         public async Task<bool> MarkCouponAsUsedAsync(int userId, int couponId, int orderId)
         {
-            var userCoupon = await _context.UserCoupons
-                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CouponId == couponId);
+            const string sql = @"
+                UPDATE user_coupons
+                SET is_used = true,
+                    used_at = @UsedAt,
+                    order_id = @OrderId,
+                    updated_at = @UpdatedAt
+                WHERE user_id = @UserId AND coupon_id = @CouponId
+                  AND (is_used = false OR order_id = @OrderId)";
 
-            if (userCoupon == null)
-            {
-                return false;
-            }
-
-            if (userCoupon.IsUsed) return userCoupon.OrderId == orderId;
-            userCoupon.IsUsed = true;
-            userCoupon.UsedAt = DateTime.UtcNow;
-            userCoupon.OrderId = orderId;
-
-            return await _unifOfWork.SaveDbChangesAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("CouponId", couponId);
+            command.Parameters.AddWithValue("OrderId", orderId);
+            command.Parameters.AddWithValue("UsedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
+            return await command.ExecuteNonQueryAsync() > 0;
         }
 
         public async Task<bool> RevertCouponUsageAsync(int userId, int couponId, int orderId)
         {
-            var userCoupon = await _context.UserCoupons
-                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CouponId == couponId && uc.OrderId == orderId);
+            const string sql = @"
+                UPDATE user_coupons
+                SET is_used = false,
+                    used_at = NULL,
+                    order_id = NULL,
+                    updated_at = @UpdatedAt
+                WHERE user_id = @UserId AND coupon_id = @CouponId AND order_id = @OrderId";
 
-            if (userCoupon == null)
-            {
-                return false;
-            }
-
-            userCoupon.IsUsed = false;
-            userCoupon.UsedAt = null;
-            userCoupon.OrderId = null;
-
-            return await _unifOfWork.SaveDbChangesAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("CouponId", couponId);
+            command.Parameters.AddWithValue("OrderId", orderId);
+            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
+            return await command.ExecuteNonQueryAsync() > 0;
         }
 
         public async Task<List<int>> GetCouponIdsUsedInOrderAsync(int orderId)
         {
-            return await _context.UserCoupons
-                .Where(uc => uc.OrderId == orderId && uc.IsUsed)
-                .Select(uc => uc.CouponId)
-                .ToListAsync();
+            const string sql = @"
+                SELECT coupon_id
+                FROM user_coupons
+                WHERE order_id = @OrderId AND is_used = true";
+
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("OrderId", orderId);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var couponIds = new List<int>();
+            while (await reader.ReadAsync())
+            {
+                couponIds.Add(reader.GetInt32(0));
+            }
+
+            return couponIds;
+        }
+
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return connection;
+        }
+
+        private static UserCoupon MapUserCoupon(NpgsqlDataReader reader)
+        {
+            return new UserCoupon
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("id")),
+                UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                CouponId = reader.GetInt32(reader.GetOrdinal("coupon_id")),
+                IsUsed = reader.GetBoolean(reader.GetOrdinal("is_used")),
+                UsedAt = reader.IsDBNull(reader.GetOrdinal("used_at")) ? null : reader.GetDateTime(reader.GetOrdinal("used_at")),
+                OrderId = reader.IsDBNull(reader.GetOrdinal("order_id")) ? null : reader.GetInt32(reader.GetOrdinal("order_id")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
+        }
+
+        private static Coupon MapCoupon(NpgsqlDataReader reader)
+        {
+            return new Coupon
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("id")),
+                Code = reader.GetString(reader.GetOrdinal("code")),
+                Description = reader.GetString(reader.GetOrdinal("description")),
+                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("discount_amount")),
+                MinimumOrderAmount = reader.GetDecimal(reader.GetOrdinal("minimum_order_amount")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+                Type = (Domain.Constants.CouponType)reader.GetInt32(reader.GetOrdinal("type")),
+                Value = reader.GetDecimal(reader.GetOrdinal("value")),
+                IsForNewUsersOnly = reader.GetBoolean(reader.GetOrdinal("is_for_new_users_only"))
+            };
+        }
+
+        private static User MapUser(NpgsqlDataReader reader)
+        {
+            return new User
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("id")),
+                UserName = reader.IsDBNull(reader.GetOrdinal("user_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("user_name")),
+                Email = reader.IsDBNull(reader.GetOrdinal("email")) ? string.Empty : reader.GetString(reader.GetOrdinal("email")),
+                FirstName = reader.IsDBNull(reader.GetOrdinal("firstname")) ? string.Empty : reader.GetString(reader.GetOrdinal("firstname")),
+                LastName = reader.IsDBNull(reader.GetOrdinal("lastname")) ? string.Empty : reader.GetString(reader.GetOrdinal("lastname"))
+            };
         }
     }
 }
