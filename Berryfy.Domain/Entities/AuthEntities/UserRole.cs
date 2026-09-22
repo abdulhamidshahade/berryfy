@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace Berryfy.Domain.Entities.AuthEntities
 {
@@ -10,5 +6,7 @@ namespace Berryfy.Domain.Entities.AuthEntities
     {
         public int UserId { get; set; }
         public int RoleId { get; set; }
+        [JsonIgnore] public User User { get; set; }
+        [JsonIgnore] public Role Role { get; set; }
     }
 }
