@@ -1,5 +1,4 @@
 using Berryfy.Application.Authorization.Attributes;
-using Berryfy.Application.Constants;
 using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.AuthDtos.Requests;
 using Berryfy.Application.Dtos.AuthDtos.Responses;
@@ -7,6 +6,7 @@ using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Entities.AuthEntities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 namespace Berryfy.API.Controllers
 {
@@ -30,14 +30,15 @@ namespace Berryfy.API.Controllers
             _logger = logger;
         }
 
+
         [HttpPost]
         [Route("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest requestDto)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (requestDto == null || !ModelState.IsValid)
+            if (request == null || !ModelState.IsValid)
             {
-                return BadRequest(new ResponseDto<RegisterResponse>
+                return BadRequest(new ApiResponse<RegisterResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -46,76 +47,45 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var registerResult = await _authService.Register(requestDto);
+            var registerResult = await _authService.Register(request);
 
-            switch (registerResult)
+            if (registerResult.IsSuccess)
             {
-                case Result<RegisterResponse> success when success.Status == ResultStatus.Success:
+                var newUserId = registerResult.Value?.User?.Id ?? 0;
+
+                if (newUserId > 0)
                 {
-                    var newUserId = success.Value?.User?.Id ?? 0;
-                    if (newUserId > 0)
+                    var sessionId = GetSessionId();
+                    if (!string.IsNullOrWhiteSpace(sessionId))
                     {
-                        var sessionId = GetSessionId();
-                        if (!string.IsNullOrWhiteSpace(sessionId))
-                        {
-                            await _cartService.MergeCartAsync(newUserId, sessionId);
-                        }
-                    }
+                        await _cartService.MergeCartAsync(newUserId, sessionId);
 
-                    return StatusCode(201, new ResponseDto<RegisterResponse>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 201,
-                        StatusMessage = "User registered successfully. Please check your email to confirm your account.",
-                        Data = success.Value
-                    });
-                }
-
-                case Result<RegisterResponse> validationError when validationError.Status == ResultStatus.ValidationError:
-                    return BadRequest(new ResponseDto<RegisterResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = validationError.Error,
-                    });
-
-                case Result<RegisterResponse> failure when failure.Status == ResultStatus.Failure:
-                    return StatusCode(500, new ResponseDto<RegisterResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = failure.Error,
-                    });
-                case Result<RegisterResponse> conflict when conflict.Status == ResultStatus.Conflict:
-                    return Conflict(new ResponseDto<RegisterResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 409,
-                        StatusMessage = conflict.Error,
-                    });
-                case Result<RegisterResponse> verificationRequired when verificationRequired.Status == ResultStatus.VerificationRequired:
-                    return StatusCode(403, new ResponseDto<RegisterResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 403,
-                        StatusMessage = verificationRequired.Error,
-                    });
-                default:
-                    return Result<RegisterResponse>.NoContent() is Result<RegisterResponse> noContent
-                        ? StatusCode(204, new ResponseDto<RegisterResponse>
+                        return StatusCode(201, new ApiResponse<RegisterResponse>
                         {
-                            IsSuccess = false,
-                            StatusCode = 204,
-                            StatusMessage = "No content to return."
-                        })
-                        : StatusCode(500, new ResponseDto<RegisterResponse>
-                        {
-                            IsSuccess = false,
-                            StatusCode = 500,
-                            StatusMessage = "An unexpected error occurred."
+                            IsSuccess = true,
+                            StatusCode = 201,
+                            StatusMessage = "User registered successfully. Please check your email to confirm your account.",
+                            Data = registerResult.Value
                         });
+                    }
+                }
             }
+            else
+            {
+                return StatusCode(400, new ApiResponse<RegisterResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400
+                });
+            }
+
+            return StatusCode(500, new ApiResponse<RegisterResponse>
+            {
+                IsSuccess = false,
+                StatusCode = 500
+            });
         }
+
 
         [HttpPost]
         [Route("login")]
@@ -124,7 +94,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<LoginResponse>
+                return StatusCode(400, new ApiResponse<LoginResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -147,7 +117,7 @@ namespace Berryfy.API.Controllers
                     }
                 }
 
-                return StatusCode(200, new ResponseDto<LoginResponse>
+                return StatusCode(200, new ApiResponse<LoginResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -158,7 +128,7 @@ namespace Berryfy.API.Controllers
 
             if (!string.IsNullOrEmpty(loginResult.ErrorMessage))
             {
-                return StatusCode(403, new ResponseDto<LoginResponse>
+                return StatusCode(403, new ApiResponse<LoginResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 403,
@@ -166,7 +136,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Unauthorized(new ResponseDto<LoginResponse>
+            return Unauthorized(new ApiResponse<LoginResponse>
             {
                 IsSuccess = false,
                 StatusCode = 401,
@@ -181,7 +151,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<object>
+                return StatusCode(400, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -196,7 +166,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<object>
+                    return Ok(new ApiResponse<object>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -204,7 +174,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -213,7 +183,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -229,7 +199,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<VerifyPasswordResetCodeResponse>
+                return StatusCode(400, new ApiResponse<VerifyPasswordResetCodeResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -244,7 +214,7 @@ namespace Berryfy.API.Controllers
 
                 if (result != null && !string.IsNullOrEmpty(result.ResetToken))
                 {
-                    return Ok(new ResponseDto<VerifyPasswordResetCodeResponse>
+                    return Ok(new ApiResponse<VerifyPasswordResetCodeResponse>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -253,7 +223,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<VerifyPasswordResetCodeResponse>
+                return BadRequest(new ApiResponse<VerifyPasswordResetCodeResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -262,7 +232,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<VerifyPasswordResetCodeResponse>
+                return StatusCode(500, new ApiResponse<VerifyPasswordResetCodeResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -278,7 +248,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<object>
+                return StatusCode(400, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -293,7 +263,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<object>
+                    return Ok(new ApiResponse<object>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -301,7 +271,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -310,7 +280,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -326,7 +296,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<object>
+                return StatusCode(400, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -341,7 +311,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<object>
+                    return Ok(new ApiResponse<object>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -349,7 +319,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<object>
+                return BadRequest(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -358,7 +328,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -374,7 +344,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<object>
+                return StatusCode(400, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -389,7 +359,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<object>
+                    return Ok(new ApiResponse<object>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -397,7 +367,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -406,7 +376,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -422,7 +392,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || !ModelState.IsValid)
             {
-                return StatusCode(400, new ResponseDto<object>
+                return StatusCode(400, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -437,7 +407,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<object>
+                    return Ok(new ApiResponse<object>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -445,7 +415,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<object>
+                return BadRequest(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -454,7 +424,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -466,13 +436,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [AdminAndAbove]
         [Route("exists/{id}")]
-        public async Task<ActionResult<ResponseDto<object>>> IsUserExistsById(int id)
+        public async Task<ActionResult<ApiResponse<object>>> IsUserExistsById(int id)
         {
             var exists = await _userService.IsUserExistsByIdAsync(id);
 
             if (!exists)
             {
-                return NotFound(new ResponseDto<object>
+                return NotFound(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -480,7 +450,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -498,7 +468,7 @@ namespace Berryfy.API.Controllers
 
             if (!exists)
             {
-                return NotFound(new ResponseDto<object>
+                return NotFound(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -506,7 +476,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -523,7 +493,7 @@ namespace Berryfy.API.Controllers
 
             if (!exists)
             {
-                return NotFound(new ResponseDto<object>
+                return NotFound(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -531,7 +501,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -546,7 +516,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || string.IsNullOrWhiteSpace(requestDto.Token))
             {
-                return BadRequest(new ResponseDto<object>
+                return BadRequest(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -560,7 +530,7 @@ namespace Berryfy.API.Controllers
 
                 if (string.IsNullOrEmpty(result.Token))
                 {
-                    return Unauthorized(new ResponseDto<object>
+                    return Unauthorized(new ApiResponse<object>
                     {
                         IsSuccess = false,
                         StatusCode = 401,
@@ -568,7 +538,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<LoginResponse>
+                return Ok(new ApiResponse<LoginResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -579,7 +549,7 @@ namespace Berryfy.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while refreshing the token.");
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -594,7 +564,7 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> Logout()
         {
             //TODO: implement token blacklisting or session management
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -610,7 +580,7 @@ namespace Berryfy.API.Controllers
             try
             {
                 var users = await _userService.GetAllUsers();
-                return Ok(new ResponseDto<List<User>>
+                return Ok(new ApiResponse<List<User>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -620,7 +590,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<User>>
+                return StatusCode(500, new ApiResponse<List<User>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -639,7 +609,7 @@ namespace Berryfy.API.Controllers
                 var user = await _userService.GetUserById(id);
                 if (user == null)
                 {
-                    return NotFound(new ResponseDto<User>
+                    return NotFound(new ApiResponse<User>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -647,7 +617,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<User>
+                return Ok(new ApiResponse<User>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -657,7 +627,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<User>
+                return StatusCode(500, new ApiResponse<User>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -675,7 +645,7 @@ namespace Berryfy.API.Controllers
 
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new ResponseDto<object>
+                return Unauthorized(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 401,
@@ -687,7 +657,7 @@ namespace Berryfy.API.Controllers
 
             if (currentUser == null)
             {
-                return NotFound(new ResponseDto<object>
+                return NotFound(new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -695,7 +665,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -711,13 +681,13 @@ namespace Berryfy.API.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                return Unauthorized(new ResponseDto<bool> { IsSuccess = false, StatusCode = 401, StatusMessage = "Unauthorized" });
+                return Unauthorized(new ApiResponse<bool> { IsSuccess = false, StatusCode = 401, StatusMessage = "Unauthorized" });
 
             var result = await _authService.UpdateProfileAsync(userId, dto);
             if (result)
-                return Ok(new ResponseDto<bool> { IsSuccess = true, StatusCode = 200, StatusMessage = "Profile updated successfully." });
+                return Ok(new ApiResponse<bool> { IsSuccess = true, StatusCode = 200, StatusMessage = "Profile updated successfully." });
 
-            return BadRequest(new ResponseDto<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to update profile. Username may already be taken." });
+            return BadRequest(new ApiResponse<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to update profile. Username may already be taken." });
         }
 
         [HttpPost]
@@ -727,16 +697,16 @@ namespace Berryfy.API.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                return Unauthorized(new ResponseDto<bool> { IsSuccess = false, StatusCode = 401, StatusMessage = "Unauthorized" });
+                return Unauthorized(new ApiResponse<bool> { IsSuccess = false, StatusCode = 401, StatusMessage = "Unauthorized" });
 
             if (dto.NewPassword != dto.ConfirmNewPassword)
-                return BadRequest(new ResponseDto<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "New password and confirmation do not match." });
+                return BadRequest(new ApiResponse<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "New password and confirmation do not match." });
 
             var result = await _authService.ChangePasswordAsync(userId, dto);
             if (result)
-                return Ok(new ResponseDto<bool> { IsSuccess = true, StatusCode = 200, StatusMessage = "Password changed successfully." });
+                return Ok(new ApiResponse<bool> { IsSuccess = true, StatusCode = 200, StatusMessage = "Password changed successfully." });
 
-            return BadRequest(new ResponseDto<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to change password. Current password may be incorrect." });
+            return BadRequest(new ApiResponse<bool> { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to change password. Current password may be incorrect." });
         }
 
         [HttpPost]
@@ -751,7 +721,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -759,7 +729,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -768,7 +738,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -788,7 +758,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -796,7 +766,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -805,7 +775,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -821,7 +791,7 @@ namespace Berryfy.API.Controllers
         {
             if (requestDto == null || string.IsNullOrWhiteSpace(requestDto.NewPassword))
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -835,7 +805,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -843,7 +813,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -852,7 +822,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -872,7 +842,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -880,7 +850,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -889,7 +859,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -905,7 +875,7 @@ namespace Berryfy.API.Controllers
         {
             if (updateUserDto == null || !ModelState.IsValid)
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -920,7 +890,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -928,7 +898,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -937,7 +907,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -953,7 +923,7 @@ namespace Berryfy.API.Controllers
         {
             if (createUserDto == null || !ModelState.IsValid)
             {
-                return BadRequest(new ResponseDto<User>
+                return BadRequest(new ApiResponse<User>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -968,7 +938,7 @@ namespace Berryfy.API.Controllers
 
                 if (user != null)
                 {
-                    return StatusCode(201, new ResponseDto<User>
+                    return StatusCode(201, new ApiResponse<User>
                     {
                         IsSuccess = true,
                         StatusCode = 201,
@@ -977,7 +947,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<User>
+                return BadRequest(new ApiResponse<User>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -986,7 +956,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<User>
+                return StatusCode(500, new ApiResponse<User>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -1006,7 +976,7 @@ namespace Berryfy.API.Controllers
 
                 if (result)
                 {
-                    return Ok(new ResponseDto<bool>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
@@ -1014,7 +984,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -1023,7 +993,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
