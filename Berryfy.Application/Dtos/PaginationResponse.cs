@@ -1,6 +1,6 @@
 namespace Berryfy.Application.Dtos
 {
-    public class PaginationDto<T>
+    public class PaginationResponse<T>
     {
         public IEnumerable<T> Data { get; set; }
         public int PageNumber { get; set; }
@@ -12,7 +12,7 @@ namespace Berryfy.Application.Dtos
         public int FirstItemOnPage { get; set; }
         public int LastItemOnPage { get; set; }
 
-        public PaginationDto(IEnumerable<T> data, int pageNumber, int pageSize, int totalCount)
+        public PaginationResponse(IEnumerable<T> data, int pageNumber, int pageSize, int totalCount)
         {
             Data = data;
             PageNumber = pageNumber;
