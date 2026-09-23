@@ -23,7 +23,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             _logger = logger;
         }
 
-        public async Task<ResponseDto<PaymentResponseDto>> ProcessPaymentAsync(CreatePayment createPaymentDto, int? userId, string? sessionId)
+        public async Task<ApiResponse<PaymentResponseDto>> ProcessPaymentAsync(CreatePayment createPaymentDto, int? userId, string? sessionId)
         {
             try
             {
@@ -88,7 +88,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     RedirectUrl = providerResult.Success ? "/payment/success" : "/payment/failed"
                 };
 
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
                     StatusMessage = "Payment processing completed",
@@ -98,7 +98,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing payment");
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while processing payment"
@@ -106,14 +106,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentResponse>> GetPaymentByIdAsync(int id)
+        public async Task<ApiResponse<PaymentResponse>> GetPaymentByIdAsync(int id)
         {
             try
             {
                 var payment = await _paymentRepository.GetByIdAsync(id);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponse>
+                    return new ApiResponse<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
@@ -121,7 +121,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -130,7 +130,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by ID: {PaymentId}", id);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -138,14 +138,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentResponse>> GetPaymentByTransactionIdAsync(string transactionId)
+        public async Task<ApiResponse<PaymentResponse>> GetPaymentByTransactionIdAsync(string transactionId)
         {
             try
             {
                 var payment = await _paymentRepository.GetByTransactionIdAsync(transactionId);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponse>
+                    return new ApiResponse<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
@@ -153,7 +153,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -162,7 +162,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by transaction ID: {TransactionId}", transactionId);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -170,14 +170,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentResponse>> GetPaymentByOrderIdAsync(int orderId)
+        public async Task<ApiResponse<PaymentResponse>> GetPaymentByOrderIdAsync(int orderId)
         {
             try
             {
                 var payment = await _paymentRepository.GetByOrderIdAsync(orderId);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponse>
+                    return new ApiResponse<PaymentResponse>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found for this order"
@@ -185,7 +185,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = true,
                     Data = paymentDto
@@ -194,7 +194,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by order ID: {OrderId}", orderId);
-                return new ResponseDto<PaymentResponse>
+                return new ApiResponse<PaymentResponse>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payment"
@@ -202,14 +202,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetAllPaymentsAsync()
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetAllPaymentsAsync()
         {
             try
             {
                 var payments = await _paymentRepository.GetAllAsync();
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -218,7 +218,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all payments");
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments"
@@ -226,14 +226,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByUserIdAsync(int userId)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByUserIdAsync(int userId)
         {
             try
             {
                 var payments = await _paymentRepository.GetByUserIdAsync(userId);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -242,7 +242,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by user ID: {UserId}", userId);
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving user payments"
@@ -250,14 +250,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByStatusAsync(PaymentStatus status)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByStatusAsync(PaymentStatus status)
         {
             try
             {
                 var payments = await _paymentRepository.GetByStatusAsync(status);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -266,7 +266,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by status: {Status}", status);
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments by status"
@@ -274,14 +274,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             try
             {
                 var payments = await _paymentRepository.GetByDateRangeAsync(startDate, endDate);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -290,7 +290,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by date range");
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving payments by date range"
@@ -298,14 +298,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.GetPaginatedAsync(pageNumber, pageSize);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -314,7 +314,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments");
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving paginated payments"
@@ -322,14 +322,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.GetPaginatedByUserIdAsync(userId, pageNumber, pageSize);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
                     Data = paymentDtos
@@ -338,7 +338,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments by user ID: {UserId}", userId);
-                return new ResponseDto<IEnumerable<PaymentResponse>>
+                return new ApiResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while retrieving user payments"
@@ -346,14 +346,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentResponseDto>> UpdatePaymentStatusAsync(int id, PaymentStatus status, string? notes = null)
+        public async Task<ApiResponse<PaymentResponseDto>> UpdatePaymentStatusAsync(int id, PaymentStatus status, string? notes = null)
         {
             try
             {
                 var payment = await _paymentRepository.GetByIdAsync(id);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponseDto>
+                    return new ApiResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
@@ -388,7 +388,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Status = payment.Status
                 };
 
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
                     Data = response
@@ -397,7 +397,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating payment status for ID: {PaymentId}", id);
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while updating payment status"
@@ -405,14 +405,14 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<PaymentResponseDto>> RefundPaymentAsync(int id, decimal? refundAmount = null, string? reason = null)
+        public async Task<ApiResponse<PaymentResponseDto>> RefundPaymentAsync(int id, decimal? refundAmount = null, string? reason = null)
         {
             try
             {
                 var payment = await _paymentRepository.GetByIdAsync(id);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponseDto>
+                    return new ApiResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
                         StatusMessage = "Payment not found"
@@ -421,7 +421,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
 
                 if (payment.Status != PaymentStatus.Completed)
                 {
-                    return new ResponseDto<PaymentResponseDto>
+                    return new ApiResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
                         StatusMessage = "Only completed payments can be refunded"
@@ -431,7 +431,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                 var amountToRefund = refundAmount ?? payment.Amount;
                 if (amountToRefund <= 0 || amountToRefund > payment.Amount)
                 {
-                    return new ResponseDto<PaymentResponseDto>
+                    return new ApiResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
                         StatusMessage = "Refund amount must be positive and cannot exceed payment amount"
@@ -459,7 +459,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Status = payment.Status
                 };
 
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
                     Data = response
@@ -468,7 +468,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refunding payment for ID: {PaymentId}", id);
-                return new ResponseDto<PaymentResponseDto>
+                return new ApiResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while processing refund"
@@ -476,12 +476,12 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<bool>> DeletePaymentAsync(int id)
+        public async Task<ApiResponse<bool>> DeletePaymentAsync(int id)
         {
             try
             {
                 var result = await _paymentRepository.DeleteAsync(id);
-                return new ResponseDto<bool>
+                return new ApiResponse<bool>
                 {
                     IsSuccess = result,
                     StatusMessage = result ? "Payment deleted successfully" : "Payment not found or could not be deleted",
@@ -491,7 +491,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting payment for ID: {PaymentId}", id);
-                return new ResponseDto<bool>
+                return new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusMessage = "An error occurred while deleting payment",
@@ -500,100 +500,100 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             }
         }
 
-        public async Task<ResponseDto<int>> GetTotalPaymentCountAsync()
+        public async Task<ApiResponse<int>> GetTotalPaymentCountAsync()
         {
             try
             {
                 var count = await _paymentRepository.GetTotalCountAsync();
-                return new ResponseDto<int> { IsSuccess = true, Data = count };
+                return new ApiResponse<int> { IsSuccess = true, Data = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total payment count");
-                return new ResponseDto<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count" };
+                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count" };
             }
         }
 
-        public async Task<ResponseDto<int>> GetPaymentCountByUserIdAsync(int userId)
+        public async Task<ApiResponse<int>> GetPaymentCountByUserIdAsync(int userId)
         {
             try
             {
                 var count = await _paymentRepository.GetCountByUserIdAsync(userId);
-                return new ResponseDto<int> { IsSuccess = true, Data = count };
+                return new ApiResponse<int> { IsSuccess = true, Data = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment count by user ID: {UserId}", userId);
-                return new ResponseDto<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving user payment count" };
+                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving user payment count" };
             }
         }
 
-        public async Task<ResponseDto<int>> GetPaymentCountByStatusAsync(PaymentStatus status)
+        public async Task<ApiResponse<int>> GetPaymentCountByStatusAsync(PaymentStatus status)
         {
             try
             {
                 var count = await _paymentRepository.GetCountByStatusAsync(status);
-                return new ResponseDto<int> { IsSuccess = true, Data = count };
+                return new ApiResponse<int> { IsSuccess = true, Data = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment count by status: {Status}", status);
-                return new ResponseDto<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count by status" };
+                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count by status" };
             }
         }
 
-        public async Task<ResponseDto<decimal>> GetTotalAmountByUserIdAsync(int userId)
+        public async Task<ApiResponse<decimal>> GetTotalAmountByUserIdAsync(int userId)
         {
             try
             {
                 var total = await _paymentRepository.GetTotalAmountByUserIdAsync(userId);
-                return new ResponseDto<decimal> { IsSuccess = true, Data = total };
+                return new ApiResponse<decimal> { IsSuccess = true, Data = total };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total amount by user ID: {UserId}", userId);
-                return new ResponseDto<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
+                return new ApiResponse<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
             }
         }
 
-        public async Task<ResponseDto<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ApiResponse<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             try
             {
                 var total = await _paymentRepository.GetTotalAmountByDateRangeAsync(startDate, endDate);
-                return new ResponseDto<decimal> { IsSuccess = true, Data = total };
+                return new ApiResponse<decimal> { IsSuccess = true, Data = total };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total amount by date range");
-                return new ResponseDto<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
+                return new ApiResponse<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
             }
         }
 
-        public async Task<ResponseDto<IEnumerable<PaymentResponse>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
+        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
         {
             try
             {
                 var payments = await _paymentRepository.SearchAsync(searchTerm, pageNumber, pageSize);
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ResponseDto<IEnumerable<PaymentResponse>> { IsSuccess = true, Data = paymentDtos };
+                return new ApiResponse<IEnumerable<PaymentResponse>> { IsSuccess = true, Data = paymentDtos };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching payments with term: {SearchTerm}", searchTerm);
-                return new ResponseDto<IEnumerable<PaymentResponse>> { IsSuccess = false, StatusMessage = "An error occurred while searching payments" };
+                return new ApiResponse<IEnumerable<PaymentResponse>> { IsSuccess = false, StatusMessage = "An error occurred while searching payments" };
             }
         }
 
-        public async Task<ResponseDto<PaymentResponseDto>> VerifyPaymentWithProviderAsync(string transactionId)
+        public async Task<ApiResponse<PaymentResponseDto>> VerifyPaymentWithProviderAsync(string transactionId)
         {
             try
             {
                 var payment = await _paymentRepository.GetByTransactionIdAsync(transactionId);
                 if (payment == null)
                 {
-                    return new ResponseDto<PaymentResponseDto> { IsSuccess = false, StatusMessage = "Payment not found" };
+                    return new ApiResponse<PaymentResponseDto> { IsSuccess = false, StatusMessage = "Payment not found" };
                 }
 
                 var verificationResult = await VerifyWithPaymentProvider(payment);
@@ -615,12 +615,12 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Status = payment.Status
                 };
 
-                return new ResponseDto<PaymentResponseDto> { IsSuccess = true, Data = response };
+                return new ApiResponse<PaymentResponseDto> { IsSuccess = true, Data = response };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error verifying payment with transaction ID: {TransactionId}", transactionId);
-                return new ResponseDto<PaymentResponseDto> { IsSuccess = false, StatusMessage = "An error occurred while verifying payment" };
+                return new ApiResponse<PaymentResponseDto> { IsSuccess = false, StatusMessage = "An error occurred while verifying payment" };
             }
         }
 
