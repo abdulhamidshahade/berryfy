@@ -40,7 +40,6 @@ builder.Services.AddOpenApi(options =>
     options.AddOperationTransformer<BearerSecuritySchemeTransformer>();
 });
 
-builder.Services.AddAutoMapper(cfg => { }, typeof(Berryfy.Application.Mapping.AssemblyMarker));
 
 builder.Services.AddApplicationServices(builder.Host, builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -62,6 +61,7 @@ builder.Services.AddOptions<Resend.ResendClientOptions>()
         {
             key = Environment.GetEnvironmentVariable("ResendSettings__ApiKey")
                 ?? Environment.GetEnvironmentVariable("RESEND_APITOKEN")
+                ?? builder.Configuration.GetSection("Resend:ApiKey").ToString()
                 ?? string.Empty;
         }
 
