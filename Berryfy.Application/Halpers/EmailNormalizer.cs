@@ -20,10 +20,10 @@ namespace Berryfy.Application.Halpers
             string localPart = parts[0];
             string domain = parts[1];
 
-            if (domain == "gmail.com")
-            {
-                localPart = localPart.Replace(".", "");
-            }
+            //if (domain == "gmail.com")
+            //{
+            //    localPart = localPart.Replace(".", "");
+            //}
 
             return $"{localPart}@{domain}";
         }
