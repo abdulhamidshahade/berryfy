@@ -7,7 +7,7 @@ namespace Berryfy.Application.Services.Interfaces.AuthServiceInterfaces
 {
     public interface IAuthService
     {
-        Task<Result<RegisterResponse>> Register(RegisterRequest requestDto);
+        Task<ApplicationResponse<RegisterResponse>> Register(RegisterRequest requestDto);
         Task<LoginResponse> Login(LoginRequest requestDto);
         Task<LoginResponse> RefreshTokenAsync(string refreshToken);
         Task<bool> ForgotPasswordAsync(ForgotPasswordRequest requestDto);
