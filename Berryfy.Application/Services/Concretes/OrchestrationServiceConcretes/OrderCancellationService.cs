@@ -14,21 +14,21 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
         private readonly IOrderRepository _orderRepository;
         private readonly IInventoryService _inventoryService;
         private readonly IUserCouponService _userCouponService;
-        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderCancellationService> _logger;
+        private readonly IUnitOfWork _unitOfWork;
 
         public OrderCancellationService(
+            IUnitOfWork unitOfWork,
             IOrderRepository orderRepository,
             IInventoryService inventoryService,
             IUserCouponService userCouponService,
-            IUnitOfWork unitOfWork,
             ILogger<OrderCancellationService> logger)
         {
             _orderRepository = orderRepository;
             _inventoryService = inventoryService;
             _userCouponService = userCouponService;
-            _unitOfWork = unitOfWork;
             _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<CancellationResult> CancelOrderAsync(int orderId, string reason, int? performedByUserId = null)
@@ -52,55 +52,32 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     return result;
                 }
 
-                var strategy = _unitOfWork.BeginTransactionAsyncStrategy();
-                var transactionResult = await strategy.ExecuteAsync(async () =>
+                // Start the raw ADO.NET transaction
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
                 {
-                    await _unitOfWork.BeginTransactionAsync();
+                    _logger.LogDebug("Reverting inventory for cancelled order {OrderId} (status {Status})", orderId, order.Status);
 
-                    try
+                    if (order.Status == OrderStatus.Pending)
                     {
-                        _logger.LogDebug("Reverting inventory for cancelled order {OrderId} (status {Status})", orderId, order.Status);
-
-                        if (order.Status == OrderStatus.Pending)
+                        if (order.CartId <= 0)
                         {
-                            if (order.CartId <= 0)
-                            {
-                                result.Warnings.Add("Order has no cart id; reserved stock may not have been released");
-                            }
-                            else
-                            {
-                                foreach (var item in order.OrderItems)
-                                {
-                                    var released = await _inventoryService.ReleaseReservedStockAsync(
-                                        item.ProductId,
-                                        item.Quantity,
-                                        order.CartId,
-                                        "CartItem");
-
-                                    if (!released)
-                                    {
-                                        result.Warnings.Add($"Failed to release reserved stock for product {item.ProductId}");
-                                    }
-                                    else
-                                    {
-                                        result.InventoryRestored = true;
-                                    }
-                                }
-                            }
+                            result.Warnings.Add("Order has no cart id; reserved stock may not have been released");
                         }
-                        else if (order.Status == OrderStatus.Processing)
+                        else
                         {
                             foreach (var item in order.OrderItems)
                             {
-                                var inventoryRestored = await _inventoryService.AddStockAsync(
+                                var released = await _inventoryService.ReleaseReservedStockAsync(
                                     item.ProductId,
                                     item.Quantity,
-                                    $"Stock returned from cancelled order {order.ReferenceNumber}: {reason}",
-                                    performedByUserId);
+                                    order.CartId,
+                                    "CartItem");
 
-                                if (!inventoryRestored)
+                                if (!released)
                                 {
-                                    result.Warnings.Add($"Failed to restore inventory for product {item.ProductId}");
+                                    result.Warnings.Add($"Failed to release reserved stock for product {item.ProductId}");
                                 }
                                 else
                                 {
@@ -108,64 +85,84 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                                 }
                             }
                         }
-
-                        _logger.LogDebug("Reverting coupon usage for cancelled order {OrderId}", orderId);
-                        if (order.UserId > 0)
+                    }
+                    else if (order.Status == OrderStatus.Processing)
+                    {
+                        foreach (var item in order.OrderItems)
                         {
-                            var couponIds = await _userCouponService.GetCouponIdsUsedInOrderAsync(orderId);
-                            foreach (var couponId in couponIds)
-                            {
-                                var couponReverted = await _userCouponService.RevertCouponUsageAsync(
-                                    order.UserId,
-                                    couponId,
-                                    orderId);
+                            var inventoryRestored = await _inventoryService.AddStockAsync(
+                                item.ProductId,
+                                item.Quantity,
+                                $"Stock returned from cancelled order {order.ReferenceNumber}: {reason}",
+                                performedByUserId);
 
-                                if (!couponReverted)
-                                {
-                                    result.Warnings.Add($"Failed to revert coupon {couponId} usage");
-                                }
-                                else
-                                {
-                                    result.CouponsReverted = true;
-                                }
+                            if (!inventoryRestored)
+                            {
+                                result.Warnings.Add($"Failed to restore inventory for product {item.ProductId}");
+                            }
+                            else
+                            {
+                                result.InventoryRestored = true;
                             }
                         }
-
-                        _logger.LogDebug("Updating order status to Cancelled for order {OrderId}", orderId);
-                        order.Status = OrderStatus.Cancelled;
-                        order.CancalledAt = DateTime.UtcNow;
-                        order.UpdatedAt = DateTime.UtcNow;
-
-                        var orderUpdated = await _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status);
-                        if (!orderUpdated)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            result.ErrorMessage = "Failed to update order status to Cancelled";
-                            return false;
-                        }
-
-                        var committed = await _unitOfWork.CommitTransactionAsync();
-                        if (!committed)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            result.ErrorMessage = "Failed to commit cancellation transaction";
-                            return false;
-                        }
-
-                        result.IsSuccess = true;
-                        _logger.LogInformation("Successfully cancelled order {OrderId}", orderId);
-                        return true;
                     }
-                    catch (Exception ex)
+
+                    _logger.LogDebug("Reverting coupon usage for cancelled order {OrderId}", orderId);
+                    if (order.UserId > 0)
                     {
-                        _logger.LogError(ex, "Error during order cancellation transaction for order {OrderId}", orderId);
-                        await _unitOfWork.RollbackTransactionAsync();
-                        result.ErrorMessage = $"Cancellation transaction failed: {ex.Message}";
-                        return false;
-                    }
-                });
+                        var couponIds = await _userCouponService.GetCouponIdsUsedInOrderAsync(orderId);
+                        foreach (var couponId in couponIds)
+                        {
+                            var couponReverted = await _userCouponService.RevertCouponUsageAsync(
+                                order.UserId,
+                                couponId,
+                                orderId);
 
-                return result;
+                            if (!couponReverted)
+                            {
+                                result.Warnings.Add($"Failed to revert coupon {couponId} usage");
+                            }
+                            else
+                            {
+                                result.CouponsReverted = true;
+                            }
+                        }
+                    }
+
+                    _logger.LogDebug("Updating order status to Cancelled for order {OrderId}", orderId);
+                    order.Status = OrderStatus.Cancelled;
+                    order.CancalledAt = DateTime.UtcNow;
+                    order.UpdatedAt = DateTime.UtcNow;
+
+                    var orderUpdated = await _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status);
+                    if (!orderUpdated)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        result.ErrorMessage = "Failed to update order status to Cancelled";
+                        return result; // Replaced 'return false'
+                    }
+
+                    var committed = await _unitOfWork.CommitTransactionAsync();
+                    if (!committed)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        result.ErrorMessage = "Failed to commit cancellation transaction";
+                        return result; // Replaced 'return false'
+                    }
+
+                    result.IsSuccess = true;
+                    _logger.LogInformation("Successfully cancelled order {OrderId}", orderId);
+
+                    return result; // Replaced 'return true'
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during order cancellation transaction for order {OrderId}", orderId);
+                    await _unitOfWork.RollbackTransactionAsync();
+                    result.ErrorMessage = $"Cancellation transaction failed: {ex.Message}";
+
+                    return result; // Replaced 'return false'
+                }
             }
             catch (Exception ex)
             {
