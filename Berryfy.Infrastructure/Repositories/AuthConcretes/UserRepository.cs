@@ -218,28 +218,28 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         private static void AddUserParameters(NpgsqlCommand command, User user)
         {
-            command.Parameters.AddWithValue("UserName", user.UserName ?? string.Empty);
-            command.Parameters.AddWithValue("NormalizedUserName", user.NormalizedUserName ?? string.Empty);
-            command.Parameters.AddWithValue("Email", user.Email ?? string.Empty);
-            command.Parameters.AddWithValue("NormalizedEmail", user.NormalizedEmail ?? string.Empty);
-            command.Parameters.AddWithValue("EmailConfirmed", user.EmailConfirmed);
-            command.Parameters.AddWithValue("PasswordHash", (object?)user.PasswordHash ?? DBNull.Value);
-            command.Parameters.AddWithValue("SecurityStamp", user.SecurityStamp ?? string.Empty);
-            command.Parameters.AddWithValue("ConcurrencyStamp", user.ConcurrencyStamp ?? string.Empty);
-            command.Parameters.AddWithValue("PhoneNumber", (object?)user.PhoneNumber ?? DBNull.Value);
-            command.Parameters.AddWithValue("PhoneNumberConfirmed", user.PhoneNumberConfirmed);
-            command.Parameters.AddWithValue("TwoFactorEnabled", user.TwoFactorEnabled);
-            command.Parameters.AddWithValue("LockoutEnd", (object?)user.LockoutEnd ?? DBNull.Value);
-            command.Parameters.AddWithValue("LockoutEnabled", user.LockoutEnabled);
-            command.Parameters.AddWithValue("AccessFailedCount", user.AccessFailedCount);
-            command.Parameters.AddWithValue("FirstName", user.FirstName ?? string.Empty);
-            command.Parameters.AddWithValue("LastName", user.LastName ?? string.Empty);
-            command.Parameters.AddWithValue("EmailConfirmationCode", (object?)user.EmailConfirmationCode ?? DBNull.Value);
-            command.Parameters.AddWithValue("EmailConfirmationCodeExpiry", (object?)user.EmailConfirmationCodeExpiry ?? DBNull.Value);
-            command.Parameters.AddWithValue("PasswordResetCode", (object?)user.PasswordResetCode ?? DBNull.Value);
-            command.Parameters.AddWithValue("PasswordResetCodeExpiry", (object?)user.PasswordResetCodeExpiry ?? DBNull.Value);
-            command.Parameters.AddWithValue("RefreshToken", (object?)user.RefreshToken ?? DBNull.Value);
-            command.Parameters.AddWithValue("RefreshTokenExpiry", (object?)user.RefreshTokenExpiry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@UserName", user.UserName ?? string.Empty);
+            command.Parameters.AddWithValue("@NormalizedUserName", user.NormalizedUserName ?? string.Empty);
+            command.Parameters.AddWithValue("@Email", user.Email ?? string.Empty);
+            command.Parameters.AddWithValue("@NormalizedEmail", user.NormalizedEmail ?? string.Empty);
+            command.Parameters.AddWithValue("@EmailConfirmed", user.EmailConfirmed);
+            command.Parameters.AddWithValue("@PasswordHash", (object?)user.PasswordHash ?? DBNull.Value);
+            command.Parameters.AddWithValue("@SecurityStamp", user.SecurityStamp ?? string.Empty);
+            command.Parameters.AddWithValue("@ConcurrencyStamp", user.ConcurrencyStamp ?? string.Empty);
+            command.Parameters.AddWithValue("@PhoneNumber", (object?)user.PhoneNumber ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PhoneNumberConfirmed", user.PhoneNumberConfirmed);
+            command.Parameters.AddWithValue("@TwoFactorEnabled", user.TwoFactorEnabled);
+            command.Parameters.AddWithValue("@LockoutEnd", (object?)user.LockoutEnd ?? DBNull.Value);
+            command.Parameters.AddWithValue("@LockoutEnabled", user.LockoutEnabled);
+            command.Parameters.AddWithValue("@AccessFailedCount", user.AccessFailedCount);
+            command.Parameters.AddWithValue("@FirstName", user.FirstName ?? string.Empty);
+            command.Parameters.AddWithValue("@LastName", user.LastName ?? string.Empty);
+            command.Parameters.AddWithValue("@EmailConfirmationCode", (object?)user.EmailConfirmationCode ?? DBNull.Value);
+            command.Parameters.AddWithValue("@EmailConfirmationCodeExpiry", (object?)user.EmailConfirmationCodeExpiry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PasswordResetCode", (object?)user.PasswordResetCode ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PasswordResetCodeExpiry", (object?)user.PasswordResetCodeExpiry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@RefreshToken", (object?)user.RefreshToken ?? DBNull.Value);
+            command.Parameters.AddWithValue("@RefreshTokenExpiry", (object?)user.RefreshTokenExpiry ?? DBNull.Value);
         }
 
         private static User MapUser(NpgsqlDataReader reader)

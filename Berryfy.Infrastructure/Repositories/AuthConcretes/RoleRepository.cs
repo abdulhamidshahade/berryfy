@@ -44,9 +44,9 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", role.Name);
-            command.Parameters.AddWithValue("NormalizedName", string.IsNullOrWhiteSpace(role.NormalizedName) ? Normalize(role.Name) : role.NormalizedName);
-            command.Parameters.AddWithValue("ConcurrencyStamp", string.IsNullOrWhiteSpace(role.ConcurrencyStamp) ? Guid.NewGuid().ToString() : role.ConcurrencyStamp);
+            command.Parameters.AddWithValue("@Name", role.Name);
+            command.Parameters.AddWithValue("@NormalizedName", string.IsNullOrWhiteSpace(role.NormalizedName) ? Normalize(role.Name) : role.NormalizedName);
+            command.Parameters.AddWithValue("@ConcurrencyStamp", string.IsNullOrWhiteSpace(role.ConcurrencyStamp) ? Guid.NewGuid().ToString() : role.ConcurrencyStamp);
             await using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
@@ -109,8 +109,8 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", userId);
-            command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
+            command.Parameters.AddWithValue("@UserId", userId);
+            command.Parameters.AddWithValue("@NormalizedName", Normalize(roleName));
             return await command.ExecuteNonQueryAsync() >= 0;
         }
 
@@ -140,8 +140,8 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", userId);
-            command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
+            command.Parameters.AddWithValue("@UserId", userId);
+            command.Parameters.AddWithValue("@NormalizedName", Normalize(roleName));
             return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
         }
 
@@ -156,7 +156,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("@UserId", userId);
             await using var reader = await command.ExecuteReaderAsync();
             var roles = new List<string>();
             while (await reader.ReadAsync())
