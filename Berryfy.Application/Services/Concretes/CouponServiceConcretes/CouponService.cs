@@ -13,12 +13,10 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
     public class CouponService : ICouponService
     {
         private readonly ICouponRepository _couponRepository;
-        private readonly IMapper _mapper;
 
         public CouponService(ICouponRepository couponRepository, IMapper mapper)
         {
             _couponRepository = couponRepository;
-            _mapper = mapper;
         }
 
         public async Task<CouponResponse> GetByIdAsync(int id)
