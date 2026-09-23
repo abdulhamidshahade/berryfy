@@ -167,7 +167,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             return await _productRepository.ExistsByNameAsync(name);
         }
 
-        public async Task<PaginationDto<ProductResponse>> GetPaginatedAsync(ProductFilter filter)
+        public async Task<PaginationResponse<ProductResponse>> GetPaginatedAsync(ProductFilter filter)
         {
             _logger.LogInformation("Getting paginated products with filter: {MaxPrice}", filter.MaxPrice);
             var products = await _productRepository.GetFilteredAsync(
@@ -190,7 +190,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             );
 
             var productDtos = ProductResponse.MapFromProduct(products);
-            var paginationResult = new PaginationDto<ProductResponse>(
+            var paginationResult = new PaginationResponse<ProductResponse>(
                 productDtos,
                 filter.PageNumber,
                 filter.PageSize,

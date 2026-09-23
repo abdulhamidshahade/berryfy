@@ -7,7 +7,7 @@ namespace Berryfy.Application.Services.Interfaces.ProductServiceInterfaces
     public interface IProductService
     {
         Task<IReadOnlyList<ProductResponse>> GetAllAsync();
-        Task<PaginationDto<ProductResponse>> GetPaginatedAsync(ProductFilter filter);
+        Task<PaginationResponse<ProductResponse>> GetPaginatedAsync(ProductFilter filter);
         Task<ProductResponse> GetByIdAsync(int id);
         Task<ProductResponse> GetByNameAsync(string name);
         Task<ProductResponse> CreateAsync(CreateProduct productDto, List<int> categories);
