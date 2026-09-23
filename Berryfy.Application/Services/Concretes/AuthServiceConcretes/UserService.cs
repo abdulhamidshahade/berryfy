@@ -192,9 +192,9 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 ?? await _userRepository.GetByEmailAsync(email);
         }
 
-        public Task<bool> IsUsernameTaken(string username)
+        public async Task<bool> IsUsernameTaken(string username)
         {
-            return _userRepository.IsUsernameTakenAsync(username);
+            return await _userRepository.IsUsernameTakenAsync(username);
         }
 
         private static string NormalizeName(string value)
