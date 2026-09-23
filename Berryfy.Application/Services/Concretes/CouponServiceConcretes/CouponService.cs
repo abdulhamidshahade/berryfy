@@ -14,7 +14,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
     {
         private readonly ICouponRepository _couponRepository;
 
-        public CouponService(ICouponRepository couponRepository, IMapper mapper)
+        public CouponService(ICouponRepository couponRepository)
         {
             _couponRepository = couponRepository;
         }
