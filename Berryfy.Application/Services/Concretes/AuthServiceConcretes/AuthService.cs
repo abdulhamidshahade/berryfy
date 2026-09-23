@@ -44,45 +44,57 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             _passwordHasher = passwordHasher;
         }
 
-        public async Task<Result<RegisterResponse>> Register(RegisterRequest requestDto)
+        public async Task<ApplicationResponse<RegisterResponse>> Register(RegisterRequest request)
         {
-            if (requestDto == null)
+            if (request == null)
             {
-                return Result<RegisterResponse>.ValidationError("Registration data is required.");
+                return new ApplicationResponse<RegisterResponse>()
+                {
+                    ErrorMessage = "The request is empty or null."
+                };
             }
 
-            if (await _userService.IsUsernameTaken(requestDto.UserName))
+            if (await _userService.IsUsernameTaken(request.UserName))
             {
-                return Result<RegisterResponse>.ValidationError("Username is taken.");
+                return new ApplicationResponse<RegisterResponse>()
+                {
+                    ErrorMessage = "Username is taken."
+                };
             }
 
-            if (await _userService.IsUserExistsByEmailAsync(requestDto.Email))
+            if (await _userService.IsUserExistsByEmailAsync(request.Email))
             {
-                return Result<RegisterResponse>.ValidationError("Email is already registered.");
+                return new ApplicationResponse<RegisterResponse>()
+                {
+                    ErrorMessage = "Email is already registered."
+                };
             }
 
             try
             {
-                var normalizedEmail = EmailNormalizer.NormalizeEmail(requestDto.Email);
+                var normalizedEmail = EmailNormalizer.NormalizeEmail(request.Email);
                 var user = new User
                 {
-                    FirstName = requestDto.FirstName,
-                    LastName = requestDto.LastName,
-                    UserName = requestDto.UserName,
-                    NormalizedUserName = NormalizeName(requestDto.UserName),
-                    Email = requestDto.Email.Trim(),
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    UserName = request.UserName,
+                    NormalizedUserName = NormalizeName(request.UserName),
+                    Email = request.Email.Trim(),
                     NormalizedEmail = normalizedEmail,
                     EmailConfirmed = false,
                     SecurityStamp = Guid.NewGuid().ToString(),
                     ConcurrencyStamp = Guid.NewGuid().ToString()
                 };
-                user.PasswordHash = _passwordHasher.HashPassword(user, requestDto.Password);
+                user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
                 user = await _userRepository.CreateAsync(user);
 
                 if (!await _roleService.AssignRoleToUserAsync(user.Id, RoleConstants.User))
                 {
-                    return Result<RegisterResponse>.Failure("User created but failed to assign default role.");
+                    return new ApplicationResponse<RegisterResponse>()
+                    {
+                        ErrorMessage = "User created but failed to assign default role."
+                    };
                 }
 
                 var code = GenerateOtpCode();
@@ -101,16 +113,19 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 }
 
                 var roles = await _roleRepository.GetUserRolesAsync(user.Id);
-                return Result<RegisterResponse>.Success(new RegisterResponse
+                return new ApplicationResponse<RegisterResponse>()
                 {
                     IsSuccess = true,
-                    User = UserResponse.MapFromUser(user, roles)
-                });
+                    Value = new() { User = UserResponse.MapFromUser(user, roles) }
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while registering the user.");
-                return Result<RegisterResponse>.Failure("An unexpected error occurred during registration. Please try again later.");
+                return new ApplicationResponse<RegisterResponse>()
+                {
+                    ErrorMessage = "\"An unexpected error occurred during registration. Please try again later."
+                };
             }
         }
 
@@ -455,7 +470,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
         private static string NormalizeName(string value)
         {
-            return value.Trim().ToUpperInvariant();
+            return value.Trim().ToLowerInvariant();
         }
 
         private static string GenerateOtpCode()
