@@ -2,6 +2,7 @@
 using Berryfy.Application.Dtos.ProductDtos.Requests;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
+using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Microsoft.Extensions.Logging;
 
