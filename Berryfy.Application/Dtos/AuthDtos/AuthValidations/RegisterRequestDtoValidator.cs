@@ -11,15 +11,15 @@ namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
                 .NotNull().WithMessage("First name is required.")
                 .NotEmpty().WithMessage("First name is required.")
                 .Matches(@"^[\p{L}\s'-]+$").WithMessage("First name must contain only letters.")
-                .MinimumLength(2).WithMessage("First name must be at least 2 characters long.")
-                .MaximumLength(50).WithMessage("First name must be at most 50 characters long.");
+                .MinimumLength(1).WithMessage("First name must be at least 2 characters long.")
+                .MaximumLength(100).WithMessage("First name must be at most 50 characters long.");
 
             RuleFor(fn => fn.LastName)
                 .NotNull().WithMessage("Last name is required.")
                 .NotEmpty().WithMessage("Last name is required.")
                 .Matches(@"^[\p{L}\s'-]+$").WithMessage("Last name must contain only letters.")
-                .MinimumLength(2).WithMessage("Last name must be at least 2 characters long.")
-                .MaximumLength(50).WithMessage("Last name must be at most 50 characters long.");
+                .MinimumLength(1).WithMessage("Last name must be at least 2 characters long.")
+                .MaximumLength(100).WithMessage("Last name must be at most 50 characters long.");
 
             RuleFor(fn => fn.UserName)
                 .NotNull().WithMessage("Username is required.")
