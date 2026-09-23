@@ -24,9 +24,9 @@ namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
             RuleFor(fn => fn.UserName)
                 .NotNull().WithMessage("Username is required.")
                 .NotEmpty().WithMessage("Username is required.")
-                .Matches(@"^[\p{L}0-9\s._'-]+$").WithMessage("Username may include letters, numbers, spaces, periods, underscores, apostrophes, and hyphens.")
+                .Matches(@"^[\p{L}0-9_-]+$").WithMessage("Username may include letters, numbers, underscores, and hyphens.")
                 .MinimumLength(3).WithMessage("Username must be at least 3 characters long.")
-                .MaximumLength(20).WithMessage("Username must be at most 20 characters long.");
+                .MaximumLength(30).WithMessage("Username must be at most 30 characters long.");
 
             RuleFor(fn => fn.Email)
                 .NotNull().WithMessage("Email is required.")
