@@ -1,5 +1,4 @@
 ﻿
-using AutoMapper;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Entities.ProductEntities;
@@ -13,15 +12,12 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
     {
         private readonly IProductCategoryRepository _productCategoryRepository;
         private readonly IProductRepository _productRepository;
-        private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
         public ProductCategoryService(IProductCategoryRepository productCategoryRepository, 
-            IMapper mapper,
             IUnitOfWork unitOfWork,
             IProductRepository productRepository)
         {
             _productCategoryRepository = productCategoryRepository;
-            _mapper = mapper;
             _unitOfWork = unitOfWork;
             _productRepository = productRepository;
         }
@@ -33,7 +29,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return false;
             }
 
-            var mappedProduct = _mapper.Map<Product>(product);
+            var mappedProduct = ProductResponse.MapToProduct(product);
 
             var created = await _productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories);
 
@@ -59,7 +55,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             //await _unitOfWork.CommitTransactionAsync();
 
-            var mappedProduct = _mapper.Map<Product>(product);
+            var mappedProduct = ProductResponse.MapToProduct(product);
 
             bool result = await _productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories);
 
