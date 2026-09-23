@@ -21,13 +21,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("check-stock/{productId}/{quantity}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> CheckStockQuantity(int productId, int quantity)
+        public async Task<ActionResult<ApiResponse<bool>>> CheckStockQuantity(int productId, int quantity)
         {
             try
             {
                 var isInStock = await _inventoryService.IsInStockAsync(productId, quantity);
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -37,7 +37,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -51,13 +51,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("check-stock/{productId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<object>>> CheckStock(int productId, [FromQuery] int quantity = 1)
+        public async Task<ActionResult<ApiResponse<object>>> CheckStock(int productId, [FromQuery] int quantity = 1)
         {
             try
             {
                 var isInStock = await _inventoryService.IsInStockAsync(productId, quantity);
 
-                return Ok(new ResponseDto<object>
+                return Ok(new ApiResponse<object>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -67,7 +67,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -80,7 +80,7 @@ namespace Berryfy.API.Controllers
         
         [HttpPost("reserve-stock")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ReserveStock([FromBody] ReserveStockRequest request)
+        public async Task<ActionResult<ApiResponse<bool>>> ReserveStock([FromBody] ReserveStockRequest request)
         {
             try
             {
@@ -92,7 +92,7 @@ namespace Berryfy.API.Controllers
 
                 if (!success)
                 {
-                    return BadRequest(new ResponseDto<bool>
+                    return BadRequest(new ApiResponse<bool>
                     {
                         IsSuccess = false,
                         StatusCode = 400,
@@ -101,7 +101,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -111,7 +111,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -125,7 +125,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPost("release-reserved-stock")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ReleaseReservedStock([FromBody] ReleaseStockRequest request)
+        public async Task<ActionResult<ApiResponse<bool>>> ReleaseReservedStock([FromBody] ReleaseStockRequest request)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace Berryfy.API.Controllers
                     request.ReferenceId,
                     request.ReferenceType);
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = success,
                     StatusCode = success ? 200 : 400,
@@ -145,7 +145,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -159,7 +159,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPost("confirm-deduction")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ConfirmStockDeduction([FromBody] ConfirmDeductionRequest request)
+        public async Task<ActionResult<ApiResponse<bool>>> ConfirmStockDeduction([FromBody] ConfirmDeductionRequest request)
         {
             try
             {
@@ -169,7 +169,7 @@ namespace Berryfy.API.Controllers
                     request.ReferenceId,
                     request.ReferenceType);
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = success,
                     StatusCode = success ? 200 : 400,
@@ -179,7 +179,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -192,7 +192,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPost("add-stock")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> AddStock([FromBody] AddStockRequest request)
+        public async Task<ActionResult<ApiResponse<bool>>> AddStock([FromBody] AddStockRequest request)
         {
             try
             {
@@ -202,7 +202,7 @@ namespace Berryfy.API.Controllers
                     request.Notes,
                     request.PerformedByUserId);
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = success,
                     StatusCode = success ? 200 : 400,
@@ -212,7 +212,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -226,7 +226,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPut("adjust-stock")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> AdjustStock([FromBody] AdjustStockRequest request)
+        public async Task<ActionResult<ApiResponse<bool>>> AdjustStock([FromBody] AdjustStockRequest request)
         {
             try
             {
@@ -236,7 +236,7 @@ namespace Berryfy.API.Controllers
                     request.Notes,
                     request.PerformedByUserId);
 
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = success,
                     StatusCode = success ? 200 : 400,
@@ -246,7 +246,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<bool>
+                return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -260,14 +260,14 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("product/{productId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<Product>>> GetProductWithStock(int productId)
+        public async Task<ActionResult<ApiResponse<Product>>> GetProductWithStock(int productId)
         {
             try
             {
                 var product = await _inventoryService.GetProductWithStockInfoAsync(productId);
                 if (product == null)
                 {
-                    return NotFound(new ResponseDto<Product>
+                    return NotFound(new ApiResponse<Product>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -275,7 +275,7 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return Ok(new ResponseDto<Product>
+                return Ok(new ApiResponse<Product>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -285,7 +285,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<Product>
+                return StatusCode(500, new ApiResponse<Product>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -298,13 +298,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("low-stock")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<Product>>>> GetLowStockProducts([FromQuery] int limit = 50)
+        public async Task<ActionResult<ApiResponse<List<Product>>>> GetLowStockProducts([FromQuery] int limit = 50)
         {
             try
             {
                 var products = await _inventoryService.GetLowStockProductsAsync(limit);
 
-                return Ok(new ResponseDto<List<Product>>
+                return Ok(new ApiResponse<List<Product>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -314,7 +314,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<Product>>
+                return StatusCode(500, new ApiResponse<List<Product>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -327,13 +327,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet("history/{productId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<InventoryLog>>>> GetInventoryHistory(int productId, [FromQuery] int limit = 50)
+        public async Task<ActionResult<ApiResponse<List<InventoryLog>>>> GetInventoryHistory(int productId, [FromQuery] int limit = 50)
         {
             try
             {
                 var history = await _inventoryService.GetInventoryHistoryAsync(productId, limit);
 
-                return Ok(new ResponseDto<List<InventoryLog>>
+                return Ok(new ApiResponse<List<InventoryLog>>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -343,7 +343,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<List<InventoryLog>>
+                return StatusCode(500, new ApiResponse<List<InventoryLog>>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
@@ -356,13 +356,13 @@ namespace Berryfy.API.Controllers
 
         [HttpPost("process-notifications")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<object>>> ProcessStockNotifications()
+        public async Task<ActionResult<ApiResponse<object>>> ProcessStockNotifications()
         {
             try
             {
                 await _inventoryService.ProcessStockNotificationsAsync();
 
-                return Ok(new ResponseDto<object>
+                return Ok(new ApiResponse<object>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -371,7 +371,7 @@ namespace Berryfy.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseDto<object>
+                return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,

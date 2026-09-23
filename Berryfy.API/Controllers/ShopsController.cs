@@ -20,13 +20,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [Route("{id}")]
-        public async Task<ActionResult<ResponseDto<Shop>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<Shop>>> GetById(int id)
         {
             var shop = await _shopService.GetShopAsync(id);
 
             if (shop == null)
             {
-                return new ResponseDto<Shop>
+                return new ApiResponse<Shop>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -34,7 +34,7 @@ namespace Berryfy.API.Controllers
                     Errors = new List<string> { "An unexpected error occurred" }
                 };
             }
-            var response = new ResponseDto<Shop>
+            var response = new ApiResponse<Shop>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -49,13 +49,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<ShopResponse>>> Update(int id, [FromBody] UpdateShop shopDto)
+        public async Task<ActionResult<ApiResponse<ShopResponse>>> Update(int id, [FromBody] UpdateShop shopDto)
         {
             var updatedShop = await _shopService.UpdateShopAsync(id, shopDto);
 
             if (updatedShop == null)
             {
-                return new ResponseDto<ShopResponse>
+                return new ApiResponse<ShopResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -64,7 +64,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<ShopResponse>
+            var response = new ApiResponse<ShopResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,

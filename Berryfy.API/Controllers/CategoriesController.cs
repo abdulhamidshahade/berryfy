@@ -23,13 +23,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [AllowAnonymous]
         [EnableRateLimiting("DefaultPolicy")]
-        public async Task<ActionResult<ResponseDto<IEnumerable<CategoryResponse>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CategoryResponse>>>> GetAll()
         {
             var categories = await _categoryService.GetAllAsync();
 
             if (categories == null)
             {
-                return StatusCode(400, new ResponseDto<IEnumerable<CategoryResponse>>
+                return StatusCode(400, new ApiResponse<IEnumerable<CategoryResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status400BadRequest,
@@ -38,7 +38,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ResponseDto<IEnumerable<CategoryResponse>>
+            var response = new ApiResponse<IEnumerable<CategoryResponse>>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -53,14 +53,14 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ResponseDto<CategoryResponse>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetById(int id)
         {
 
             var category = await _categoryService.GetByIdAsync(id);
 
             if (category == null)
             {
-                return NotFound(new ResponseDto<CategoryResponse>
+                return NotFound(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -69,7 +69,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ResponseDto<CategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -84,13 +84,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("name/{name}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ResponseDto<CategoryResponse>>> GetByName(string name)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetByName(string name)
         {
             var category = await _categoryService.GetByNameAsync(name);
 
             if (category == null)
             {
-                return NotFound(new ResponseDto<CategoryResponse>
+                return NotFound(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -99,7 +99,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ResponseDto<CategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -112,13 +112,13 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<CategoryResponse>>> Create([FromBody] CreateCategoryRequest categoryRequest)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> Create([FromBody] CreateCategoryRequest categoryRequest)
         {
             var createdCategory = await _categoryService.CreateAsync(categoryRequest);
 
             if (createdCategory == null)
             {
-                return new ResponseDto<CategoryResponse>
+                return new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -128,7 +128,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<CategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
@@ -141,13 +141,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<CategoryResponse>>> Update(int id, [FromBody] UpdateCategoryRequest request)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> Update(int id, [FromBody] UpdateCategoryRequest request)
         {
             var updatedCategory = await _categoryService.UpdateAsync(id, request);
 
             if (updatedCategory == null)
             {
-                return new ResponseDto<CategoryResponse>
+                return new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -158,7 +158,7 @@ namespace Berryfy.API.Controllers
 
             }
 
-            var response = new ResponseDto<CategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -172,13 +172,13 @@ namespace Berryfy.API.Controllers
         [HttpDelete]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> Delete(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
             var deleted = await _categoryService.DeleteAsync(id);
 
             if (!deleted)
             {
-                var notFoundResponse = new ResponseDto<bool>
+                var notFoundResponse = new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -189,7 +189,7 @@ namespace Berryfy.API.Controllers
                 return NotFound(notFoundResponse);
             }
 
-            var response = new ResponseDto<bool>
+            var response = new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -203,14 +203,14 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("exists-by-id/{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ExistsById(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> ExistsById(int id)
         {
 
             var exists = await _categoryService.ExistsAsync(id);
 
             if (exists)
             {
-                var response = new ResponseDto<bool>
+                var response = new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = StatusCodes.Status200OK,
@@ -220,7 +220,7 @@ namespace Berryfy.API.Controllers
                 return Ok(response);
             }
 
-            var notFoundResponse = new ResponseDto<bool>
+            var notFoundResponse = new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = StatusCodes.Status404NotFound,
@@ -235,13 +235,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("exists-by-name/{name}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ExistsByName(string name)
+        public async Task<ActionResult<ApiResponse<bool>>> ExistsByName(string name)
         {
             var exists = await _categoryService.ExistsByNameAsync(name);
 
             if (exists)
             {
-                var response = new ResponseDto<bool>
+                var response = new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = StatusCodes.Status200OK,
@@ -251,7 +251,7 @@ namespace Berryfy.API.Controllers
                 return Ok(response);
             }
 
-            var notFoundResponse = new ResponseDto<bool>
+            var notFoundResponse = new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = StatusCodes.Status404NotFound,

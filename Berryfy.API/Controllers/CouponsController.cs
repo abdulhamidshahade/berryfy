@@ -24,13 +24,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<IEnumerable<CouponResponse>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CouponResponse>>>> GetAll()
         {
             var coupons = await _couponService.GetAllAsync();
 
             if (coupons == null)
             {
-                return new ResponseDto<IEnumerable<CouponResponse>>
+                return new ApiResponse<IEnumerable<CouponResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -38,7 +38,7 @@ namespace Berryfy.API.Controllers
                     Errors = new List<string> { "An unexpected error occurred" }
                 };
             }
-            var response = new ResponseDto<IEnumerable<CouponResponse>>
+            var response = new ApiResponse<IEnumerable<CouponResponse>>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -52,13 +52,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("{id}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<CouponResponse>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<CouponResponse>>> GetById(int id)
         {
             var coupon = await _couponService.GetByIdAsync(id);
 
             if (coupon == null)
             {
-                return new ResponseDto<CouponResponse>
+                return new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -67,7 +67,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<CouponResponse>
+            var response = new ApiResponse<CouponResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -81,13 +81,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("code/{code}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<CouponResponse>>> GetByCode(string code)
+        public async Task<ActionResult<ApiResponse<CouponResponse>>> GetByCode(string code)
         {
             var coupon = await _couponService.GetByCodeAsync(code);
 
             if (coupon == null)
             {
-                return new ResponseDto<CouponResponse>
+                return new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -96,7 +96,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<CouponResponse>
+            var response = new ApiResponse<CouponResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -109,13 +109,13 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<CouponResponse>>> Create([FromBody] CreateCoupon couponDto)
+        public async Task<ActionResult<ApiResponse<CouponResponse>>> Create([FromBody] CreateCoupon couponDto)
         {
             var createdCoupon = await _couponService.CreateAsync(couponDto);
 
             if (createdCoupon == null)
             {
-                return new ResponseDto<CouponResponse>
+                return new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -124,7 +124,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<CouponResponse>
+            var response = new ApiResponse<CouponResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
@@ -140,13 +140,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<CouponResponse>>> Update(int id, [FromBody] UpdateCoupon couponDto)
+        public async Task<ActionResult<ApiResponse<CouponResponse>>> Update(int id, [FromBody] UpdateCoupon couponDto)
         {
             var updatedCoupon = await _couponService.UpdateAsync(id, couponDto);
 
             if (updatedCoupon == null)
             {
-                return new ResponseDto<CouponResponse>
+                return new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -155,7 +155,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ResponseDto<CouponResponse>
+            var response = new ApiResponse<CouponResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -169,13 +169,13 @@ namespace Berryfy.API.Controllers
         [HttpDelete]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> Delete(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
             var deleted = await _couponService.DeleteAsync(id);
 
             if (!deleted)
             {
-                var notFoundResponse = new ResponseDto<bool>
+                var notFoundResponse = new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -186,7 +186,7 @@ namespace Berryfy.API.Controllers
                 return NotFound(notFoundResponse);
             }
 
-            var response = new ResponseDto<bool>
+            var response = new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -200,13 +200,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("exists-by-id/{id}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> Exists(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Exists(int id)
         {
             var exists = await _couponService.ExistsByIdAsync(id);
 
             if (exists)
             {
-                var response = new ResponseDto<bool>
+                var response = new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = StatusCodes.Status200OK,
@@ -216,7 +216,7 @@ namespace Berryfy.API.Controllers
                 return Ok(response);
             }
 
-            var notFoundResponse = new ResponseDto<bool>
+            var notFoundResponse = new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = StatusCodes.Status404NotFound,
@@ -230,13 +230,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("exists-by-code/{code}")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> ExistsByCode(string code)
+        public async Task<ActionResult<ApiResponse<bool>>> ExistsByCode(string code)
         {
             var exists = await _couponService.ExistsByCodeAsync(code);
 
             if (exists)
             {
-                var response = new ResponseDto<bool>
+                var response = new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = StatusCodes.Status200OK,
@@ -246,7 +246,7 @@ namespace Berryfy.API.Controllers
                 return Ok(response);
             }
 
-            var notFoundResponse = new ResponseDto<bool>
+            var notFoundResponse = new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = StatusCodes.Status404NotFound,
@@ -260,13 +260,13 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("users/{userId}/coupons")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<UserCouponResponse>>> AddCouponToUser(int userId, [FromBody] AddCouponToUser addCouponToUser)
+        public async Task<ActionResult<ApiResponse<UserCouponResponse>>> AddCouponToUser(int userId, [FromBody] AddCouponToUser addCouponToUser)
         {
             var entity = await _userCouponService.AddCouponToUserAsync(userId, addCouponToUser.CouponId);
 
             if (entity != null)
             {
-                return Ok(new ResponseDto<UserCouponResponse>
+                return Ok(new ApiResponse<UserCouponResponse>
                 {
                     Data = entity,
                     IsSuccess = true,
@@ -274,7 +274,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<UserCouponResponse>
+            return BadRequest(new ApiResponse<UserCouponResponse>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -285,13 +285,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("users/{userId}/coupons/{couponId}/disable")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> DisableUserCoupon(int userId, int couponId)
+        public async Task<ActionResult<ApiResponse<bool>>> DisableUserCoupon(int userId, int couponId)
         {
             var isDisabled = await _userCouponService.DisableCouponToUser(userId, couponId);
 
             if (isDisabled)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -300,7 +300,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -313,13 +313,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("users/{userId}/coupons")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<List<CouponResponse>>>> GetCouponsByUserId(int userId)
+        public async Task<ActionResult<ApiResponse<List<CouponResponse>>>> GetCouponsByUserId(int userId)
         {
             var coupons = await _userCouponService.GetCouponsByUserIdAsync(userId);
 
             if (coupons.Count != 0)
             {
-                return Ok(new ResponseDto<List<CouponResponse>>
+                return Ok(new ApiResponse<List<CouponResponse>>
                 {
                     Data = coupons,
                     IsSuccess = true,
@@ -327,7 +327,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return NotFound(new ResponseDto<List<CouponResponse>>
+            return NotFound(new ApiResponse<List<CouponResponse>>
             {
                 IsSuccess = false,
                 StatusCode = 404,
@@ -339,13 +339,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("{couponId}/users")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<List<UserResponse>>>> GetUsersByCouponId(int couponId)
+        public async Task<ActionResult<ApiResponse<List<UserResponse>>>> GetUsersByCouponId(int couponId)
         {
             var users = await _userCouponService.GetUsersByCouponIdAsync(couponId);
 
             if (users.Count != 0)
             {
-                return Ok(new ResponseDto<List<UserResponse>>
+                return Ok(new ApiResponse<List<UserResponse>>
                 {
                     Data = users,
                     IsSuccess = true,
@@ -353,7 +353,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return NotFound(new ResponseDto<List<UserResponse>>
+            return NotFound(new ApiResponse<List<UserResponse>>
             {
                 IsSuccess = false,
                 StatusCode = 404,
@@ -365,14 +365,14 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("users/{userId}/coupons/{couponCode}/used")]
         [UserAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> HasUserUsedCoupon(int userId, string couponCode)
+        public async Task<ActionResult<ApiResponse<bool>>> HasUserUsedCoupon(int userId, string couponCode)
         {
 
             var hasUsed = await _userCouponService.IsCouponUsedByUser(userId, couponCode);
 
             if (hasUsed)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     StatusCode = 200,
                     IsSuccess = true,
@@ -382,7 +382,7 @@ namespace Berryfy.API.Controllers
             }
             else if (!hasUsed)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     StatusMessage = "The coupon has not used",
                     StatusCode = 200,
@@ -393,7 +393,7 @@ namespace Berryfy.API.Controllers
 
             else
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     StatusMessage = "Error exists while checking",
                     StatusCode = 400,
@@ -407,13 +407,13 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("add-coupon-to-specific-users/{couponId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> AddCouponToSpecificUsers(int couponId, [FromQuery]List<int> UserIds)
+        public async Task<ActionResult<ApiResponse<bool>>> AddCouponToSpecificUsers(int couponId, [FromQuery]List<int> UserIds)
         {
             var addedCoupon = await _userCouponService.AddCouponToUsersAsync(UserIds, couponId);
 
             if (!addedCoupon)
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -422,7 +422,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<bool>
+            return Ok(new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -434,13 +434,13 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("add-coupon-to-all-users/{couponId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> AddCouponToAllUsers(int couponId)
+        public async Task<ActionResult<ApiResponse<bool>>> AddCouponToAllUsers(int couponId)
         {
             var addedCoupon = await _userCouponService.AddCouponToAllUsersAsync(couponId);
 
             if (!addedCoupon)
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -449,7 +449,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<bool>
+            return Ok(new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -461,13 +461,13 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("add-coupon-to-new-users/{couponId}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ResponseDto<bool>>> AddCouponToNewUsers(int couponId)
+        public async Task<ActionResult<ApiResponse<bool>>> AddCouponToNewUsers(int couponId)
         {
             var addedCoupon = await _userCouponService.AddCouponToNewUsersAsync(couponId);
 
             if (!addedCoupon)
             {
-                return BadRequest(new ResponseDto<bool>
+                return BadRequest(new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -476,7 +476,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<bool>
+            return Ok(new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = 200,

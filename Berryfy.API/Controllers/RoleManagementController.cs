@@ -28,7 +28,7 @@ namespace Berryfy.API.Controllers
 
             if (result)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -36,7 +36,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -52,7 +52,7 @@ namespace Berryfy.API.Controllers
 
             if (result)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -60,7 +60,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -76,7 +76,7 @@ namespace Berryfy.API.Controllers
 
             if (result)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -84,7 +84,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -100,7 +100,7 @@ namespace Berryfy.API.Controllers
 
             if (result)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -108,7 +108,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -122,7 +122,7 @@ namespace Berryfy.API.Controllers
         {
             var roles = await _roleManagementService.GetUserRolesAsync(userId);
 
-            return Ok(new ResponseDto<List<string>>
+            return Ok(new ApiResponse<List<string>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -138,7 +138,7 @@ namespace Berryfy.API.Controllers
         {
             var roles = await _roleManagementService.GetAllRolesAsync();
 
-            return Ok(new ResponseDto<List<RoleResponse>>
+            return Ok(new ApiResponse<List<RoleResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -153,7 +153,7 @@ namespace Berryfy.API.Controllers
         {
             var users = await _roleManagementService.GetUsersInRoleAsync(roleName);
 
-            return Ok(new ResponseDto<List<UserResponse>>
+            return Ok(new ApiResponse<List<UserResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -168,7 +168,7 @@ namespace Berryfy.API.Controllers
         {
             var isInRole = await _roleManagementService.IsUserInRoleAsync(userId, roleName);
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -183,7 +183,7 @@ namespace Berryfy.API.Controllers
         {
             await _roleManagementService.InitializeDefaultRolesAsync();
 
-            return Ok(new ResponseDto<object>
+            return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -197,7 +197,7 @@ namespace Berryfy.API.Controllers
         {
             var users = await _roleManagementService.GetAllUsersAsync();
 
-            return Ok(new ResponseDto<List<UserWithRolesResponse>>
+            return Ok(new ApiResponse<List<UserWithRolesResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -214,7 +214,7 @@ namespace Berryfy.API.Controllers
 
             if (user == null)
             {
-                return NotFound(new ResponseDto<UserWithRolesResponse>
+                return NotFound(new ApiResponse<UserWithRolesResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -222,7 +222,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ResponseDto<UserWithRolesResponse>
+            return Ok(new ApiResponse<UserWithRolesResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -237,7 +237,7 @@ namespace Berryfy.API.Controllers
         {
             var stats = await _roleManagementService.GetRoleStatsAsync();
 
-            return Ok(new ResponseDto<RoleStats>
+            return Ok(new ApiResponse<RoleStats>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -254,7 +254,7 @@ namespace Berryfy.API.Controllers
 
             if (result)
             {
-                return Ok(new ResponseDto<bool>
+                return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -262,7 +262,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<bool>
+            return BadRequest(new ApiResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = 400,
@@ -276,7 +276,7 @@ namespace Berryfy.API.Controllers
         {
             if (request == null || request.UserIds == null || !request.UserIds.Any() || string.IsNullOrWhiteSpace(request.RoleName))
             {
-                return BadRequest(new ResponseDto<BulkAssignmentResult>
+                return BadRequest(new ApiResponse<BulkAssignmentResult>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
@@ -288,7 +288,7 @@ namespace Berryfy.API.Controllers
 
             if (result.IsSuccess)
             {
-                return Ok(new ResponseDto<BulkAssignmentResult>
+                return Ok(new ApiResponse<BulkAssignmentResult>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
@@ -297,7 +297,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return BadRequest(new ResponseDto<BulkAssignmentResult>
+            return BadRequest(new ApiResponse<BulkAssignmentResult>
             {
                 IsSuccess = false,
                 StatusCode = 400,
