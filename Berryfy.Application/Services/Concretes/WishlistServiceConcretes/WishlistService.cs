@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Berryfy.Application.Dtos.CategoryDtos.Responses;
+﻿using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Dtos.WishlistDtos.Requests;
 using Berryfy.Application.Dtos.WishlistDtos.Responses;

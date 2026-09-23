@@ -1,4 +1,3 @@
-using AutoMapper;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
@@ -30,6 +29,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
         private readonly IOrderRepository _orderRepository;
 
         public CartService(
+                           IUnitOfWork unitOfWork,
                            ICartRepository cartRepository,
                            ILogger<CartService> logger,
                            IConfiguration configuration,
@@ -919,7 +919,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     return null;
                 }
 
-                return _mapper.Map<CartResponse>(updatedCart);
+                return CartResponse.MapFromCart(updatedCart);
             }
             catch (Exception ex)
             {
@@ -955,7 +955,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     throw new InvalidOperationException("Failed to remove coupon from cart");
                 }
 
-                return _mapper.Map<CartResponse>(updatedCart);
+                return CartResponse.MapFromCart(updatedCart);
             }
             catch (Exception ex)
             {
