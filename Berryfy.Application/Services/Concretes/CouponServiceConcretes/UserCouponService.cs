@@ -12,20 +12,17 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
     {
         private readonly IUserService _userService;
         private readonly ICouponService _couponService;
-        private readonly IMapper _mapper;
         private readonly IUserCouponRepository _userCouponRepository;
         private readonly IOrderRepository _orderRepository;
 
 
         public UserCouponService(IUserService userService, 
             ICouponService couponService,
-            IMapper mapper,
             IUserCouponRepository userCouponRepository,
             IOrderRepository orderRepository)
         {
             _userService = userService;
             _couponService = couponService;
-            _mapper = mapper;
             _userCouponRepository = userCouponRepository;
             _orderRepository = orderRepository;
         }
