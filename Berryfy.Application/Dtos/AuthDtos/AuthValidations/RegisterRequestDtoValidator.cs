@@ -36,7 +36,7 @@ namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
             RuleFor(p => p.Password)
                 .NotNull().WithMessage("Password is required.")
                 .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(8).WithMessage("Password must be at least 6 characters long.")
+                .MinimumLength(8).WithMessage("Password must be at least 8 characters long.")
                 .MaximumLength(128).WithMessage("Password must be at most 128 characters long.")
                 .Must(password => ContainsUpperCase(password)).WithMessage("Password should contain at least one uppercase letter.")
                 .Must(password => ContainsDigits(password)).WithMessage("Password should contain at least one digit.")
