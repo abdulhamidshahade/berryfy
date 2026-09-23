@@ -1,4 +1,4 @@
-﻿using Berryfy.Application.Dtos.EmailDtos;
+﻿using Berryfy.Application.Dtos.EmailDtos.Requests;
 
 namespace Berryfy.Application.Services.Interfaces.EmailServiceInterfaces
 {
