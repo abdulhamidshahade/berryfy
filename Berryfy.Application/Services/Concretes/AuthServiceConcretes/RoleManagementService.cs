@@ -1,31 +1,25 @@
-﻿using AutoMapper;
 using Berryfy.Application.Dtos.AuthDtos.Responses;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.AuthEntities;
-using Berryfy.Domain.Repositories;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Berryfy.Domain.Repositories.AuthInterfaces;
 using Microsoft.Extensions.Logging;
 
 namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 {
     public class RoleManagementService : IRoleManagementService
     {
-        private readonly UserManager<User> _userManager;
-        private readonly RoleManager<Role> _roleManager;
         private readonly ILogger<RoleManagementService> _logger;
+        private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
 
         public RoleManagementService(
-            UserManager<User> userManager,
-            RoleManager<Role> roleManager,
             ILogger<RoleManagementService> logger,
+            IUserRepository userRepository,
             IRoleRepository roleRepository)
         {
-            _userManager = userManager;
-            _roleManager = roleManager;
             _logger = logger;
+            _userRepository = userRepository;
             _roleRepository = roleRepository;
         }
 
@@ -34,26 +28,22 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             try
             {
                 if (string.IsNullOrWhiteSpace(roleName))
-                    return false;
-
-                if (await _roleManager.RoleExistsAsync(roleName))
-                    return true;
-
-                var role = new Role(roleName);
-                var result = await _roleManager.CreateAsync(role);
-
-                if (result.Succeeded)
                 {
-                    _logger.LogInformation($"Role '{roleName}' created successfully.");
+                    return false;
+                }
+
+                if (await _roleRepository.RoleExistsAsync(roleName))
+                {
                     return true;
                 }
 
-                _logger.LogError($"Failed to create role '{roleName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                return false;
+                await _roleRepository.CreateAsync(new Role(roleName.Trim()));
+                _logger.LogInformation("Role '{RoleName}' created successfully.", roleName);
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error creating role '{roleName}'");
+                _logger.LogError(ex, "Error creating role '{RoleName}'", roleName);
                 return false;
             }
         }
@@ -62,38 +52,24 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var systemRoles = new[] { RoleConstants.SuperAdmin, RoleConstants.Admin };
-                if (systemRoles.Contains(roleName))
+                if (IsProtectedRole(roleName))
                 {
-                    _logger.LogWarning($"Attempt to delete system role '{roleName}' denied.");
+                    _logger.LogWarning("Attempt to delete system role '{RoleName}' denied.", roleName);
                     return false;
                 }
 
-                var role = await _roleManager.FindByNameAsync(roleName);
-                if (role == null)
-                    return false;
-
-                var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
+                var usersInRole = await _roleRepository.GetUsersInRoleAsync(roleName);
                 if (usersInRole.Any())
                 {
-                    _logger.LogWarning($"Cannot delete role '{roleName}' because it is assigned to {usersInRole.Count} user(s).");
+                    _logger.LogWarning("Cannot delete role '{RoleName}' because it is assigned to {UserCount} user(s).", roleName, usersInRole.Count);
                     return false;
                 }
 
-                var result = await _roleManager.DeleteAsync(role);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation($"Role '{roleName}' deleted successfully.");
-                    return true;
-                }
-
-                _logger.LogError($"Failed to delete role '{roleName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                return false;
+                return await _roleRepository.DeleteAsync(roleName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error deleting role '{roleName}'");
+                _logger.LogError(ex, "Error deleting role '{RoleName}'", roleName);
                 return false;
             }
         }
@@ -102,30 +78,26 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
-                if (user == null)
-                    return false;
-
-                if (!await _roleManager.RoleExistsAsync(roleName))
-                    await CreateRoleAsync(roleName);
-
-                if (await _userManager.IsInRoleAsync(user, roleName))
-                    return true;
-
-                var result = await _userManager.AddToRoleAsync(user, roleName);
-
-                if (result.Succeeded)
+                if (!await _userRepository.ExistsByIdAsync(userId))
                 {
-                    _logger.LogInformation($"Role '{roleName}' assigned to user '{user.UserName}' successfully.");
+                    return false;
+                }
+
+                if (!await _roleRepository.RoleExistsAsync(roleName))
+                {
+                    await CreateRoleAsync(roleName);
+                }
+
+                if (await _roleRepository.IsUserInRoleAsync(userId, roleName))
+                {
                     return true;
                 }
 
-                _logger.LogError($"Failed to assign role '{roleName}' to user '{user.UserName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                return false;
+                return await _roleRepository.AssignRoleToUserAsync(userId, roleName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error assigning role '{roleName}' to user with ID '{userId}'");
+                _logger.LogError(ex, "Error assigning role '{RoleName}' to user with ID '{UserId}'", roleName, userId);
                 return false;
             }
         }
@@ -134,37 +106,26 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
-                if (user == null)
-                    return false;
-
-                if (!await _userManager.IsInRoleAsync(user, roleName))
-                    return true;
-
-                if (roleName == RoleConstants.SuperAdmin)
+                if (!await _roleRepository.IsUserInRoleAsync(userId, roleName))
                 {
-                    var superAdmins = await _userManager.GetUsersInRoleAsync(RoleConstants.SuperAdmin);
+                    return true;
+                }
+
+                if (string.Equals(roleName, RoleConstants.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+                {
+                    var superAdmins = await _roleRepository.GetUsersInRoleAsync(RoleConstants.SuperAdmin);
                     if (superAdmins.Count <= 1)
                     {
-                        _logger.LogWarning($"Cannot remove SuperAdmin role from user '{user.UserName}' as they are the last SuperAdmin.");
+                        _logger.LogWarning("Cannot remove SuperAdmin role from the last SuperAdmin user.");
                         return false;
                     }
                 }
 
-                var result = await _userManager.RemoveFromRoleAsync(user, roleName);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation($"Role '{roleName}' removed from user '{user.UserName}' successfully.");
-                    return true;
-                }
-
-                _logger.LogError($"Failed to remove role '{roleName}' from user '{user.UserName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                return false;
+                return await _roleRepository.RemoveRoleFromUserAsync(userId, roleName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error removing role '{roleName}' from user with ID '{userId}'");
+                _logger.LogError(ex, "Error removing role '{RoleName}' from user with ID '{UserId}'", roleName, userId);
                 return false;
             }
         }
@@ -173,16 +134,16 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
-                if (user == null)
+                if (!await _userRepository.ExistsByIdAsync(userId))
+                {
                     return new List<string>();
+                }
 
-                var roles = await _userManager.GetRolesAsync(user);
-                return roles.ToList();
+                return await _roleRepository.GetUserRolesAsync(userId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting roles for user with ID '{userId}'");
+                _logger.LogError(ex, "Error getting roles for user with ID '{UserId}'", userId);
                 return new List<string>();
             }
         }
@@ -191,13 +152,12 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var roles = await _roleManager.Roles.ToListAsync();
-                return RoleResponse.MapFromRole(roles);
+                return RoleResponse.MapFromRole(await _roleRepository.GetAllAsync());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all roles");
-                return null;
+                return new List<RoleResponse>();
             }
         }
 
@@ -205,66 +165,39 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var users = await _userManager.GetUsersInRoleAsync(roleName);
-                return UserResponse.MapFromUser(users);
+                var users = await _roleRepository.GetUsersInRoleAsync(roleName);
+                return users.Select(user => UserResponse.MapFromUser(user, new[] { roleName })).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting users in role '{roleName}'");
+                _logger.LogError(ex, "Error getting users in role '{RoleName}'", roleName);
                 return new List<UserResponse>();
             }
         }
 
-        public async Task<bool> IsUserInRoleAsync(int userId, string roleName)
+        public Task<bool> IsUserInRoleAsync(int userId, string roleName)
         {
-            try
-            {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
-                if (user == null)
-                    return false;
-
-                return await _userManager.IsInRoleAsync(user, roleName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error checking if user with ID '{userId}' is in role '{roleName}'");
-                return false;
-            }
+            return _roleRepository.IsUserInRoleAsync(userId, roleName);
         }
 
         public async Task InitializeDefaultRolesAsync()
         {
-            try
+            foreach (var role in RoleConstants.AllRoles)
             {
-                foreach (var role in RoleConstants.AllRoles)
-                {
-                    await CreateRoleAsync(role);
-                }
+                await CreateRoleAsync(role);
+            }
 
-                _logger.LogInformation("Default roles initialized successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error initializing default roles");
-            }
+            _logger.LogInformation("Default roles initialized successfully.");
         }
 
         public async Task<List<UserWithRolesResponse>> GetAllUsersAsync()
         {
             try
             {
-                var users = await _userManager.Users.ToListAsync();
-                var userDtos = new List<UserWithRolesResponse>();
-
-                foreach (var user in users)
-                {
-                    var roles = await _userManager.GetRolesAsync(user);
-                    var userDto = UserWithRolesResponse.MapFromUser(user);
-                    userDto.Roles = roles.ToList();
-                    userDtos.Add(userDto);
-                }
-
-                return userDtos;
+                var users = await _roleRepository.GetAllUsersWithRolesAsync();
+                return users
+                    .Select(entry => UserWithRolesResponse.MapFromUser(entry.User, entry.Roles))
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -277,19 +210,18 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
+                var user = await _userRepository.GetByIdAsync(userId);
                 if (user == null)
+                {
                     return null;
+                }
 
-                var roles = await _userManager.GetRolesAsync(user);
-                var userDto = UserWithRolesResponse.MapFromUser(user);
-                userDto.Roles = roles.ToList();
-
-                return userDto;
+                var roles = await _roleRepository.GetUserRolesAsync(user.Id);
+                return UserWithRolesResponse.MapFromUser(user, roles);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting user with ID '{userId}'");
+                _logger.LogError(ex, "Error getting user with ID '{UserId}'", userId);
                 return null;
             }
         }
@@ -299,7 +231,6 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             try
             {
                 var result = await _roleRepository.GetRoleStatsAsync();
-
                 return new RoleStats
                 {
                     TotalRoles = result.TotalRoles,
@@ -320,39 +251,27 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             try
             {
                 if (string.IsNullOrWhiteSpace(oldRoleName) || string.IsNullOrWhiteSpace(newRoleName))
-                    return false;
-
-                var oldRole = await _roleManager.FindByNameAsync(oldRoleName);
-                if (oldRole == null)
-                    return false;
-
-                if (await _roleManager.RoleExistsAsync(newRoleName))
-                    return false;
-
-                var systemRoles = new[] { RoleConstants.SuperAdmin, RoleConstants.Admin };
-                if (systemRoles.Contains(oldRoleName))
                 {
-                    _logger.LogWarning($"Attempt to update system role '{oldRoleName}' denied.");
                     return false;
                 }
 
-                oldRole.Name = newRoleName;
-                oldRole.NormalizedName = newRoleName.ToUpperInvariant();
-
-                var result = await _roleManager.UpdateAsync(oldRole);
-
-                if (result.Succeeded)
+                if (IsProtectedRole(oldRoleName))
                 {
-                    _logger.LogInformation($"Role '{oldRoleName}' updated to '{newRoleName}' successfully.");
-                    return true;
+                    _logger.LogWarning("Attempt to update system role '{RoleName}' denied.", oldRoleName);
+                    return false;
                 }
 
-                _logger.LogError($"Failed to update role '{oldRoleName}': {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                return false;
+                if (!await _roleRepository.RoleExistsAsync(oldRoleName) ||
+                    await _roleRepository.RoleExistsAsync(newRoleName))
+                {
+                    return false;
+                }
+
+                return await _roleRepository.UpdateAsync(oldRoleName, newRoleName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating role '{oldRoleName}' to '{newRoleName}'");
+                _logger.LogError(ex, "Error updating role '{OldRoleName}' to '{NewRoleName}'", oldRoleName, newRoleName);
                 return false;
             }
         }
@@ -364,53 +283,48 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 TotalUsers = userIds?.Count ?? 0
             };
 
-            try
+            if (userIds == null || !userIds.Any() || string.IsNullOrWhiteSpace(roleName))
             {
-                if (userIds == null || !userIds.Any() || string.IsNullOrWhiteSpace(roleName))
-                {
-                    result.ErrorMessages.Add("Invalid input parameters");
-                    return result;
-                }
+                result.ErrorMessages.Add("Invalid input parameters");
+                return result;
+            }
 
-                if (!await _roleManager.RoleExistsAsync(roleName))
-                {
-                    await CreateRoleAsync(roleName);
-                }
+            if (!await _roleRepository.RoleExistsAsync(roleName))
+            {
+                await CreateRoleAsync(roleName);
+            }
 
-                foreach (var userId in userIds)
+            foreach (var userId in userIds)
+            {
+                try
                 {
-                    try
+                    if (await AssignRoleToUserAsync(userId, roleName))
                     {
-                        var success = await AssignRoleToUserAsync(userId, roleName);
-                        if (success)
-                        {
-                            result.SuccessfulAssignments++;
-                        }
-                        else
-                        {
-                            result.FailedAssignments++;
-                            result.FailedUserIds.Add(userId.ToString());
-                            result.ErrorMessages.Add($"Failed to assign role to user {userId}");
-                        }
+                        result.SuccessfulAssignments++;
                     }
-                    catch (Exception ex)
+                    else
                     {
                         result.FailedAssignments++;
                         result.FailedUserIds.Add(userId.ToString());
-                        result.ErrorMessages.Add($"Error assigning role to user {userId}: {ex.Message}");
-                        _logger.LogError(ex, $"Error in bulk assignment for user {userId}");
+                        result.ErrorMessages.Add($"Failed to assign role to user {userId}");
                     }
                 }
+                catch (Exception ex)
+                {
+                    result.FailedAssignments++;
+                    result.FailedUserIds.Add(userId.ToString());
+                    result.ErrorMessages.Add($"Error assigning role to user {userId}: {ex.Message}");
+                    _logger.LogError(ex, "Error in bulk assignment for user {UserId}", userId);
+                }
+            }
 
-                _logger.LogInformation($"Bulk assignment completed: {result.SuccessfulAssignments} successful, {result.FailedAssignments} failed");
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in bulk role assignment");
-                result.ErrorMessages.Add($"Bulk assignment failed: {ex.Message}");
-                return result;
-            }
+            return result;
+        }
+
+        private static bool IsProtectedRole(string roleName)
+        {
+            return string.Equals(roleName, RoleConstants.SuperAdmin, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(roleName, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
