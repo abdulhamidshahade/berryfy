@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Berryfy.Application.Dtos.CategoryDtos.Requests;
+﻿using Berryfy.Application.Dtos.CategoryDtos.Requests;
 using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -9,12 +8,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
     public class CategoryService : ICategoryService
     {
         private readonly ICategoryRepository _categoryRepository;
-        private readonly IMapper _mapper;
 
-        public CategoryService(ICategoryRepository categoryRepository, IMapper mapper)
+        public CategoryService(ICategoryRepository categoryRepository)
         {
             _categoryRepository = categoryRepository;
-            _mapper = mapper;
         }
 
         public async Task<CategoryResponse> GetByIdAsync(int id)
@@ -26,7 +23,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CategoryResponse>(category);
+            return CategoryResponse.MapFromCategory(category);
         }
 
         public async Task<CategoryResponse> GetByNameAsync(string name)
@@ -43,13 +40,13 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 return null;
             }
 
-            return _mapper.Map<CategoryResponse>(category);
+            return CategoryResponse.MapFromCategory(category);
         }
 
         public async Task<IEnumerable<CategoryResponse>> GetAllAsync()
         {
             var categories = await _categoryRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<CategoryResponse>>(categories);
+            return categories.Select(CategoryResponse.MapFromCategory);
         }
 
         public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest categoryRequest)
