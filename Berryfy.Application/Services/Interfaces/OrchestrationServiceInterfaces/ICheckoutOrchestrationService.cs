@@ -1,11 +1,12 @@
 using Berryfy.Application.Dtos.OrderDtos;
+using Berryfy.Application.Dtos.OrderDtos.Requests;
 using Berryfy.Domain.Entities.OrderEntities;
 
 namespace Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces
 {
     public interface ICheckoutOrchestrationService
     {
-        Task<CheckoutResult> ProcessCheckoutAsync(int cartId, CreateOrderDto orderDto, int? userId);
+        Task<CheckoutResult> ProcessCheckoutAsync(int cartId, CreateOrder orderDto, int? userId);
     }
 
     public class CheckoutResult
