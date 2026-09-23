@@ -1,13 +1,14 @@
 using Berryfy.Application.Dtos.OrderDtos;
+using Berryfy.Application.Dtos.OrderDtos.Requests;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
-using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
+using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Repositories;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
 {
@@ -17,26 +18,26 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
         private readonly IOrderService _orderService;
         private readonly IInventoryService _inventoryService;
         private readonly IUserCouponService _userCouponService;
-        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CheckoutOrchestrationService> _logger;
+        private readonly IUnitOfWork _unitOfWork;
 
         public CheckoutOrchestrationService(
+            IUnitOfWork unitOfWork,
             ICartService cartService,
             IOrderService orderService,
             IInventoryService inventoryService,
             IUserCouponService userCouponService,
-            IUnitOfWork unitOfWork,
             ILogger<CheckoutOrchestrationService> logger)
         {
             _cartService = cartService;
             _orderService = orderService;
             _inventoryService = inventoryService;
             _userCouponService = userCouponService;
-            _unitOfWork = unitOfWork;
             _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task<CheckoutResult> ProcessCheckoutAsync(int cartId, CreateOrderDto orderDto, int? userId)
+        public async Task<CheckoutResult> ProcessCheckoutAsync(int cartId, CreateOrder orderDto, int? userId)
         {
             var result = new CheckoutResult();
 
@@ -50,7 +51,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 {
                     cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
                 }
-                
+
                 if (cart == null)
                 {
                     result.ErrorMessage = "Cart not found or already completed";
@@ -77,7 +78,6 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     if (existingOrder != null)
                     {
                         _logger.LogInformation("Found existing order {OrderId} for cart {CartId}, syncing and returning it", existingOrder.Id, cartId);
-                        // Sync the order with current cart state (in case items were modified)
                         if (!await _orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId))
                         {
                             result.ErrorMessage = "Could not update the pending order";
@@ -90,59 +90,57 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     _logger.LogInformation("No existing order found for PendingPayment cart {CartId}, will create new order", cartId);
                 }
 
-                foreach (var item in cart.CartItems)
-                {
-                    // Cart additions already reserved these units. Available stock excludes them.
-                    var product = await _inventoryService.GetProductWithStockInfoAsync(item.ProductId);
-                    if (item.Quantity <= 0 || product == null || product.ReservedStock < item.Quantity ||
-                        product.StockQuantity < product.ReservedStock)
-                    {
-                        result.ErrorMessage = $"Insufficient stock for product ID {item.ProductId}";
-                        return result;
-                    }
-                }
+                // IMPORTANT: Start the transaction BEFORE checking inventory.
+                // This allows your underlying InventoryRepository to use a "SELECT ... FOR UPDATE" lock
+                // so two users can't buy the last item at the exact same millisecond.
+                await _unitOfWork.BeginTransactionAsync();
 
-                var strategy = _unitOfWork.BeginTransactionAsyncStrategy();
-                var transactionResult = await strategy.ExecuteAsync(async () =>
+                try
                 {
-                    await _unitOfWork.BeginTransactionAsync();
-
-                    try
+                    foreach (var item in cart.CartItems)
                     {
-                        _logger.LogDebug("Creating order from cart {CartId}", cartId);
-                        var order = await _orderService.CreateOrderFromCartAsync(cartId, orderDto);
-                        if (order == null)
+                        var product = await _inventoryService.GetProductWithStockInfoAsync(item.ProductId);
+                        if (item.Quantity <= 0 || product == null || product.ReservedStock < item.Quantity ||
+                            product.StockQuantity < product.ReservedStock)
                         {
                             await _unitOfWork.RollbackTransactionAsync();
-                            result.ErrorMessage = "Failed to create order";
-                            return false;
+                            result.ErrorMessage = $"Insufficient stock for product ID {item.ProductId}";
+                            return result;
                         }
-
-                        result.Order = order;
-
-                        var committed = await _unitOfWork.CommitTransactionAsync();
-                        if (!committed)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            result.ErrorMessage = "Failed to commit checkout transaction";
-                            return false;
-                        }
-
-                        result.IsSuccess = true;
-                        _logger.LogInformation("Successfully completed checkout for cart {CartId}, order {OrderId}",
-                            cartId, order.Id);
-                        return true;
                     }
-                    catch (Exception ex)
+
+                    _logger.LogDebug("Creating order from cart {CartId}", cartId);
+                    var order = await _orderService.CreateOrderFromCartAsync(cartId, orderDto);
+
+                    if (order == null)
                     {
-                        _logger.LogError(ex, "Error during checkout transaction for cart {CartId}", cartId);
                         await _unitOfWork.RollbackTransactionAsync();
-                        result.ErrorMessage = $"Checkout transaction failed: {ex.Message}";
-                        return false;
+                        result.ErrorMessage = "Failed to create order";
+                        return result; // Replaced 'return false'
                     }
-                });
 
-                return result;
+                    result.Order = order;
+
+                    var committed = await _unitOfWork.CommitTransactionAsync();
+                    if (!committed)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        result.ErrorMessage = "Failed to commit checkout transaction";
+                        return result; // Replaced 'return false'
+                    }
+
+                    result.IsSuccess = true;
+                    _logger.LogInformation("Successfully completed checkout for cart {CartId}, order {OrderId}", cartId, order.Id);
+
+                    return result; // Replaced 'return true'
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during checkout transaction for cart {CartId}", cartId);
+                    await _unitOfWork.RollbackTransactionAsync();
+                    result.ErrorMessage = $"Checkout transaction failed: {ex.Message}";
+                    return result; // Replaced 'return false'
+                }
             }
             catch (Exception ex)
             {
