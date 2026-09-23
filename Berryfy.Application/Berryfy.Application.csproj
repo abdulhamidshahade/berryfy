@@ -7,8 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Dtos\CategoryDtos\CategoryValidations\**" />
     <Compile Remove="Utils\**" />
+    <EmbeddedResource Remove="Dtos\CategoryDtos\CategoryValidations\**" />
     <EmbeddedResource Remove="Utils\**" />
+    <None Remove="Dtos\CategoryDtos\CategoryValidations\**" />
     <None Remove="Utils\**" />
   </ItemGroup>
 
@@ -26,10 +29,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Berryfy.Domain\Berryfy.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Dtos\CategoryDtos\CategoryValidations\" />
   </ItemGroup>
 
 </Project>
