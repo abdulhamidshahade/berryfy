@@ -1,7 +1,7 @@
-﻿using Berryfy.Application.Config;
+using Berryfy.Application.Config;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Domain.Entities.AuthEntities;
-using Microsoft.AspNetCore.Identity;
+using Berryfy.Domain.Repositories.AuthInterfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,24 +13,28 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 {
     public class TokenService : ITokenService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly JwtOptions _jwtOptions;
+        private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
 
-        public TokenService(UserManager<ApplicationUser> userManager, IOptions<JwtOptions> jwtOptions)
+        public TokenService(
+            IOptions<JwtOptions> jwtOptions,
+            IUserRepository userRepository,
+            IRoleRepository roleRepository)
         {
-            _userManager = userManager;
             _jwtOptions = jwtOptions.Value;
+            _userRepository = userRepository;
+            _roleRepository = roleRepository;
         }
 
-        public async Task<string> GenerateToken(ApplicationUser user)
+        public async Task<string> GenerateToken(User user)
         {
-
             if (user == null)
             {
                 return string.Empty;
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _roleRepository.GetUserRolesAsync(user.Id);
 
             var claims = new List<Claim>
             {
@@ -58,16 +62,17 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public async Task<string> GenerateRefreshToken(ApplicationUser user)
+        public async Task<string> GenerateRefreshToken(User user)
         {
             var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
             user.RefreshToken = HashToken(refreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
+
+            if (!await _userRepository.UpdateAsync(user))
             {
                 throw new InvalidOperationException("Could not persist the refresh token. Please sign in again.");
             }
+
             return refreshToken;
         }
 
