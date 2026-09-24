@@ -1,3 +1,4 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Repositories.AuthInterfaces;
 using Berryfy.Infrastructure.Data;
@@ -15,26 +16,36 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<bool> RoleExistsAsync(string roleName)
+        public async Task<InfrastructureResponse<bool>> RoleExistsAsync(string roleName)
         {
             const string sql = "SELECT COUNT(1) FROM roles WHERE normalized_name = @NormalizedName";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0,
+                Message = "The process completed successfully."
+            };
         }
 
-        public async Task<Role?> GetByNameAsync(string roleName)
+        public async Task<InfrastructureResponse<Role?>> GetByNameAsync(string roleName)
         {
             const string sql = "SELECT id, name, normalized_name, concurrency_stamp FROM roles WHERE normalized_name = @NormalizedName";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapRole(reader) : null;
+            return new InfrastructureResponse<Role?>()
+            {
+                IsSuccess = true,
+                Value = await reader.ReadAsync() ? MapRole(reader) : null,
+                Message = "The process completed successfully."
+            };
         }
 
-        public async Task<Role> CreateAsync(Role role)
+        public async Task<InfrastructureResponse<Role>> CreateAsync(Role role)
         {
             const string sql = @"
                 INSERT INTO roles (name, normalized_name, concurrency_stamp)
@@ -50,22 +61,37 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                return MapRole(reader);
+                return new InfrastructureResponse<Role>()
+                {
+                    IsSuccess = true,
+                    Value = MapRole(reader),
+                    Message = "The process completed successfully"
+                };
             }
 
-            return role;
+            return new InfrastructureResponse<Role>()
+            {
+                IsSuccess = true,
+                Value = role,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> DeleteAsync(string roleName)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(string roleName)
         {
             const string sql = "DELETE FROM roles WHERE normalized_name = @NormalizedName";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> UpdateAsync(string oldRoleName, string newRoleName)
+        public async Task<InfrastructureResponse<bool>> UpdateAsync(string oldRoleName, string newRoleName)
         {
             const string sql = @"
                 UPDATE roles
@@ -80,10 +106,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             command.Parameters.AddWithValue("NewNormalizedName", Normalize(newRoleName));
             command.Parameters.AddWithValue("ConcurrencyStamp", Guid.NewGuid().ToString());
             command.Parameters.AddWithValue("OldNormalizedName", Normalize(oldRoleName));
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<List<Role>> GetAllAsync()
+        public async Task<InfrastructureResponse<List<Role>>> GetAllAsync()
         {
             const string sql = "SELECT id, name, normalized_name, concurrency_stamp FROM roles ORDER BY name";
             await using var connection = await OpenConnectionAsync();
@@ -95,10 +126,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 roles.Add(MapRole(reader));
             }
 
-            return roles;
+            return new InfrastructureResponse<List<Role>>()
+            {
+                IsSuccess = true,
+                Value = roles,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> AssignRoleToUserAsync(int userId, string roleName)
+        public async Task<InfrastructureResponse<bool>> AssignRoleToUserAsync(int userId, string roleName)
         {
             const string sql = @"
                 INSERT INTO user_roles (user_id, role_id)
@@ -111,10 +147,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
             command.Parameters.AddWithValue("@NormalizedName", Normalize(roleName));
-            return await command.ExecuteNonQueryAsync() >= 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = await command.ExecuteNonQueryAsync() >= 0,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> RemoveRoleFromUserAsync(int userId, string roleName)
+        public async Task<InfrastructureResponse<bool>> RemoveRoleFromUserAsync(int userId, string roleName)
         {
             const string sql = @"
                 DELETE FROM user_roles ur
@@ -127,10 +168,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("UserId", userId);
             command.Parameters.AddWithValue("NormalizedName", Normalize(roleName));
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = await command.ExecuteNonQueryAsync() > 0
+            };
         }
 
-        public async Task<bool> IsUserInRoleAsync(int userId, string roleName)
+        public async Task<InfrastructureResponse<bool>> IsUserInRoleAsync(int userId, string roleName)
         {
             const string sql = @"
                 SELECT COUNT(1)
@@ -142,10 +188,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
             command.Parameters.AddWithValue("@NormalizedName", Normalize(roleName));
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0
+            };
         }
 
-        public async Task<List<string>> GetUserRolesAsync(int userId)
+        public async Task<InfrastructureResponse<List<string>>> GetUserRolesAsync(int userId)
         {
             const string sql = @"
                 SELECT r.name
@@ -164,10 +215,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 roles.Add(reader.GetString(0));
             }
 
-            return roles;
+            return new InfrastructureResponse<List<string>>()
+            {
+                IsSuccess = true,
+                Value = roles,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<List<User>> GetUsersInRoleAsync(string roleName)
+        public async Task<InfrastructureResponse<List<User>>> GetUsersInRoleAsync(string roleName)
         {
             const string sql = @"
                 SELECT u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
@@ -198,10 +254,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 });
             }
 
-            return users;
+            return new InfrastructureResponse<List<User>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = users
+            };
         }
 
-        public async Task<List<(User User, List<string> Roles)>> GetAllUsersWithRolesAsync()
+        public async Task<InfrastructureResponse<List<(User User, List<string> Roles)>>> GetAllUsersWithRolesAsync()
         {
             const string sql = @"
                 SELECT u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
@@ -245,10 +306,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 }
             }
 
-            return users.Values.ToList();
+            return new InfrastructureResponse<List<(User User, List<string> Roles)>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = users.Values.ToList()
+            };
         }
 
-        public async Task<(int TotalRoles, int TotalUsers, int UsersWithRoles, int UsersWithoutRoles)> GetRoleStatsAsync()
+        public async Task<InfrastructureResponse<(int TotalRoles, int TotalUsers, int UsersWithRoles, int UsersWithoutRoles)>> GetRoleStatsAsync()
         {
             const string sql = @"
                 SELECT
@@ -261,13 +327,23 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var reader = await command.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
             {
-                return (0, 0, 0, 0);
+                return new InfrastructureResponse<(int TotalRoles, int TotalUsers, int UsersWithRoles, int UsersWithoutRoles)>()
+                {
+                    IsSuccess = true,
+                    Value = (0, 0, 0, 0),
+                    Message = "The process completed successfully"
+                };
             }
 
             var totalRoles = reader.GetInt32(reader.GetOrdinal("total_roles"));
             var totalUsers = reader.GetInt32(reader.GetOrdinal("total_users"));
             var usersWithRoles = reader.GetInt32(reader.GetOrdinal("users_with_roles"));
-            return (totalRoles, totalUsers, usersWithRoles, totalUsers - usersWithRoles);
+            return new InfrastructureResponse<(int TotalRoles, int TotalUsers, int UsersWithRoles, int UsersWithoutRoles)>()
+            {
+                IsSuccess = true,
+                Value = (totalRoles, totalUsers, usersWithRoles, totalUsers - usersWithRoles),
+                Message = "The process completed successfully"
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
