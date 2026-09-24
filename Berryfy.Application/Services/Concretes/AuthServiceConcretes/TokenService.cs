@@ -43,7 +43,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 new Claim(ClaimTypes.Name, user.UserName)
             };
 
-            foreach (var role in roles)
+            foreach (var role in roles.Value)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
