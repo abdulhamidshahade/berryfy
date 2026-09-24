@@ -1,7 +1,6 @@
 ﻿using Berryfy.Application.Dtos;
 using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Services.Interfaces.ShopServiceInterfaces;
-using Berryfy.Domain.Entities.ShopEntities;
 using Microsoft.AspNetCore.Mvc;
 using Berryfy.Application.Dtos.ShopDtos.Responses;
 using Berryfy.Application.Dtos.ShopDtos.Requests;
@@ -20,13 +19,13 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [Route("{id}")]
-        public async Task<ActionResult<ApiResponse<Shop>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<ShopResponse>>> GetById(int id)
         {
             var shop = await _shopService.GetShopAsync(id);
 
             if (shop == null)
             {
-                return new ApiResponse<Shop>
+                return new ApiResponse<ShopResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -34,16 +33,16 @@ namespace Berryfy.API.Controllers
                     Errors = new List<string> { "An unexpected error occurred" }
                 };
             }
-            var response = new ApiResponse<Shop>
+
+            var response = new ApiResponse<ShopResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Shop retrieved successfully",
-                Data = shop
+                Data = shop.Value
             };
+
             return Ok(response);
-
-
         }
 
         [HttpPut]
@@ -64,16 +63,16 @@ namespace Berryfy.API.Controllers
                 };
 
             }
+
             var response = new ApiResponse<ShopResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Shop updated successfully",
-                Data = updatedShop
+                Data = updatedShop.Value
             };
+
             return Ok(response);
-
         }
-
     }
 }

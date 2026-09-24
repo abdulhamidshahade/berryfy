@@ -18,7 +18,6 @@ namespace Berryfy.API.Controllers
             _roleManagementService = roleManagementService;
         }
 
-
         [HttpPost("roles")]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
         {
@@ -44,7 +43,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpDelete("roles/{roleName}")]
         public async Task<IActionResult> DeleteRole(string roleName)
         {
@@ -68,7 +66,6 @@ namespace Berryfy.API.Controllers
                 StatusMessage = $"Failed to delete role '{roleName}'."
             });
         }
-
 
         [HttpPost("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRoleToUser(int userId, string roleName)
@@ -95,7 +92,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpDelete("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string roleName)
         {
@@ -121,7 +117,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpGet("users/{userId}/roles")]
         public async Task<IActionResult> GetUserRoles(int userId)
         {
@@ -135,7 +130,6 @@ namespace Berryfy.API.Controllers
                 Data = roles.Value
             });
         }
-
 
         [HttpGet("roles")]
         [SuperAdminOnly]
@@ -152,7 +146,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpGet("roles/{roleName}/users")]
         public async Task<IActionResult> GetUsersInRole(string roleName)
         {
@@ -166,7 +159,6 @@ namespace Berryfy.API.Controllers
                 Data = users.Value
             });
         }
-
 
         [HttpGet("users/{userId}/roles/{roleName}/check")]
         public async Task<IActionResult> IsUserInRole(int userId, string roleName)
@@ -182,7 +174,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpPost("initialize-default-roles")]
         public async Task<IActionResult> InitializeDefaultRoles()
         {
@@ -197,7 +188,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -211,7 +201,6 @@ namespace Berryfy.API.Controllers
                 Data = users.Value
             });
         }
-
 
         [HttpGet("users/{userId}")]
         public async Task<IActionResult> GetUser(int userId)
@@ -238,7 +227,6 @@ namespace Berryfy.API.Controllers
             });
         }
 
-
         [HttpGet("stats")]
         public async Task<IActionResult> GetRoleStats()
         {
@@ -252,7 +240,6 @@ namespace Berryfy.API.Controllers
                 Data = stats.Value
             });
         }
-
 
         [HttpPut("roles")]
         public async Task<IActionResult> UpdateRole(UpdateRoleRequest request)
@@ -278,7 +265,6 @@ namespace Berryfy.API.Controllers
                 Data = false
             });
         }
-
 
         [HttpPost("bulk-assign")]
         public async Task<IActionResult> BulkAssignRole([FromBody] BulkAssignRoleRequest request)
