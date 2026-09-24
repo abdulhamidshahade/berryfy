@@ -89,7 +89,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
                 user = await _userRepository.CreateAsync(user);
 
-                if (!await _roleService.AssignRoleToUserAsync(user.Id, RoleConstants.User))
+                if (!_roleService.AssignRoleToUserAsync(user.Id, RoleConstants.User).GetAwaiter().GetResult().Value)
                 {
                     return new ApplicationResponse<RegisterResponse>()
                     {
@@ -116,7 +116,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new ApplicationResponse<RegisterResponse>()
                 {
                     IsSuccess = true,
-                    Value = new() { User = UserResponse.MapFromUser(user, roles) }
+                    Value = new() { User = UserResponse.MapFromUser(user, roles.Value) }
                 };
             }
             catch (Exception ex)
@@ -172,7 +172,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
             return new LoginResponse
             {
-                User = UserResponse.MapFromUser(user, roles),
+                User = UserResponse.MapFromUser(user, roles.Value),
                 Token = token,
                 RefreshToken = refreshToken
             };
@@ -200,7 +200,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             var roles = await _roleRepository.GetUserRolesAsync(user.Id);
             return new LoginResponse
             {
-                User = UserResponse.MapFromUser(user, roles),
+                User = UserResponse.MapFromUser(user, roles.Value),
                 Token = await _tokenService.GenerateToken(user),
                 RefreshToken = await _tokenService.GenerateRefreshToken(user)
             };
