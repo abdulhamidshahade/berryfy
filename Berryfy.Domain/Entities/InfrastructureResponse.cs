@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Berryfy.Application.Dtos
+namespace Berryfy.Domain.Entities
 {
     public class InfrastructureResponse<T>
     {
