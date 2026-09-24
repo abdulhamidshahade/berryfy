@@ -116,7 +116,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         public async Task<InfrastructureResponse<List<Role>>> GetAllAsync()
         {
-            const string sql = "SELECT id, name, normalized_name, concurrency_stamp FROM roles ORDER BY name";
+            const string sql = "SELECT id, name, normalized_name, concurrency_stamp FROM roles ORDER BY id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
