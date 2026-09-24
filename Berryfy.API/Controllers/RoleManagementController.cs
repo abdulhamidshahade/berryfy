@@ -26,13 +26,14 @@ namespace Berryfy.API.Controllers
         {
             var result = await _roleManagementService.CreateRoleAsync(roleName);
 
-            if (result)
+            if (result.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Role '{roleName}' created successfully."
+                    StatusMessage = $"Role '{roleName}' created successfully.",
+                    Data = true
                 });
             }
 
@@ -40,7 +41,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = $"Failed to create role '{roleName}'."
+                StatusMessage = $"Failed to create role '{roleName}'.",
+                Data = false
             });
         }
 
@@ -50,13 +52,14 @@ namespace Berryfy.API.Controllers
         {
             var result = await _roleManagementService.DeleteRoleAsync(roleName);
 
-            if (result)
+            if (result.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Role '{roleName}' deleted successfully."
+                    StatusMessage = $"Role '{roleName}' deleted successfully.",
+                    Data = true
                 });
             }
 
@@ -74,13 +77,14 @@ namespace Berryfy.API.Controllers
         {
             var result = await _roleManagementService.AssignRoleToUserAsync(userId, roleName);
 
-            if (result)
+            if (result.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Role '{roleName}' assigned to user successfully."
+                    StatusMessage = $"Role '{roleName}' assigned to user {userId} successfully.",
+                    Data = true
                 });
             }
 
@@ -88,7 +92,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = $"Failed to assign role '{roleName}' to user."
+                StatusMessage = $"Failed to assign role '{roleName}' to user.",
+                Data = false
             });
         }
 
@@ -98,13 +103,14 @@ namespace Berryfy.API.Controllers
         {
             var result = await _roleManagementService.RemoveRoleFromUserAsync(userId, roleName);
 
-            if (result)
+            if (result.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Role '{roleName}' removed from user successfully."
+                    StatusMessage = $"Role '{roleName}' removed from user '{userId}' successfully.",
+                    Data = true
                 });
             }
 
@@ -112,7 +118,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = $"Failed to remove role '{roleName}' from user."
+                StatusMessage = $"Failed to remove role '{roleName}' from user {userId}.",
+                Data = false
             });
         }
 
@@ -127,7 +134,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "User roles retrieved successfully.",
-                Data = roles
+                Data = roles.Value
             });
         }
 
@@ -143,7 +150,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "All roles retrieved successfully.",
-                Data = roles
+                Data = roles.Value
             });
         }
 
@@ -158,7 +165,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = $"Users in role '{roleName}' retrieved successfully.",
-                Data = users
+                Data = users.Value
             });
         }
 
@@ -168,12 +175,12 @@ namespace Berryfy.API.Controllers
         {
             var isInRole = await _roleManagementService.IsUserInRoleAsync(userId, roleName);
 
-            return Ok(new ApiResponse<object>
+            return Ok(new ApiResponse<bool>
             {
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "Role check completed.",
-                Data = new { UserId = userId, RoleName = roleName, IsInRole = isInRole }
+                Data = isInRole.Value
             });
         }
 
@@ -187,7 +194,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = true,
                 StatusCode = 200,
-                StatusMessage = "Default roles initialized successfully."
+                StatusMessage = "Default roles initialized successfully.",
+                Data = null
             });
         }
 
@@ -202,7 +210,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "All users retrieved successfully.",
-                Data = users
+                Data = users.Value
             });
         }
 
@@ -218,7 +226,8 @@ namespace Berryfy.API.Controllers
                 {
                     IsSuccess = false,
                     StatusCode = 404,
-                    StatusMessage = $"User with given {userId} not found."
+                    StatusMessage = $"User with given {userId} not found.",
+                    Data = null
                 });
             }
 
@@ -227,7 +236,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "User retrieved successfully.",
-                Data = user
+                Data = user.Value
             });
         }
 
@@ -242,7 +251,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "Role statistics retrieved successfully.",
-                Data = stats
+                Data = stats.Value
             });
         }
 
@@ -252,13 +261,14 @@ namespace Berryfy.API.Controllers
         {
             var result = await _roleManagementService.UpdateRoleAsync(oldRoleName, newRoleName);
 
-            if (result)
+            if (result.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Role '{oldRoleName}' updated to '{newRoleName}' successfully."
+                    StatusMessage = $"Role '{oldRoleName}' updated to '{newRoleName}' successfully.",
+                    Data = result.Value
                 });
             }
 
@@ -266,7 +276,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = $"Failed to update role '{oldRoleName}'."
+                StatusMessage = $"Failed to update role '{oldRoleName}'.",
+                Data = false
             });
         }
 
@@ -292,8 +303,8 @@ namespace Berryfy.API.Controllers
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = $"Successfully assigned role '{request.RoleName}' to {result.SuccessfulAssignments} users.",
-                    Data = result
+                    StatusMessage = $"Successfully assigned role '{request.RoleName}' to {result.Value.SuccessfulAssignments} users.",
+                    Data = result.Value
                 });
             }
 
@@ -301,8 +312,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = $"Bulk assignment partially failed. {result.SuccessfulAssignments} succeeded, {result.FailedAssignments} failed.",
-                Data = result
+                StatusMessage = $"Bulk assignment partially failed. {result.Value.SuccessfulAssignments} succeeded, {result.Value.FailedAssignments} failed.",
+                Data = result.Value
             });
         }
     }
