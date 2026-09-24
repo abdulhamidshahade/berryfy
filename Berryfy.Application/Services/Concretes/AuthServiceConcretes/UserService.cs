@@ -163,7 +163,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 var roles = createUserDto.Roles.Any() ? createUserDto.Roles : new List<string> { RoleConstants.User };
                 foreach (var role in roles)
                 {
-                    if (!await _roleRepository.RoleExistsAsync(role))
+                    if (!_roleRepository.RoleExistsAsync(role).GetAwaiter().GetResult().Value)
                     {
                         await _roleRepository.CreateAsync(new Role(role));
                     }
