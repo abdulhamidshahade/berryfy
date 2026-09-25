@@ -1,6 +1,4 @@
-﻿using Berryfy.Application.Constants;
-
-namespace Berryfy.Application.Dtos
+﻿namespace Berryfy.Application.Dtos
 {
     public class ApplicationResponse<T>
     {
