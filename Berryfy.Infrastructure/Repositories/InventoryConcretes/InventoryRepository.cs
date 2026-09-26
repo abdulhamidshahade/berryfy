@@ -2,7 +2,6 @@
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
-using Microsoft.EntityFrameworkCore;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
