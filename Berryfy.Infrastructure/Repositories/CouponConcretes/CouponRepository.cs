@@ -42,7 +42,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             const string sql = "SELECT * FROM coupons WHERE code = @Code LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Code", code);
+            command.Parameters.AddWithValue("@Code", code);
             await using var reader = await command.ExecuteReaderAsync();
             return await reader.ReadAsync() ? MapCoupon(reader) : null;
         }
@@ -52,7 +52,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             const string sql = "SELECT * FROM coupons WHERE id = @Id LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
             await using var reader = await command.ExecuteReaderAsync();
             return await reader.ReadAsync() ? MapCoupon(reader) : null;
         }
@@ -99,7 +99,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             AddCouponParameters(command, coupon);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
 
             if (await command.ExecuteNonQueryAsync() == 0)
             {
@@ -114,7 +114,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             const string sql = "DELETE FROM coupons WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", coupon.Id);
+            command.Parameters.AddWithValue("@Id", coupon.Id);
             return await command.ExecuteNonQueryAsync() > 0;
         }
 
@@ -130,7 +130,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             {
                 throw new InvalidOperationException("CouponRepository is not configured with a PostgreSQL connection string.");
             }
-
+            
             var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
             return connection;
@@ -138,16 +138,16 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
         private static void AddCouponParameters(NpgsqlCommand command, Coupon coupon)
         {
-            command.Parameters.AddWithValue("Code", coupon.Code);
-            command.Parameters.AddWithValue("Description", coupon.Description ?? string.Empty);
-            command.Parameters.AddWithValue("DiscountAmount", coupon.DiscountAmount);
-            command.Parameters.AddWithValue("MinimumOrderAmount", coupon.MinimumOrderAmount);
-            command.Parameters.AddWithValue("IsActive", coupon.IsActive);
-            command.Parameters.AddWithValue("CreatedAt", coupon.CreatedAt);
-            command.Parameters.AddWithValue("UpdatedAt", coupon.UpdatedAt);
-            command.Parameters.AddWithValue("Type", (int)coupon.Type);
-            command.Parameters.AddWithValue("Value", coupon.Value);
-            command.Parameters.AddWithValue("IsForNewUsersOnly", coupon.IsForNewUsersOnly);
+            command.Parameters.AddWithValue("@Code", coupon.Code);
+            command.Parameters.AddWithValue("@Description", coupon.Description ?? string.Empty);
+            command.Parameters.AddWithValue("@DiscountAmount", coupon.DiscountAmount);
+            command.Parameters.AddWithValue("@MinimumOrderAmount", coupon.MinimumOrderAmount);
+            command.Parameters.AddWithValue("@IsActive", coupon.IsActive);
+            command.Parameters.AddWithValue("@CreatedAt", coupon.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", coupon.UpdatedAt);
+            command.Parameters.AddWithValue("@Type", (int)coupon.Type);
+            command.Parameters.AddWithValue("@Value", coupon.Value);
+            command.Parameters.AddWithValue("@IsForNewUsersOnly", coupon.IsForNewUsersOnly);
         }
 
         private static Coupon MapCoupon(NpgsqlDataReader reader)
