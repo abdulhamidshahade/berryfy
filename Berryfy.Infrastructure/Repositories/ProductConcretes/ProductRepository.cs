@@ -19,15 +19,10 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 SELECT
-                    p.Id, p.Name, p.Description, p.StockQuantity, p.ImageUrl, p.Price,
-                    p.ReservedStock, p.LowStockThreshold, p.IsActive, p.SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    pc.Id AS PcId, pc.CategoryId, pc.CreatedAt AS PcCreatedAt, pc.UpdatedAt AS PcUpdatedAt,
-                    c.Id AS C_Id, c.Name AS C_Name, c.Description AS C_Description, c.ImageUrl AS C_ImageUrl,
-                    c.CreatedAt AS C_CreatedAt, c.UpdatedAt AS C_UpdatedAt
+                    p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
+                    p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
+                    p.created_at, p.updated_at
                 FROM Products p
-                LEFT JOIN ProductCategories pc ON p.Id = pc.ProductId
-                LEFT JOIN Categories c ON pc.CategoryId = c.Id
                 ORDER BY p.Id, pc.Id;";
 
             await using var connection = new NpgsqlConnection(_connectionString);
@@ -629,6 +624,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             var count = await command.ExecuteScalarAsync();
             return count != null ? Convert.ToInt32(count) : 0;
+        }
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return connection;
         }
     }
 }
