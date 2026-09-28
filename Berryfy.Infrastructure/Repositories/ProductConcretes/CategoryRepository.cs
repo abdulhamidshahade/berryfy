@@ -18,55 +18,44 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<Category> CreateAsync(Category category)
         {
             const string sql = @"
-                INSERT INTO Categories (Name, Description, ImageUrl, CreatedAt, UpdatedAt)
+                INSERT INTO Categories (name, description, image_url, created_at, updated_at)
                 VALUES (@Name, @Description, @ImageUrl, @CreatedAt, @UpdatedAt)
-                RETURNING Id, CreatedAt, UpdatedAt;";
+                RETURNING id, name, description, image_url, created_at, updated_at;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", category.Name);
-            command.Parameters.AddWithValue("Description", (object?)category.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("ImageUrl", (object?)category.ImageUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("CreatedAt", category.CreatedAt);
-            command.Parameters.AddWithValue("UpdatedAt", category.UpdatedAt);
+            
+            AddCategoryParameters(command, category);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            if (await reader.ReadAsync())
-            {
-                category.Id = reader.GetInt32(reader.GetOrdinal("Id"));
-                category.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
-                category.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-            }
+            category createdCategory = MapCategory(reader);
 
-            return category;
+            return createdCategory;
         }
 
         public async Task<bool> DeleteAsync(Category category)
         {
-            const string sql = "DELETE FROM Categories WHERE Id = @Id";
+            const string sql = "DELETE FROM Categories WHERE id = @Id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
-
+            await OpenConnectionAsync();
+            
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", category.Id);
 
-            var affected = await command.ExecuteNonQueryAsync();
-            return affected > 0;
+            var rowAffected = await command.ExecuteNonQueryAsync();
+            return rowAffected > 0;
         }
 
         public async Task<bool> ExistsByIdAsync(int id)
         {
-            const string sql = "SELECT COUNT(1) FROM Categories WHERE Id = @Id";
+            const string sql = "SELECT COUNT(1) FROM Categories WHERE id = @Id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenconnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
 
             var count = await command.ExecuteScalarAsync();
             return count != null && Convert.ToInt32(count) > 0;
@@ -74,13 +63,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<bool> ExistsByNameAsync(string name)
         {
-            const string sql = "SELECT COUNT(1) FROM Categories WHERE Name = @Name";
+            const string sql = "SELECT COUNT(1) FROM Categories WHERE name = @Name";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", name);
+            command.Parameters.AddWithValue("@Name", name);
 
             var count = await command.ExecuteScalarAsync();
             return count != null && Convert.ToInt32(count) > 0;
@@ -88,7 +76,8 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<IEnumerable<Category>> GetAllAsync()
         {
-            const string sql = "SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at FROM Categories order by id";
+            const string sql = @"SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
+                                FROM Categories order by id";
 
             await OpenConnectionAsync();
 
@@ -148,36 +137,25 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 UPDATE Categories
-                SET Name = @Name,
-                    Description = @Description,
-                    ImageUrl = @ImageUrl,
-                    UpdatedAt = @UpdatedAt
-                WHERE Id = @Id
-                RETURNING Id, Name, Description, ImageUrl, CreatedAt, UpdatedAt;";
+                SET name = @Name,
+                    description = @Description,
+                    image_url = @ImageUrl,
+                    updated_at = @UpdatedAt
+                WHERE id = @Id
+                RETURNING id, name, description, image_url, created_at, updated_at;";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", category.Name);
-            command.Parameters.AddWithValue("Description", (object?)category.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("ImageUrl", (object?)category.ImageUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("Id", id);
+            
+            AddCategoryParameters(command, category);
+            command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                category.Id = reader.GetInt32(reader.GetOrdinal("Id"));
-                category.Name = reader.GetString(reader.GetOrdinal("Name"));
-                category.Description = reader.GetString(reader.GetOrdinal("Description"));
-                category.ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl"));
-                category.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
-                category.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-                return category;
-            }
-
-            return null;
+            category = MapCategory(reader);
+            
+            return category;
         }
 
         private Category MapCategory(NpgsqlDataReader reader)
@@ -190,15 +168,25 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
-            }
+            };
         }
 
+        //19:46
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
             var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
             return connection;
+        }
+
+        private void AddCategoryParameters(NpgsqlCommand command, Category category)
+        {
+            command.Parameters.AddWithValue("@Name", category.Name);
+            command.Parameters.AddWithValue("@Description", category.Description);
+            command.Parameters.AddWithValue("@ImageUrl", category.ImageUrl);
+            command.Parameters.AddWithValue("@CreatedAt", category.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", category.UpdatedAt);
         }
     }
 }
