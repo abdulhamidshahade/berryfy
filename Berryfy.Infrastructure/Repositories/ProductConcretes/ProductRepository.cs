@@ -23,162 +23,43 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
                     p.created_at, p.updated_at
                 FROM Products p
-                ORDER BY p.Id, pc.Id;";
+                ORDER BY p.id;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
-
-            var products = new Dictionary<int, Product>();
-            var productCategories = new Dictionary<int, ProductCategory>();
+            
+            var products = new List<Product>();
 
             while (await reader.ReadAsync())
             {
-                var productId = reader.GetInt32(reader.GetOrdinal("Id"));
-                if (!products.TryGetValue(productId, out var product))
-                {
-                    product = new Product
-                    {
-                        Id = productId,
-                        Name = reader.GetString(reader.GetOrdinal("Name")),
-                        Description = reader.GetString(reader.GetOrdinal("Description")),
-                        StockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity")),
-                        ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                        ReservedStock = reader.GetInt32(reader.GetOrdinal("ReservedStock")),
-                        LowStockThreshold = reader.GetInt32(reader.GetOrdinal("LowStockThreshold")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt")),
-                        ProductCategories = new List<ProductCategory>()
-                    };
-                    products.Add(productId, product);
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("PcId")))
-                {
-                    var pcId = reader.GetInt32(reader.GetOrdinal("PcId"));
-                    if (!productCategories.TryGetValue(pcId, out var pc))
-                    {
-                        pc = new ProductCategory
-                        {
-                            Id = pcId,
-                            ProductId = productId,
-                            CategoryId = reader.GetInt32(reader.GetOrdinal("CategoryId")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("PcCreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("PcUpdatedAt"))
-                        };
-                        productCategories.Add(pcId, pc);
-                        product.ProductCategories.Add(pc);
-                    }
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("C_Id")))
-                    {
-                        if (pc.Category == null)
-                        {
-                            pc.Category = new Category
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("C_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("C_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("C_Description")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("C_ImageUrl")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("C_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("C_UpdatedAt"))
-                            };
-                        }
-                    }
-                }
+                Product product = MapProduct(reader, new Product());
+                products.Add(product);
             }
-
-            return products.Values.ToList().AsReadOnly();
+            
+            return products;
         }
 
         public async Task<Product> GetByIdAsync(int id)
         {
             const string sql = @"
                 SELECT
-                    p.Id, p.Name, p.Description, p.StockQuantity, p.ImageUrl, p.Price,
-                    p.ReservedStock, p.LowStockThreshold, p.IsActive, p.SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    pc.Id AS PcId, pc.CategoryId, pc.CreatedAt AS PcCreatedAt, pc.UpdatedAt AS PcUpdatedAt,
-                    c.Id AS C_Id, c.Name AS C_Name, c.Description AS C_Description, c.ImageUrl AS C_ImageUrl,
-                    c.CreatedAt AS C_CreatedAt, c.UpdatedAt AS C_UpdatedAt
+                    p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
+                    p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
+                    p.created_at, p.updated_at 
                 FROM Products p
-                LEFT JOIN ProductCategories pc ON p.Id = pc.ProductId
-                LEFT JOIN Categories c ON pc.CategoryId = c.Id
-                WHERE p.Id = @Id
-                ORDER BY p.Id, pc.Id;";
+                WHERE p.id = @Id
+                ORDER BY p.id;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product? product = null;
-            var productCategories = new Dictionary<int, ProductCategory>();
-
-            while (await reader.ReadAsync())
-            {
-                if (product == null)
-                {
-                    product = new Product
-                    {
-                        Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                        Name = reader.GetString(reader.GetOrdinal("Name")),
-                        Description = reader.GetString(reader.GetOrdinal("Description")),
-                        StockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity")),
-                        ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                        ReservedStock = reader.GetInt32(reader.GetOrdinal("ReservedStock")),
-                        LowStockThreshold = reader.GetInt32(reader.GetOrdinal("LowStockThreshold")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt")),
-                        ProductCategories = new List<ProductCategory>()
-                    };
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("PcId")))
-                {
-                    var pcId = reader.GetInt32(reader.GetOrdinal("PcId"));
-                    if (!productCategories.TryGetValue(pcId, out var pc))
-                    {
-                        pc = new ProductCategory
-                        {
-                            Id = pcId,
-                            ProductId = product.Id,
-                            CategoryId = reader.GetInt32(reader.GetOrdinal("CategoryId")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("PcCreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("PcUpdatedAt"))
-                        };
-                        productCategories.Add(pcId, pc);
-                        product.ProductCategories.Add(pc);
-                    }
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("C_Id")))
-                    {
-                        if (pc.Category == null)
-                        {
-                            pc.Category = new Category
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("C_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("C_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("C_Description")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("C_ImageUrl")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("C_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("C_UpdatedAt"))
-                            };
-                        }
-                    }
-                }
-            }
+            Product product = MapProduct(reader, new Product());
 
             return product;
         }
@@ -187,85 +68,21 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 SELECT
-                    p.Id, p.Name, p.Description, p.StockQuantity, p.ImageUrl, p.Price,
-                    p.ReservedStock, p.LowStockThreshold, p.IsActive, p.SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    pc.Id AS PcId, pc.CategoryId, pc.CreatedAt AS PcCreatedAt, pc.UpdatedAt AS PcUpdatedAt,
-                    c.Id AS C_Id, c.Name AS C_Name, c.Description AS C_Description, c.ImageUrl AS C_ImageUrl,
-                    c.CreatedAt AS C_CreatedAt, c.UpdatedAt AS C_UpdatedAt
+                    p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
+                    p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
+                    p.created_at, p.updated_at
                 FROM Products p
-                LEFT JOIN ProductCategories pc ON p.Id = pc.ProductId
-                LEFT JOIN Categories c ON pc.CategoryId = c.Id
-                WHERE p.Name = @Name
-                ORDER BY p.Id, pc.Id;";
+                WHERE p.name = @Name
+                ORDER BY p.id, pc.id;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", name);
+            command.Parameters.AddWithValue("@Name", name);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product? product = null;
-            var productCategories = new Dictionary<int, ProductCategory>();
-
-            while (await reader.ReadAsync())
-            {
-                if (product == null)
-                {
-                    product = new Product
-                    {
-                        Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                        Name = reader.GetString(reader.GetOrdinal("Name")),
-                        Description = reader.GetString(reader.GetOrdinal("Description")),
-                        StockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity")),
-                        ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                        ReservedStock = reader.GetInt32(reader.GetOrdinal("ReservedStock")),
-                        LowStockThreshold = reader.GetInt32(reader.GetOrdinal("LowStockThreshold")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt")),
-                        ProductCategories = new List<ProductCategory>()
-                    };
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("PcId")))
-                {
-                    var pcId = reader.GetInt32(reader.GetOrdinal("PcId"));
-                    if (!productCategories.TryGetValue(pcId, out var pc))
-                    {
-                        pc = new ProductCategory
-                        {
-                            Id = pcId,
-                            ProductId = product.Id,
-                            CategoryId = reader.GetInt32(reader.GetOrdinal("CategoryId")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("PcCreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("PcUpdatedAt"))
-                        };
-                        productCategories.Add(pcId, pc);
-                        product.ProductCategories.Add(pc);
-                    }
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("C_Id")))
-                    {
-                        if (pc.Category == null)
-                        {
-                            pc.Category = new Category
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("C_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("C_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("C_Description")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("C_ImageUrl")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("C_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("C_UpdatedAt"))
-                            };
-                        }
-                    }
-                }
-            }
+            Product product = MapProduct(reader, new Product());
 
             return product;
         }
@@ -273,117 +90,84 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<Product> CreateAsync(Product product)
         {
             const string sql = @"
-                INSERT INTO Products (Name, Description, StockQuantity, ImageUrl, Price, ReservedStock,
-                    LowStockThreshold, IsActive, SKU, CreatedAt, UpdatedAt)
+                INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
+                    low_stock_threshold, is_active, sku, created_at, updated_at)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
                     @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt)
-                RETURNING Id, CreatedAt, UpdatedAt;";
+                RETURNING id, name, description, stock_quantity, image_url, price,
+                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", product.Name);
-            command.Parameters.AddWithValue("Description", (object?)product.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("StockQuantity", product.StockQuantity);
-            command.Parameters.AddWithValue("ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("Price", product.Price);
-            command.Parameters.AddWithValue("ReservedStock", product.ReservedStock);
-            command.Parameters.AddWithValue("LowStockThreshold", product.LowStockThreshold);
-            command.Parameters.AddWithValue("IsActive", product.IsActive);
-            command.Parameters.AddWithValue("SKU", product.SKU);
-            command.Parameters.AddWithValue("CreatedAt", product.CreatedAt);
-            command.Parameters.AddWithValue("UpdatedAt", product.UpdatedAt);
+
+            AddProductParameters(command, product);
 
             await using var reader = await command.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                product.Id = reader.GetInt32(reader.GetOrdinal("Id"));
-                product.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
-                product.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-            }
+            
+            Product createdProduct = MapProduct(reader, new Product());
 
-            return product;
+            return createdProduct;
         }
 
         public async Task<Product> UpdateAsync(int id, Product product)
         {
             const string sql = @"
                 UPDATE Products
-                SET Name = @Name,
-                    Description = @Description,
-                    StockQuantity = @StockQuantity,
-                    ImageUrl = @ImageUrl,
-                    Price = @Price,
-                    ReservedStock = @ReservedStock,
-                    LowStockThreshold = @LowStockThreshold,
-                    IsActive = @IsActive,
-                    SKU = @SKU,
-                    UpdatedAt = @UpdatedAt
-                WHERE Id = @Id
-                RETURNING Id, Name, Description, StockQuantity, ImageUrl, Price, ReservedStock,
-                    LowStockThreshold, IsActive, SKU, CreatedAt, UpdatedAt;";
+                SET name = @Name,
+                    description = @Description,
+                    stock_quantity = @StockQuantity,
+                    image_url = @ImageUrl,
+                    price = @Price,
+                    reserved_stock = @ReservedStock,
+                    low_stock_quantity = @LowStockThreshold,
+                    is_active = @IsActive,
+                    sku = @SKU,
+                    updated_at = @UpdatedAt
+                WHERE id = @Id
+                RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
+                    low_stock_quantity, is_active, sku, created_at, updated_at;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", product.Name);
-            command.Parameters.AddWithValue("Description", (object?)product.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("StockQuantity", product.StockQuantity);
-            command.Parameters.AddWithValue("ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("Price", product.Price);
-            command.Parameters.AddWithValue("ReservedStock", product.ReservedStock);
-            command.Parameters.AddWithValue("LowStockThreshold", product.LowStockThreshold);
-            command.Parameters.AddWithValue("IsActive", product.IsActive);
-            command.Parameters.AddWithValue("SKU", product.SKU);
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
+            AddProductParameters(command, product);
             command.Parameters.AddWithValue("Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
+            
+            if(await reader.ReadAsync())
             {
-                product.Id = reader.GetInt32(reader.GetOrdinal("Id"));
-                product.Name = reader.GetString(reader.GetOrdinal("Name"));
-                product.Description = reader.GetString(reader.GetOrdinal("Description"));
-                product.StockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity"));
-                product.ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl"));
-                product.Price = reader.GetDecimal(reader.GetOrdinal("Price"));
-                product.ReservedStock = reader.GetInt32(reader.GetOrdinal("ReservedStock"));
-                product.LowStockThreshold = reader.GetInt32(reader.GetOrdinal("LowStockThreshold"));
-                product.IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive"));
-                product.SKU = reader.GetString(reader.GetOrdinal("SKU"));
-                product.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
-                product.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-                return product;
+                Product updatedProduct = MapProduct(reader, new Product());
+                return updatedProduct;
             }
-
-            return null;
+            else
+            {
+                throw new Exception($"Product with ID {id} not found.");
+            }
         }
 
         public async Task<bool> DeleteAsync(Product product)
         {
-            const string sql = "DELETE FROM Products WHERE Id = @Id";
+            const string sql = "DELETE FROM Products WHERE id = @Id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", product.Id);
+            command.Parameters.AddWithValue("@Id", product.Id);
 
-            var affected = await command.ExecuteNonQueryAsync();
-            return affected > 0;
+            var rowEffected = await command.ExecuteNonQueryAsync();
+            return rowEffected > 0;
         }
 
         public async Task<bool> ExistsByIdAsync(int id)
         {
-            const string sql = "SELECT COUNT(1) FROM Products WHERE Id = @Id";
+            const string sql = "SELECT COUNT(1) FROM Products WHERE id = @Id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
 
             var count = await command.ExecuteScalarAsync();
             return count != null && Convert.ToInt32(count) > 0;
@@ -391,13 +175,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<bool> ExistsByNameAsync(string name)
         {
-            const string sql = "SELECT COUNT(1) FROM Products WHERE Name = @Name";
+            const string sql = "SELECT COUNT(1) FROM Products WHERE name = @Name";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Name", name);
+            command.Parameters.AddWithValue("@Name", name);
 
             var count = await command.ExecuteScalarAsync();
             return count != null && Convert.ToInt32(count) > 0;
@@ -407,8 +190,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Products";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             var count = await command.ExecuteScalarAsync();
@@ -421,25 +203,19 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             var sql = @"
                 SELECT
-                    p.Id, p.Name, p.Description, p.StockQuantity, p.ImageUrl, p.Price,
-                    p.ReservedStock, p.LowStockThreshold, p.IsActive, p.SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    pc.Id AS PcId, pc.CategoryId, pc.CreatedAt AS PcCreatedAt, pc.UpdatedAt AS PcUpdatedAt,
-                    c.Id AS C_Id, c.Name AS C_Name, c.Description AS C_Description, c.ImageUrl AS C_ImageUrl,
-                    c.CreatedAt AS C_CreatedAt, c.UpdatedAt AS C_UpdatedAt
-                FROM Products p
-                LEFT JOIN ProductCategories pc ON p.Id = pc.ProductId
-                LEFT JOIN Categories c ON pc.CategoryId = c.Id
+                    p.Id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
+                    p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
+                    p.created_at, p.updated_at
                 WHERE 1=1 ";
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                sql += "AND (p.Name LIKE @SearchTerm OR p.Description LIKE @SearchTerm) ";
+                sql += "AND (p.name ILIKE @SearchTerm OR p.description ILIKE @SearchTerm) ";
             }
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc2 INNER JOIN Categories c2 ON pc2.CategoryId = c2.Id WHERE pc2.ProductId = p.Id AND LOWER(c2.Name) = LOWER(@CategoryName)) ";
+                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc INNER JOIN Categories c ON pc.CategoryId = c.Id WHERE pc.ProductId = p.Id AND LOWER(c.Name) = LOWER(@CategoryName)) ";
             }
 
             if (minPrice.HasValue)
@@ -468,8 +244,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             sql += "OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -497,69 +272,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            var products = new Dictionary<int, Product>();
-            var productCategories = new Dictionary<int, ProductCategory>();
+            var products = new List<Product>();
 
             while (await reader.ReadAsync())
             {
-                var productId = reader.GetInt32(reader.GetOrdinal("Id"));
-                if (!products.TryGetValue(productId, out var product))
-                {
-                    product = new Product
-                    {
-                        Id = productId,
-                        Name = reader.GetString(reader.GetOrdinal("Name")),
-                        Description = reader.GetString(reader.GetOrdinal("Description")),
-                        StockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity")),
-                        ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                        ReservedStock = reader.GetInt32(reader.GetOrdinal("ReservedStock")),
-                        LowStockThreshold = reader.GetInt32(reader.GetOrdinal("LowStockThreshold")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt")),
-                        ProductCategories = new List<ProductCategory>()
-                    };
-                    products.Add(productId, product);
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("PcId")))
-                {
-                    var pcId = reader.GetInt32(reader.GetOrdinal("PcId"));
-                    if (!productCategories.TryGetValue(pcId, out var pc))
-                    {
-                        pc = new ProductCategory
-                        {
-                            Id = pcId,
-                            ProductId = productId,
-                            CategoryId = reader.GetInt32(reader.GetOrdinal("CategoryId")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("PcCreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("PcUpdatedAt"))
-                        };
-                        productCategories.Add(pcId, pc);
-                        product.ProductCategories.Add(pc);
-                    }
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("C_Id")))
-                    {
-                        if (pc.Category == null)
-                        {
-                            pc.Category = new Category
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("C_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("C_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("C_Description")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("C_ImageUrl")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("C_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("C_UpdatedAt"))
-                            };
-                        }
-                    }
-                }
+                Product product = MapProduct(reader, new Product());
+                products.Add(product);
             }
 
-            return products.Values.ToList().AsReadOnly();
+            return products;
         }
 
         public async Task<int> GetFilteredCountAsync(string? searchTerm = null, string? category = null,
@@ -568,18 +289,16 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             var sql = @"
                 SELECT COUNT(DISTINCT p.Id)
                 FROM Products p
-                LEFT JOIN ProductCategories pc ON p.Id = pc.ProductId
-                LEFT JOIN Categories c ON pc.CategoryId = c.Id
                 WHERE 1=1 ";
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                sql += "AND (p.Name LIKE @SearchTerm OR p.Description LIKE @SearchTerm) ";
+                sql += "AND (p.name ILIKE @SearchTerm OR p.description ILIKE @SearchTerm) ";
             }
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc2 INNER JOIN Categories c2 ON pc2.CategoryId = c2.Id WHERE pc2.ProductId = p.Id AND LOWER(c2.Name) = LOWER(@CategoryName)) ";
+                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc INNER JOIN Categories c ON pc.CategoryId = c.Id WHERE pc.ProductId = p.Id AND LOWER(c.name) = LOWER(@CategoryName)) ";
             }
 
             if (minPrice.HasValue)
@@ -597,8 +316,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 sql += "AND p.IsActive = @IsActive ";
             }
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -625,11 +343,47 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             var count = await command.ExecuteScalarAsync();
             return count != null ? Convert.ToInt32(count) : 0;
         }
+
         private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
             var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
             return connection;
+        }
+
+        private Product MapProduct(NpgsqlDataReader reader, Product product)
+        {
+            product = new Product()
+            {
+                Id = reader.getInt16(reader.getOrdinal("id")),
+                Name = reader.getString(reader.getOrdinal("name")),
+                Description = reader.getString(reader.getOrdinal("description")),
+                StockQuantity = reader.getInt16(reader.getOrdinal("stock_quantity")),
+                ImageUrl = reader.getString(reader.getOrdinal("image_url")),
+                Price = reader.getDecimal(reader.getOrdinal("price")),
+                ReservedStock = reader.getInt16(reader.getOrdinal("reserved_stock")),
+                LowStockThreshold = reader.getInt16(reader.getOrdinal("low_stock_threshold")),
+                IsActive = reader.getBoolean(reader.getOrdinal("is_active")),
+                SKU = reader.getString(reader.getOrdinal("sku")),
+                CreatedAt = reader.getDateTime(reader.getOrdinal("created_at")),
+                UpdatedAt = reader.getDateTime(reader.getOrdinal("updated_at"))
+            };
+            return product;
+        }
+
+        private void AddProductParameters(NpgsqlCommand command, Product product)
+        {
+            command.Parameters.AddWithValue("Name", product.Name);
+            command.Parameters.AddWithValue("Description", (object?)product.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("StockQuantity", product.StockQuantity);
+            command.Parameters.AddWithValue("ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
+            command.Parameters.AddWithValue("Price", product.Price);
+            command.Parameters.AddWithValue("ReservedStock", product.ReservedStock);
+            command.Parameters.AddWithValue("LowStockThreshold", product.LowStockThreshold);
+            command.Parameters.AddWithValue("IsActive", product.IsActive);
+            command.Parameters.AddWithValue("SKU", product.SKU);
+            command.Parameters.AddWithValue("CreatedAt", product.CreatedAt);
+            command.Parameters.AddWithValue("UpdatedAt", product.UpdatedAt);
         }
     }
 }
