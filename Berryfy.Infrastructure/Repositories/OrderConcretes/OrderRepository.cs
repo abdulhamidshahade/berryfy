@@ -22,20 +22,15 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
 
         public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
-            string query = @"select o.*, oi.Quantitiy as OI_Quantity, oi.UnitPrice as OI_UnitPrice, 
-                             oi.TotalPrice as OI_TotalPrice, oi.DiscountAmount as OI_DiscountAmount,
-                             p.Id as P_Id, p.ProductName as P_ProductName, p.Description as P_Description,
-                             p.StockQuantity as P_StockQuantity, p.ImageUrl as P_ImageUrl,
-                             p.Price as P_Price, p.ReservedStock as P_ReservedStock, 
-                             p.LowStockThreshold as P_LowStockThreshold, p.IsActive as P_IsActive, p.SKU as P_SKU 
-                             from Orders o
-                            Left join OrderItems oi on (oi.OrderId = o.Id)
-                            leff join Products p on (oi.productId = p.Id)
-                            where o.Id = @OrderId
-                            limit 1;";
+            string query = @"select id, user_id, cart_id, is_paid, status, subtotal,
+            tax_amount, shipping_amount, total, discount_total, customer_email, customer_phone,
+            completed_at, cancelled_at, shipping_name, shipping_address1, shipping_address2,
+            shipping_city, shipping_state, shipping_postal_code, shipping_country,
+            created_at, updated_at
+            from orders o
+            where o.id = @OrderId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -45,87 +40,24 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
 
             var reader = await command.ExecuteReaderAsync();
 
-            while(await reader.ReadAsync())
+            if(await reader.ReadAsync())
             {
-                if(order == null)
-                {
-                    order = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-
-                        OrderItems = new List<OrderItem>()
-                    };
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("OI_Id")),
-                        ProductId = reader.GetInt16(reader.GetOrdinal("OI_ProductId")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("OI_Quantity")),
-                        UnitPrice = reader.GetDecimal(reader.GetOrdinal("OI_UnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("OI_TotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("OI_DiscountAmount")),
-
-                        Product = new Product
-                        {
-                            Id = reader.GetInt16(reader.GetOrdinal("P_Id")),
-                            Name = reader.GetString(reader.GetOrdinal("P_ProductName")),
-                            Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                            StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                            ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                            Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                            ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                            LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                            IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                            SKU = reader.GetString(reader.GetOrdinal("P_SKU"))
-                        }
-                    };
-
-                    order.OrderItems.Add(orderItem);
-                }
-            }
+                order = MapOrder(reader);
+            }                
 
             return order;
         }
 
         public async Task<List<Order>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
         {
-            string query = @"select o.*, oi.Quantitiy as OI_Quantity, oi.UnitPrice as OI_UnitPrice, 
-                             oi.TotalPrice as OI_TotalPrice, oi.DiscountAmount as OI_DiscountAmount,
-                             p.Id as P_Id, p.ProductName as P_ProductName, p.Description as P_Description,
-                             p.StockQuantity as P_StockQuantity, p.ImageUrl as P_ImageUrl,
-                             p.Price as P_Price, p.ReservedStock as P_ReservedStock, 
-                             p.LowStockThreshold as P_LowStockThreshold, p.IsActive as P_IsActive, p.SKU as P_SKU 
-                             from Orders o
-                            Left join OrderItems oi on (oi.OrderId = o.Id)
-                            inner join Products p on (oi.productId = p.Id)
-                            where o.UserId = @UserId
-                            order by createdAt desc
-                            offset @offset
-                            limit @pageSize;";
+            string query = @"select id, user_id, cart_id, is_paid, status, subtotal, tax_amount, shipping_amount, total
+            discount_total, customer_email, customer_phone, completed_at, cancelled_at, shipping_name, shipping_address1,
+            shipping_address2, shipping_city, shipping_state, shipping_postal_code, shipping_country, created_at, updated_at
+            from orders o
+                            where o.user_id = @UserId
+                            order by created_at desc
+                            offset @Offset
+                            limit @PageSize;";
 
             var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -135,257 +67,80 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
             var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@UserId", userId);
-            command.Parameters.AddWithValue("@offset", offset);
-            command.Parameters.AddWithValue("@pageSize", pageSize);
+            command.Parameters.AddWithValue("@Offset", offset);
+            command.Parameters.AddWithValue("@PageSize", pageSize);
 
-            Dictionary<int, Order> orders = new Dictionary<int, Order>();
+            List<Order> orders = new List<Order>();
 
             var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
-                int orderId = reader.GetInt16(reader.GetOrdinal("Id"));
-
-                if (!orders.TryGetValue(orderId, out var order))
-                {
-                    order = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        OrderItems = new List<OrderItem>()
-
-                    };
-                    orders.Add(orderId, order);
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("OI_Id")))
-                {
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("OI_Id")),
-                        ProductId = reader.GetInt16(reader.GetOrdinal("OI_ProductId")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("OI_Quantity")),
-                        UnitPrice = reader.GetDecimal(reader.GetOrdinal("OI_UnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("OI_TotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("OI_DiscountAmount"))
-                    };
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("P_Id")))
-                    {
-
-                        orderItem.Product = new Product
-                        {
-                            Id = reader.GetInt16(reader.GetOrdinal("P_Id")),
-                            Name = reader.GetString(reader.GetOrdinal("P_ProductName")),
-                            Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                            StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                            ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                            Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                            ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                            LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                            IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                            SKU = reader.GetString(reader.GetOrdinal("P_SKU"))
-                        };
-
-                    }
-                    order.OrderItems.Add(orderItem);
-                }
+                orders.Add(MapOrder(reader));
             }
-            return orders.Values.ToList();
+
+            return ordersh;
         }
 
         public async Task<List<Order>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
         {
             string query = @"SELECT
-    o.Id AS OrderId,
-    o.UserId AS OrderUserId,
-    o.CartId AS OrderCartId,
-    o.Status AS OrderStatus,
-    o.SubTotal AS OrderSubTotal,
-    o.TaxAmount AS OrderTaxAmount,
-    o.ShippingAmount AS OrderShippingAmount,
-    o.Total AS OrderTotal,
-    o.DiscountTotal AS OrderDiscountTotal,
-    o.CustomerEmail AS OrderCustomerEmail,
-    o.CustomerPhone AS OrderCustomerPhone,
-    o.ReferenceNumber AS OrderReferenceNumber,
-    o.CompletedAt AS OrderCompletedAt,
-    o.CancelledAt AS OrderCancelledAt,
-    o.ShippingName AS OrderShippingName,
-    o.ShippingAddress1 AS OrderShippingAddress1,
-    o.ShippingAddress2 AS OrderShippingAddress2,
-    o.ShippingCity AS OrderShippingCity,
-    o.ShippingState AS OrderShippingState,
-    o.ShippingPostalCode AS OrderShippingPostalCode,
-    o.ShippingCountry AS OrderShippingCountry,
-    o.CreatedAt AS OrderCreatedAt,
-    o.UpdatedAt AS OrderUpdatedAt,
-    o.IsPaid AS OrderIsPaid,
-    o.SessionId AS OrderSessionId,
-
-    oi.Id AS OrderItemId,
-    oi.Quantity AS ItemQuantity,
-    oi.UnitPrice AS ItemUnitPrice,
-    oi.TotalPrice AS ItemTotalPrice,
-    oi.DiscountAmount AS ItemDiscountAmount,
-
-    p.Id AS ProductId,
-    p.Name AS ProductName,
-    p.Description AS ProductDescription,
-    p.StockQuantity AS ProductStockQuantity,
-    p.ImageUrl AS ProductImageUrl,
-    p.Price AS ProductPrice,
-    p.ReservedStock AS ProductReservedStock,
-    p.LowStockThreshold AS ProductLowStockThreshold,
-    p.IsActive AS ProductIsActive,
-    p.SKU AS ProductSKU,
-
-    u.Id AS UserId,
-    u.FirstName AS UserFirstName,
-    u.LastName AS UserLastName
+    o.id,
+    o.user_id,
+    o.cart_id,
+    o.status,
+    o.subtotal,
+    o.tax_amount,
+    o.shipping_amount,
+    o.total,
+    o.discount_total,
+    o.customer_email,
+    o.customer_phone,
+    o.reference_number,
+    o.completed_at,
+    o.cancelled_at,
+    o.shipping_name,
+    o.shipping_address1,
+    o.shipping_address2,
+    o.shipping_city,
+    o.shipping_state,
+    o.shipping_postal_code,
+    o.shipping_country,
+    o.created_at,
+    o.updated_at,
+    o.is_paid,
+    o.session_id,
 
 FROM (
     SELECT *
     FROM Orders
     ORDER BY CreatedAt DESC
-    OFFSET @offset
-    LIMIT @pageSize
+    OFFSET @Offset
+    LIMIT @PageSize
 ) o
-LEFT JOIN OrderItems oi ON o.Id = oi.OrderId
-LEFT JOIN Products p ON oi.ProductId = p.Id
-LEFT JOIN AspNetUsers u ON o.UserId = u.Id
-ORDER BY o.CreatedAt DESC, o.Id;";
+ORDER BY o.CreatedAt DESC;";
 
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
             int offset = (page - 1) * pageSize;
 
-            command.Parameters.AddWithValue("@offset", offset);
-            command.Parameters.AddWithValue("@pageSize", pageSize);
+            command.Parameters.AddWithValue("@Offset", offset);
+            command.Parameters.AddWithValue("@PageSize", pageSize);
 
 
             var reader = await command.ExecuteReaderAsync();
 
-            Dictionary<int, Order> orders = new Dictionary<int, Order>();
-            Dictionary<int, User> users = new Dictionary<int, User>();
+            List<Order> orders = new List<Order>();
 
             while(await reader.ReadAsync())
             {
-                int orderId = reader.GetInt16(reader.GetOrdinal("OrderId"));
-                int userId = reader.GetInt16(reader.GetOrdinal("UserId"));
-
-                if (!orders.TryGetValue(orderId, out var order))
-                {
-                    order = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        OrderItems = new List<OrderItem>()
-
-                    };
-                    orders.Add(orderId, order);
-                }
-
-                if (!users.TryGetValue(userId, out var user))
-                {
-                    user = new User
-                    {
-                        FirstName = reader.GetString(reader.GetOrdinal("UserFirstName")),
-                        Id = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        LastName = reader.GetString(reader.GetOrdinal("UserLastName"))
-                    };
-
-                    users.Add(userId, user);
-                }
-
-                if (!reader.IsDBNull(reader.GetOrdinal("OrderItemId")))
-                {
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("OrderItemId")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("ItemQuantity")),
-                        UnitPrice = reader.GetDecimal(reader.GetOrdinal("ItemUnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("ItemTotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("ItemDiscountAmount"))
-                    };
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("ProductId")))
-                    {
-
-                        orderItem.Product = new Product
-                        {
-                            Id = reader.GetInt16(reader.GetOrdinal("ProductId")),
-                            Name = reader.GetString(reader.GetOrdinal("ProductName")),
-                            Description = reader.GetString(reader.GetOrdinal("ProductDescription")),
-                            StockQuantity = reader.GetInt32(reader.GetOrdinal("ProductStockQuantity")),
-                            ImageUrl = reader.GetString(reader.GetOrdinal("ProductImageUrl")),
-                            Price = reader.GetDecimal(reader.GetOrdinal("ProductPrice")),
-                            ReservedStock = reader.GetInt32(reader.GetOrdinal("ProductReservedStock")),
-                            LowStockThreshold = reader.GetInt32(reader.GetOrdinal("ProductLowStockThreshold")),
-                            IsActive = reader.GetBoolean(reader.GetOrdinal("ProductIsActive")),
-                            SKU = reader.GetString(reader.GetOrdinal("ProductSKU"))
-                        };
-
-                    }
-                    order.OrderItems.Add(orderItem);
-                    order.User = user;
-                }
+                orders.Add(MapOrder(reader));
             }
 
-            return orders.Values.ToList();
-
+            return orders();
         }
 
 
@@ -398,8 +153,7 @@ ORDER BY o.CreatedAt DESC, o.Id;";
                             CancelledAt = Case When @newStatus = @cancelledAtStatus Then CURRENT_TIMESTAMP else CancelledAt End
                             Where Id = @orderId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -911,5 +665,103 @@ END";
 
             return Convert.ToBoolean(result);
         }
+
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return connection;
+        }
+        
+
+        private Order MapOrder(NpgsqlDataReader reader)
+        {
+            return new Order()
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
+                CartId = reader.GetInt16(reader.GetOrdinal("cart_id")),
+                IsPaid = reader.GetBoolean(reader.GetOrdinal("is_paid")),
+                Status = reader.GetInt16(reader.GetOrdinal("status")),
+                SubTotal = reader.GetDecimal(reader.GetOrdinal("subtotal")),
+                TaxAmount = reader.GetDecimal(reader.GetOrdinal("tax_amount")),
+                ShippingAmount = reader.GetDecimal(reader.GetOrdinal("shipping_amount")),
+                Total = reader.GetDecimal(reader.GetOrdinal("total")),
+                DiscountTotal = reader.GetDecimal(reader.GetOrdinal("discount_total")),
+                CustomerEmail = reader.GetString(reader.GetOrdinal("customer_email")),
+                CustomerPhone = reader.GetString(reader.GetOrdinal("customer_phone")),
+                CompletedAt = reader.GetDateTime(reader.GetOrdinal("completed_at")),
+                CancelledAt = reader.GetDateTime(reader.GetOrdinal("cancelled_at")),
+                ShippingName = reader.GetString(reader.GetOrdinal("shipping_name")),
+                ShippingAddress1 = reader.GetString(reader.GetOrdinal("shipping_address1")),
+                ShippingAddress2 = reader.GetString(reader.GetOrdinal("shipping_address2")),
+                ShippingCity = reader.GetString(reader.GetOrdinal("shipping_city")),
+                ShippingState = reader.GetString(reader.GetOrdinal("shipping_state")),
+                ShippingPostalCode = reader.GetString(reader.GetOrdinal("shipping_postal_code")),
+                ShippingCountry = reader.GetString(reader.GetOrdinal("shipping_country")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
+        }
+
+        private OrderItem MapOrderItem(NpgsqlDataReader reader)
+        {
+            return new OrderItem()
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
+                ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
+                ProductName = reader.GetString(reader.GetOrdinal("product_name")),
+                Quantity = reader.GetInt16(reader.GetOrdinal("quantity")),
+                UnitPrice = reader.GetDecimal(reader.GetOrdinal("unit_price")),
+                TotalPrice = reader.GetDecimal(reader.GetOrdinal("total_price")),
+                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("discount_amount")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
+        }
+
+
+        private void AddOrderParameters(NpgsqlCommand command, Order order)
+        {
+            command.Parameters.AddWithValue("@UserId", order.UserId);
+            command.Parameters.AddWithValue("@CartId", order.CartId);
+            command.Parameters.AddWithValue("@Status", order.Status);
+            command.Parameters.AddWithValue("@SubTotal", order.SubTotal);
+            command.Parameters.AddWithValue("@TaxAmount", order.TaxAmount);
+            command.Parameters.AddWithValue("@ShippingAmount", order.ShippingAmount);
+            command.Parameters.AddWithValue("@Total", order.Total);
+            command.Parameters.AddWithValue("@DiscountTotal", order.DiscountTotal);
+            command.Parameters.AddWithValue("@CustomerEmail", order.CustomerEmail);
+            command.Parameters.AddWithValue("@CustomerPhone", order.CustomerPhone);
+            command.Parameters.AddWithValue("@ReferenceNumber", order.ReferenceNumber);
+            command.Parameters.AddWithValue("@CompletedAt", order.CompletedAt);
+            command.Parameters.AddWithValue("@CancelledAt", order.CancalledAt);
+            command.Parameters.AddWithValue("@ShippingName", order.ShippingName);
+            command.Parameters.AddWithValue("@ShippingAddress1", order.ShippingAddress1);
+            command.Parameters.AddWithValue("@ShippingAddress2", order.ShippingAddress2);
+            command.Parameters.AddWithValue("@ShippingCity", order.ShippingCity);
+            command.Parameters.AddWithValue("@ShippingState", order.ShippingState);
+            command.Parameters.AddWithValue("@ShippingPostalCode", order.ShippingPostalCode);
+            command.Parameters.AddWithValue("@ShippingCountry", order.ShippingCountry);
+            command.Parameters.AddWithValue("@CreatedAt", order.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", order.UpdatedAt);
+            command.Parameters.AddWithValue("@IsPaid", order.isPaid);
+            command.Parameters.AddWithValue("@SessionId", order.sessionId);
+        }
+
+        private void AddOrderItemParameters(NpgsqlCommand command, OrderItem orderItem)
+        {
+            command.Parameters.AddWithValue("@OrderId", item.OrderId);
+            command.Parameters.AddWithValue("@ProductId", item.ProductId);
+            command.Parameters.AddWithValue("@Quantity", item.Quantity);
+            command.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
+            command.Parameters.AddWithValue("@TotalPrice", item.TotalPrice);
+            command.Parameters.AddWithValue("@DiscountAmount", item.DiscountAmount);
+            command.Parameters.AddWithValue("@CreatedAt", item.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", item.UpdatedAt);
+            command.Parameters.AddWithValue("@ProductName", item.ProductName);
+        }
     }
+    
 }
