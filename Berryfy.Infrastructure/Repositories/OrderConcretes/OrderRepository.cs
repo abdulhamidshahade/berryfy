@@ -30,13 +30,13 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
             from orders o
             where o.id = @OrderId;";
 
-            await OpenConnectionAsync();
+            avar connection = wait OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@OrderId", orderId);
 
-            Order order = null;
+            Order order = new Order();
 
             var reader = await command.ExecuteReaderAsync();
 
@@ -59,8 +59,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
                             offset @Offset
                             limit @PageSize;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var offset = (page - 1) * pageSize;
 
@@ -121,7 +120,7 @@ FROM (
 ORDER BY o.CreatedAt DESC;";
 
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -149,11 +148,11 @@ ORDER BY o.CreatedAt DESC;";
             string query = @"Update Orders
                             Set Status = @newStatus,
                             UpdatedAt = 
-                            CompletedAt = Case When @newStatus = @completedAtStatus Then CURRENT_TIMESTAMP else CompletedAt End,
-                            CancelledAt = Case When @newStatus = @cancelledAtStatus Then CURRENT_TIMESTAMP else CancelledAt End
+                            CompletedAt = Case When @newStatus = @completedAtStatus Then CURRENT_TIMESTAMP else completed_at End,
+                            CancelledAt = Case When @newStatus = @cancelledAtStatus Then CURRENT_TIMESTAMP else cancelled_at End
                             Where Id = @orderId;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -174,81 +173,26 @@ ORDER BY o.CreatedAt DESC;";
 
         public async Task<Order> CreateOrderAsync(Order order)
         {
-            string query = @"Insert into Orders (UserId, CartId, Status, SubTotal, TaxAmount, ShippingAmount,
-Total, DiscountTotal, CustomerEmail, CustomerPhone, ReferenceNumber, CompletedAt, CancelledAt, ShippingName,
-ShippingAddress1, ShippingAddress2, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry, 
-CreatedAt, UpdatedAt, isPaid, sessionId) Values (@UserId, @CartId, @Status, @SubTotal, @TaxAmount, @ShippingAmount,
+            string query = @"Insert into Orders (user_id, cart_id, status, subtotal, tax_amount, shipping_amount,
+total, discount_total, customer_email, customer_phone, reference_number, completed_at, cancelled_at, shipping_name,
+shipping_address1, shipping_address2, shipping_city, shipping_state, shipping_postal_code, shipping_country,
+created_at, updated_at, is_paid, session_id) Values (@UserId, @CartId, @Status, @SubTotal, @TaxAmount, @ShippingAmount,
 @Total, @DiscountTotal, @CustomerEmail, @CustomerPhone, @ReferenceNumber, @CompletedAt, @CancelledAt, @ShippingName,
 @ShippingAddress1, @ShippingAddress2, @ShippingCity, @ShippingState, @ShippingPostalCode, @ShippingCountry, 
 @CreatedAt, @UpdatedAt, @isPaid, @sessionId) Returning *;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@UserId", order.UserId);
-            command.Parameters.AddWithValue("@CartId", order.CartId);
-            command.Parameters.AddWithValue("@Status", order.Status);
-            command.Parameters.AddWithValue("@SubTotal", order.SubTotal);
-            command.Parameters.AddWithValue("@TaxAmount", order.TaxAmount);
-            command.Parameters.AddWithValue("@ShippingAmount", order.ShippingAmount);
-            command.Parameters.AddWithValue("@Total", order.Total);
-            command.Parameters.AddWithValue("@DiscountTotal", order.DiscountTotal);
-            command.Parameters.AddWithValue("@CustomerEmail", order.CustomerEmail);
-            command.Parameters.AddWithValue("@CustomerPhone", order.CustomerPhone);
-            command.Parameters.AddWithValue("@ReferenceNumber", order.ReferenceNumber);
-            command.Parameters.AddWithValue("@CompletedAt", order.CompletedAt);
-            command.Parameters.AddWithValue("@CancelledAt", order.CancalledAt);
-            command.Parameters.AddWithValue("@ShippingName", order.ShippingName);
-            command.Parameters.AddWithValue("@ShippingAddress1", order.ShippingAddress1);
-            command.Parameters.AddWithValue("@ShippingAddress2", order.ShippingAddress2);
-            command.Parameters.AddWithValue("@ShippingCity", order.ShippingCity);
-            command.Parameters.AddWithValue("@ShippingState", order.ShippingState);
-            command.Parameters.AddWithValue("@ShippingPostalCode", order.ShippingPostalCode);
-            command.Parameters.AddWithValue("@ShippintCountry", order.ShippingCountry);
-            command.Parameters.AddWithValue("@CreatedAt", order.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", order.UpdatedAt);
-            command.Parameters.AddWithValue("@isPaid", order.isPaid);
-            command.Parameters.AddWithValue("@sessionId", order.sessionId);
+            AddOrderParameters(command, order);
 
             var reader = await command.ExecuteReaderAsync();
-            Order orderObj = null;
+            Order orderObj = new Order();
 
-            while(await reader.ReadAsync())
+            if(await reader.ReadAsync())
             {
-                if(orderObj == null)
-                {
-                    orderObj = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        OrderItems = new List<OrderItem>()
-                    };
-                }
+                orderObj = MapOrder(reader);
             }
 
             return orderObj;
@@ -256,45 +200,22 @@ CreatedAt, UpdatedAt, isPaid, sessionId) Values (@UserId, @CartId, @Status, @Sub
 
         public async Task<OrderItem> CreateOrderItemAsync(OrderItem item)
         {
-            string query = @"insert into OrderItems (OrderId, ProductId, Quantity, UnitPrice, TotalPrice,
-DiscountAmount, CreatedAt, UpdatedAt, ProductName) values (@OrderId, @ProductId, @Quantity, @UnitPrice,
+            string query = @"insert into order_items (order_id, product_id, quantity, unit_price, total_price,
+discount_amount, created_at, updated_at, product_name) values (@OrderId, @ProductId, @Quantity, @UnitPrice,
 @TotalPrice, @DiscountAmount, @CreatedAt, @UpdatedAt, @ProductName) Returning *;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@OrderId", item.OrderId);
-            command.Parameters.AddWithValue("@ProductId", item.ProductId);
-            command.Parameters.AddWithValue("@Quantity", item.Quantity);
-            command.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
-            command.Parameters.AddWithValue("@TotalPrice", item.TotalPrice);
-            command.Parameters.AddWithValue("@DiscountAmount", item.DiscountAmount);
-            command.Parameters.AddWithValue("@CreatedAt", item.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", item.UpdatedAt);
-            command.Parameters.AddWithValue("@ProductName", item.ProductName);
+            AddOrderItemParameters(command, item);
 
             var reader = await command.ExecuteReaderAsync();
-            OrderItem orderItem = null;
+            OrderItem orderItem = new OrderItem();
 
-            while(await reader.ReadAsync())
+            if(await reader.ReadAsync())
             {
-                if(orderItem == null)
-                {
-                    orderItem = new OrderItem
-                    {
-                        OrderId = reader.GetInt16(reader.GetOrdinal("OrderId")),
-                        ProductId = reader.GetInt16(reader.GetOrdinal("ProductId")),
-                        Quantity = reader.GetInt16(reader.GetOrdinal("Quantity")),
-                        UnitPrice = reader.GetInt16(reader.GetOrdinal("UnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("TotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("DiscountAmount")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        ProductName = reader.GetString(reader.GetOrdinal("ProductName"))
-                    };
-                }
+                orderItem = MapOrderItem(reader);
             }
 
             return orderItem;
@@ -302,110 +223,41 @@ DiscountAmount, CreatedAt, UpdatedAt, ProductName) values (@OrderId, @ProductId,
 
         public async Task<Order?> GetOrderByReferenceNumberAsync(string referenceNumber)
         {
-            string query = @"select o.*, oi.Quantitiy as OI_Quantity, oi.UnitPrice as OI_UnitPrice, 
-                             oi.TotalPrice as OI_TotalPrice, oi.DiscountAmount as OI_DiscountAmount,
-                             p.Id as P_Id, p.ProductName as P_ProductName, p.Description as P_Description,
-                             p.StockQuantity as P_StockQuantity, p.ImageUrl as P_ImageUrl,
-                             p.Price as P_Price, p.ReservedStock as P_ReservedStock, 
-                             p.LowStockThreshold as P_LowStockThreshold, p.IsActive as P_IsActive, p.SKU as P_SKU 
+            string query = @"select o.*
                              from Orders o
-                            Left join OrderItems oi on (oi.OrderId = o.Id)
-                            leff join Products p on (oi.productId = p.Id)
-                            where o.ReferenceNumber = @referenceNumber
-                            limit 1;";
+                            where o.reference_number = @ReferenceNumber;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@referenceNumber", referenceNumber);
+            command.Parameters.AddWithValue("@ReferenceNumber", referenceNumber);
 
-            Order order = null;
+            Order order = new Order();
 
             var reader = await command.ExecuteReaderAsync();
 
-            while (await reader.ReadAsync())
+            if (await reader.ReadAsync())
             {
-                if (order == null)
-                {
-                    order = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-
-                        OrderItems = new List<OrderItem>()
-                    };
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("OI_Id")),
-                        ProductId = reader.GetInt16(reader.GetOrdinal("OI_ProductId")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("OI_Quantity")),
-                        UnitPrice = reader.GetDecimal(reader.GetOrdinal("OI_UnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("OI_TotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("OI_DiscountAmount")),
-
-                        Product = new Product
-                        {
-                            Id = reader.GetInt16(reader.GetOrdinal("P_Id")),
-                            Name = reader.GetString(reader.GetOrdinal("P_ProductName")),
-                            Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                            StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                            ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                            Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                            ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                            LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                            IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                            SKU = reader.GetString(reader.GetOrdinal("P_SKU"))
-                        }
-                    };
-
-                    order.OrderItems.Add(orderItem);
-                }
+                order = MapOrder(reader);
             }
 
             return order;
-
         }
 
         public async Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
         {
-            string query = @"select * from orders where Status = @orderStatus offset @offset limit @pageSize;";
+            string query = @"select * from orders where Status = @OrderStatus offset @offset limit @pageSize;";
 
             int offset = (page - 1) * pageSize;
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@offset", offset);
             command.Parameters.AddWithValue("@pageSize", pageSize);
-            command.Parameters.AddWithValue("orderStatus", status);
+            command.Parameters.AddWithValue("@OrderStatus", status);
 
             List<Order> orders = new List<Order>();
 
@@ -413,38 +265,8 @@ DiscountAmount, CreatedAt, UpdatedAt, ProductName) values (@OrderId, @ProductId,
 
             while(await reader.ReadAsync())
             {
-                orders.Add(new Order
-                {
-                    Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                    UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                    CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                    Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                    SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                    TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                    ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                    Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                    DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                    CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                    CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                    ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                    CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                    CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                    ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                    ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                    ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                    ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                    ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                    ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                    ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                    isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                    sessionId = reader.GetString(reader.GetOrdinal("sessionId"))
-                });
+                orders.Add(MapOrder(reader));
             }
-
-            await reader.CloseAsync();
-            await connection.CloseAsync();
 
             return orders;
         }
@@ -452,11 +274,10 @@ DiscountAmount, CreatedAt, UpdatedAt, ProductName) values (@OrderId, @ProductId,
         public async Task<bool> UpdateOrderPaymentStatusAsync(int orderId, PaymentStatus paymentStatus)
         {
             string query = @"Update Orders
-set isPaid = case when @paymentStatus = @completedStatus then 1 else 0 end
-where Id = @orderId;";
+set is_paid = case when @paymentStatus = @completedStatus then 1 else 0 end
+where id = @orderId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -470,90 +291,23 @@ where Id = @orderId;";
 
         public async Task<Order?> GetOrderByCartIdAsync(int cartId)
         {
-            string query = @"select o.*, oi.Quantitiy as OI_Quantity, oi.UnitPrice as OI_UnitPrice, 
-                             oi.TotalPrice as OI_TotalPrice, oi.DiscountAmount as OI_DiscountAmount,
-                             p.Id as P_Id, p.ProductName as P_ProductName, p.Description as P_Description,
-                             p.StockQuantity as P_StockQuantity, p.ImageUrl as P_ImageUrl,
-                             p.Price as P_Price, p.ReservedStock as P_ReservedStock, 
-                             p.LowStockThreshold as P_LowStockThreshold, p.IsActive as P_IsActive, p.SKU as P_SKU 
+            string query = @"select o.*
                              from Orders o
-                            Left join OrderItems oi on (oi.OrderId = o.Id)
-                            leff join Products p on (oi.productId = p.Id)
-                            where o.CartId = @cartId
-                            limit 1;";
+                            where o.cart_id = @cartId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@cartId", cartId);
 
-            Order order = null;
+            Order order = new Order();
 
             var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
-                if (order == null)
-                {
-                    order = new Order
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                        UserId = reader.GetInt16(reader.GetOrdinal("UserId")),
-                        CartId = reader.GetInt16(reader.GetOrdinal("CartId")),
-                        Status = (OrderStatus)reader.GetValue(reader.GetOrdinal("Status")),
-                        SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                        TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
-                        ShippingAmount = reader.GetDecimal(reader.GetOrdinal("ShippingAmount")),
-                        Total = reader.GetDecimal(reader.GetOrdinal("Total")),
-                        DiscountTotal = reader.GetDecimal(reader.GetOrdinal("DiscountTotal")),
-                        CustomerEmail = reader.GetString(reader.GetOrdinal("CustomerEmail")),
-                        CustomerPhone = reader.GetString(reader.GetOrdinal("CustomerPhone")),
-                        ReferenceNumber = reader.GetString(reader.GetOrdinal("ReferenceNumber")),
-                        CompletedAt = reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
-                        CancalledAt = reader.GetDateTime(reader.GetOrdinal("CancelledAt")),
-                        ShippingName = reader.GetString(reader.GetOrdinal("ShippingName")),
-                        ShippingAddress1 = reader.GetString(reader.GetOrdinal("ShippingAddress1")),
-                        ShippingAddress2 = reader.GetString(reader.GetOrdinal("ShippingAddress2")),
-                        ShippingCity = reader.GetString(reader.GetOrdinal("ShippingCity")),
-                        ShippingCountry = reader.GetString(reader.GetOrdinal("ShippingCountry")),
-                        ShippingPostalCode = reader.GetString(reader.GetOrdinal("ShippingPostalCode")),
-                        ShippingState = reader.GetString(reader.GetOrdinal("ShippingState")),
-                        isPaid = reader.GetBoolean(reader.GetOrdinal("IsPaid")),
-                        sessionId = reader.GetString(reader.GetOrdinal("SessionId")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-
-                        OrderItems = new List<OrderItem>()
-                    };
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = reader.GetInt16(reader.GetOrdinal("OI_Id")),
-                        ProductId = reader.GetInt16(reader.GetOrdinal("OI_ProductId")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("OI_Quantity")),
-                        UnitPrice = reader.GetDecimal(reader.GetOrdinal("OI_UnitPrice")),
-                        TotalPrice = reader.GetDecimal(reader.GetOrdinal("OI_TotalPrice")),
-                        DiscountAmount = reader.GetDecimal(reader.GetOrdinal("OI_DiscountAmount")),
-
-                        Product = new Product
-                        {
-                            Id = reader.GetInt16(reader.GetOrdinal("P_Id")),
-                            Name = reader.GetString(reader.GetOrdinal("P_ProductName")),
-                            Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                            StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                            ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                            Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                            ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                            LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                            IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                            SKU = reader.GetString(reader.GetOrdinal("P_SKU"))
-                        }
-                    };
-
-                    order.OrderItems.Add(orderItem);
-                }
+                order = MapOrder(reader);
             }
 
             return order;
@@ -562,63 +316,38 @@ where Id = @orderId;";
         public async Task<bool> UpdateOrderAsync(Order order)
         {
             string query = @"Update Orders
-set UserId = @userId,
-CartId = @cartId,
-Status = @status,
-SubTotal = @subTotal,
-TaxAmount = @taxAmount,
-ShippingAmount = @shippingAmount,
-Total = @total,
-DiscountTotal = @discountTotal,
-CustomerEmail = @customerEmail,
-CustomerPhone = @customerPhone,
-ReferenceNumber = @referenceNumber,
-CompletedAt = @completedAt,
-CancelledAt = @cancelledAt,
-ShippingName, = @shippingName,
-ShippingAddress1 = @shippingAddress1,
-ShippingAddress2 = @shippingAddress2,
-ShippingCity = @shippingCity,
-ShippingState= @shippingState,
-ShippingPostalCode, @shippingPostalCode,
-ShippingCountry, @shippingCountry,
-CreatedAt = @createdAt,
-UpdatedAt = @updatedAt,
-IsPaid = @isPaid,
-SessionId= @sessionId
-where Id = @orderId;";
+set user_id = @userId,
+cart_id = @cartId,
+status = @status,
+sub_total = @subTotal,
+tax_amount = @taxAmount,
+shipping_amount = @shippingAmount,
+total = @total,
+discount_total = @discountTotal,
+customer_email = @customerEmail,
+customer_phone = @customerPhone,
+reference_number = @referenceNumber,
+completed_at = @completedAt,
+cancelled_at = @cancelledAt,
+shipping_name = @shippingName,
+shipping_address1 = @shippingAddress1,
+shipping_address2 = @shippingAddress2,
+shipping_city = @shippingCity,
+shipping_state = @shippingState,
+shipping_postal_code = @shippingPostalCode,
+shipping_country = @shippingCountry,
+created_at = @createdAt,
+updated_at = @updatedAt,
+is_paid = @isPaid,
+session_id = @sessionId
+where id = @orderId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@userId", order.UserId);
-            command.Parameters.AddWithValue("@cartId", order.CartId);
-            command.Parameters.AddWithValue("@status", order.Status);
-            command.Parameters.AddWithValue("@subTotal", order.SubTotal);
-            command.Parameters.AddWithValue("@taxAmount", order.TaxAmount);
-            command.Parameters.AddWithValue("@shippingAmount", order.ShippingAmount);
-            command.Parameters.AddWithValue("@total", order.Total);
-            command.Parameters.AddWithValue("@discountTotal", order.DiscountTotal);
-            command.Parameters.AddWithValue("@customerEmail", order.CustomerEmail);
-            command.Parameters.AddWithValue("@customerPhone", order.CustomerPhone);
-            command.Parameters.AddWithValue("@referenceNumber", order.ReferenceNumber);
-            command.Parameters.AddWithValue("@completedAt", order.CompletedAt);
-            command.Parameters.AddWithValue("@cancelledAt", order.CancalledAt);
-            command.Parameters.AddWithValue("@shippingName", order.ShippingName);
-            command.Parameters.AddWithValue("@shippingAddress1", order.ShippingAddress1);
-            command.Parameters.AddWithValue("@shippingAddress2", order.ShippingAddress2);
-            command.Parameters.AddWithValue("@shippingCity", order.ShippingCity);
-            command.Parameters.AddWithValue("@shippingState", order.ShippingState);
-            command.Parameters.AddWithValue("@shippingPostalCode", order.ShippingPostalCode);
-            command.Parameters.AddWithValue("@shippingCountry", order.ShippingCountry);
-            command.Parameters.AddWithValue("@createdAt", order.CreatedAt);
-            command.Parameters.AddWithValue("@updatedAt", order.UpdatedAt);
-            command.Parameters.AddWithValue("@isPaid", order.isPaid);
-            command.Parameters.AddWithValue("@sessionId", order.sessionId);
+            AddOrderParameters(command, order);
             command.Parameters.AddWithValue("@orderId", order.Id);
-
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
@@ -627,10 +356,9 @@ where Id = @orderId;";
 
         public async Task<bool> DeleteOrderItemsAsync(int orderId)
         {
-            string query = @"Delete from order_items oi where oi.orderId = @orderId;";
+            string query = @"Delete from order_items oi where oi.order_id = @orderId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@orderId", orderId);
@@ -653,8 +381,7 @@ where Id = @orderId;";
     ELSE 0 
 END";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@orderId", userId);
@@ -763,5 +490,4 @@ END";
             command.Parameters.AddWithValue("@ProductName", item.ProductName);
         }
     }
-    
 }
