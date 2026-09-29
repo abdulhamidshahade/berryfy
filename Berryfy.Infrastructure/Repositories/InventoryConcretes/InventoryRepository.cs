@@ -19,48 +19,24 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<InventoryLog> CreateInventory(InventoryLog inventoryLog)
         {
-            string query = @"Insert into InventoryLogs (ProductId, CurrentStockQuantity, QuantityChanged,
-ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, UpdatedAt) values (@ProductId,
+            string query = @"Insert into InventoryLogs (product_id, current_stock_quantity, quantity_changed,
+change_type, reference_id, reference_type, performed_by_user_id, notes, created_at, updated_at) values (@ProductId,
 @CurrentStockQuantity, @QuantityChanged, @ChangeType, @ReferenceId, @ReferenceType, @PerformedByUserId, @Notes, @CreatedAt,
 @UpdatedAt) Returning *;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@ProductId", inventoryLog.ProductId);
-            command.Parameters.AddWithValue("@CurrentStockQuantity", inventoryLog.CurrentStockQuantity);
-            command.Parameters.AddWithValue("@QuantityChanged", inventoryLog.QuantityChanged);
-            command.Parameters.AddWithValue("@ChangeType", inventoryLog.ChangeType);
-            command.Parameters.AddWithValue("@ReferenceId", inventoryLog.ReferenceId);
-            command.Parameters.AddWithValue("@ReferenceType", inventoryLog.ReferenceType);
-            command.Parameters.AddWithValue("@PerformedByUserId", inventoryLog.PerformedByUserId);
-            command.Parameters.AddWithValue("@Notes", inventoryLog.Notes);
-            command.Parameters.AddWithValue("@CreatedAt", inventoryLog.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", inventoryLog.UpdatedAt);
+            AddInventoryLogParameters(command, inventoryLog);
 
-
-            InventoryLog inventoryLogObj = null;
+            InventoryLog inventoryLogObj = new InventoryLog();
 
             var reader = await command.ExecuteReaderAsync();
 
-            while(await reader.ReadAsync())
+            if(await reader.ReadAsync())
             {
-                inventoryLogObj = new InventoryLog
-                {
-                    Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                    ProductId = reader.GetInt16(reader.GetOrdinal("ProductId")),
-                    CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("CurrentStockQuantity")),
-                    QuantityChanged = reader.GetInt16(reader.GetOrdinal("QuantityChanged")),
-                    ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("ChangeType")),
-                    ReferenceId = reader.GetInt16(reader.GetOrdinal("ReferenceId")),
-                    ReferenceType = reader.GetString(reader.GetOrdinal("ReferenceType")),
-                    PerformedByUserId = reader.GetInt16(reader.GetOrdinal("PerformedByUserId")),
-                    Notes = reader.GetString(reader.GetOrdinal("Notes")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                };
+                inventoryLogObj = MapInventoryLog(reader);
             }
 
             return inventoryLogObj;
@@ -68,10 +44,9 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
 
         public async Task<List<InventoryLog>> GetInventoryHistoryAsync(int productId, int limit = 50)
         {
-            string query = @"select * from InventoryLogs where ProductId = @ProductId limit @limit";
+            string query = @"select * from inventory_logs where product_id = @ProductId limit @limit";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -84,20 +59,7 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
 
             while(await reader.ReadAsync())
             {
-                logs.Add(new InventoryLog
-                {
-                    Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                    ProductId = reader.GetInt16(reader.GetOrdinal("ProductId")),
-                    CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("CurrentStockQuantity")),
-                    QuantityChanged = reader.GetInt16(reader.GetOrdinal("QuantityChanged")),
-                    ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("ChangeType")),
-                    ReferenceId = reader.GetInt16(reader.GetOrdinal("ReferenceId")),
-                    ReferenceType = reader.GetString(reader.GetOrdinal("ReferenceType")),
-                    PerformedByUserId = reader.GetInt16(reader.GetOrdinal("PerformedByUserId")),
-                    Notes = reader.GetString(reader.GetOrdinal("Notes")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                });
+                logs.Add(MapInventoryLog(reader));
             }
 
             return logs;
@@ -106,10 +68,9 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
 
         public async Task<bool> IsInStockAsync(int productId, int quantity)
         {
-            string productQuery = @"select StockQuantity, ReservedStock from Products where Id = @ProductId";
+            string productQuery = @"select stock_quantity, reserved_stock from products where id = @ProductId";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(productQuery, connection);
 
@@ -122,8 +83,8 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
 
             while (await reader.ReadAsync())
             {
-                stockQuantity = reader.GetInt32(reader.GetOrdinal("StockQuantity"));
-                reservedQuantity = reader.GetInt32(reader.GetOrdinal("ReservedQuantity"));
+                stockQuantity = reader.GetInt32(reader.GetOrdinal("stock_quantity"));
+                reservedQuantity = reader.GetInt32(reader.GetOrdinal("reserved_stock"));
             }
 
             return (quantity <= (stockQuantity - reservedQuantity));
@@ -137,14 +98,13 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
     string referenceType)
         {
             const string query = @"
-        UPDATE Products
-        SET ReservedQuantity = ReservedQuantity + @Quantity
-        WHERE Id = @ProductId
-          AND StockQuantity - ReservedQuantity >= @Quantity;
+        UPDATE products
+        SET reserved_stock = reserved_stock + @Quantity
+        WHERE id = @ProductId
+          AND stock_quantity - reserved_stock >= @Quantity;
     ";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(query, connection);
 
@@ -158,12 +118,11 @@ ChangeType, ReferenceId, ReferenceType, PerformedByUserId, Notes, CreatedAt, Upd
 
         public async Task<bool> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
-            string query = @"Update Products
-Set ReservedStock = ReservedStock - @quantity
-where Id = @productId;";
+            string query = @"Update products
+Set reserved_stock = reserved_stock - @quantity
+where id = @productId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -177,13 +136,12 @@ where Id = @productId;";
 
         public async Task<bool> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
         {
-            string query = @"Update Products
-Set StockQuantity = StockQuantity - @quantity,
-ReservedStock = ReservedStock - @quantity
-where Id = @ProductId;";
+            string query = @"Update products
+Set stock_quantity = stock_quantity - @quantity,
+reserved_stock = reserved_stock - @quantity
+where id = @ProductId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -197,12 +155,11 @@ where Id = @ProductId;";
 
         public async Task<bool> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
         {
-            string query = @"Update Products
-Set StockQuantity = StockQuantity + @quantity
-where Id = @productId;";
+            string query = @"Update products
+Set stock_quantity = stock_quantity + @quantity
+where id = @productId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -216,12 +173,11 @@ where Id = @productId;";
 
         public async Task<bool> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
         {
-            string query = @"Update Products
-set StockQuantity = @newQuantity
-where Id = @productId;";
+            string query = @"Update products
+set stock_quantity = @newQuantity
+where id = @productId;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -233,18 +189,14 @@ where Id = @productId;";
             return rowEffected > 0;
         }
 
-
-
-        
-
         public async Task<List<Product>> GetLowStockProductsAsync(int limit = 50)
         {
-            string query = @"Select * from Products
-where StockQuantity < LowStockThreshold
-order by StockQuantity
+            string query = @"Select * from products
+where stock_quantity < low_stock_threshold
+order by stock_quantity
 limit @limit;";
 
-            var connection = new NpgsqlConnection(_connectionString);
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -256,21 +208,7 @@ limit @limit;";
 
             while(await reader.ReadAsync())
             {
-                products.Add(new Product
-                {
-                    Id = reader.GetInt16(reader.GetOrdinal("Id")),
-                    Name = reader.GetString(reader.GetOrdinal("Name")),
-                    Description = reader.GetString(reader.GetOrdinal("Description")),
-                    StockQuantity = reader.GetInt16(reader.GetOrdinal("StockQuantity")),
-                    ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                    Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                    ReservedStock = reader.GetInt16(reader.GetOrdinal("ReservedStock")),
-                    LowStockThreshold = reader.GetInt16(reader.GetOrdinal("LowStockThreshold")),
-                    IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                    SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                });
+                products.Add(MapProduct(reader));
             }
 
             return products;
@@ -279,13 +217,12 @@ limit @limit;";
         public async Task<Product> GetProductWithStockInfoAsync(int productId)
         {
             string sql = @"select p.*, il.* from products p
-left join InventoryLogs il on (p.Id = il.ProductId)
-where p.Id = @productId
-order by il.CreatedAt desc
+left join InventoryLogs il on (p.id = il.product_id)
+where p.id = @productId
+order by il.created_at desc
 limit 20;";
 
-            var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(sql, connection);
 
@@ -297,40 +234,72 @@ limit 20;";
 
             while(await reader.ReadAsync())
             {
-                int id = reader.GetInt16(reader.GetOrdinal("Id"));
+                int id = reader.GetInt16(reader.GetOrdinal("id"));
 
                 if(product.TryGetValue(id, out Product productObj))
                 {
-                    productObj = new Product
-                    {
-                        Id = id,
-                        Name = reader.GetString(reader.GetOrdinal("Name")),
-                        Description = reader.GetString(reader.GetOrdinal("Description")),
-                        StockQuantity = reader.GetInt16(reader.GetOrdinal("StockQuantity")),
-                        ImageUrl = reader.GetString(reader.GetOrdinal("ImageUrl")),
-                        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                        ReservedStock = reader.GetInt16(reader.GetOrdinal("ReservedStock")),
-                        LowStockThreshold = reader.GetInt16(reader.GetOrdinal("LowStockThreshold")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        SKU = reader.GetString(reader.GetOrdinal("SKU")),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                    };
+                    productObj = MapProduct(reader, productObj);
                 }
-                productObj.InventoryLogs.Add(new InventoryLog
-                {
-                    ProductId = reader.GetInt16(reader.GetOrdinal("ProductId")),
-                    CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("CurrentStockQuantity")),
-                    QuantityChanged = reader.GetInt16(reader.GetOrdinal("QuantityChanged")),
-                    ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("ChangeType")),
-                    ReferenceId = reader.GetInt32(reader.GetOrdinal("ReferenceId")),
-                    ReferenceType = reader.GetString(reader.GetOrdinal("ReferenceType")),
-                    PerformedByUserId = reader.GetInt16(reader.GetOrdinal("PerformedByUserId")),
-                    Notes = reader.GetString(reader.GetOrdinal("Notes"))
-                });
+                productObj.InventoryLogs.Add(MapInventoryLog(reader));
             }
 
             return product.Values.FirstOrDefault();
+        }
+
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            return connection;
+        }
+
+        private InventoryLog MapInventoryLog(NpgsqlDataReader reader)
+        {
+            return new InventoryLog
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("Id")),
+                ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
+                CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("current_stock_quantity")),
+                QuantityChanged = reader.GetInt16(reader.GetOrdinal("quantity_changed")),
+                ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("change_type")),
+                ReferenceId = reader.GetInt16(reader.GetOrdinal("reference_id")),
+                ReferenceType = reader.GetString(reader.GetOrdinal("reference_type")),
+                PerformedByUserId = reader.GetInt16(reader.GetOrdinal("performed_by_user_id")),
+                Notes = reader.GetString(reader.GetOrdinal("notes")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
+        }
+
+        private void AddInventoryLogParameters(NpgsqlCommand command, InventoryLog inventoryLog)
+        {
+            command.Parameters.AddWithValue("@ProductId", inventoryLog.ProductId);
+            command.Parameters.AddWithValue("@CurrentStockQuantity", inventoryLog.CurrentStockQuantity);
+            command.Parameters.AddWithValue("@QuantityChanged", inventoryLog.QuantityChanged);
+            command.Parameters.AddWithValue("@ChangeType", inventoryLog.ChangeType);
+            command.Parameters.AddWithValue("@ReferenceId", inventoryLog.ReferenceId);
+            command.Parameters.AddWithValue("@ReferenceType", inventoryLog.ReferenceType);
+            command.Parameters.AddWithValue("@PerformedByUserId", inventoryLog.PerformedByUserId);
+            command.Parameters.AddWithValue("@Notes", inventoryLog.Notes);
+            command.Parameters.AddWithValue("@CreatedAt", inventoryLog.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", inventoryLog.UpdatedAt);
+        }
+
+        private void MapProduct(NpgsqlDataReader reader, Product product)
+        {
+            product.Id = reader.GetInt16(reader.GetOrdinal("id"));
+            product.Name = reader.GetString(reader.GetOrdinal("name"));
+            product.Description = reader.GetString(reader.GetOrdinal("description"));
+            product.StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity"));
+            product.ImageUrl = reader.GetString(reader.GetOrdinal("image_url"));
+            product.Price = reader.GetDecimal(reader.GetOrdinal("price"));
+            product.ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock"));
+            product.LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold"));
+            product.IsActive = reader.GetBoolean(reader.GetOrdinal("is_active"));
+            product.SKU = reader.GetString(reader.GetOrdinal("sku"));
+            product.CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"));
+            product.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"));
         }
     }
 }
