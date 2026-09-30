@@ -22,7 +22,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 VALUES (@Name, @Description, @ImageUrl, @CreatedAt, @UpdatedAt)
                 RETURNING id, name, description, image_url, created_at, updated_at;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             
@@ -30,7 +30,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            category createdCategory = MapCategory(reader);
+            Category createdCategory = MapCategory(reader);
 
             return createdCategory;
         }
@@ -39,7 +39,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "DELETE FROM Categories WHERE id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
             
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", category.Id);
@@ -52,7 +52,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Categories WHERE id = @Id";
 
-            await OpenconnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -65,7 +65,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Categories WHERE name = @Name";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
@@ -79,7 +79,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             const string sql = @"SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
                                 FROM Categories order by id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
@@ -101,7 +101,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
                 WHERE c.id = @Id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -121,7 +121,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 FROM Categories
                 WHERE c.name = @Name";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
