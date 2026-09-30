@@ -238,7 +238,7 @@ limit 20;";
 
                 if(product.TryGetValue(id, out Product productObj))
                 {
-                    productObj = MapProduct(reader, productObj);
+                    productObj = MapProduct(reader);
                 }
                 productObj.InventoryLogs.Add(MapInventoryLog(reader));
             }
@@ -286,20 +286,24 @@ limit 20;";
             command.Parameters.AddWithValue("@UpdatedAt", inventoryLog.UpdatedAt);
         }
 
-        private void MapProduct(NpgsqlDataReader reader, Product product)
+        private Product MapProduct(NpgsqlDataReader reader)
         {
-            product.Id = reader.GetInt16(reader.GetOrdinal("id"));
-            product.Name = reader.GetString(reader.GetOrdinal("name"));
-            product.Description = reader.GetString(reader.GetOrdinal("description"));
-            product.StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity"));
-            product.ImageUrl = reader.GetString(reader.GetOrdinal("image_url"));
-            product.Price = reader.GetDecimal(reader.GetOrdinal("price"));
-            product.ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock"));
-            product.LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold"));
-            product.IsActive = reader.GetBoolean(reader.GetOrdinal("is_active"));
-            product.SKU = reader.GetString(reader.GetOrdinal("sku"));
-            product.CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"));
-            product.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"));
+            return new Product()
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                Name = reader.GetString(reader.GetOrdinal("name")),
+                Description = reader.GetString(reader.GetOrdinal("description")),
+                StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
+                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Price = reader.GetDecimal(reader.GetOrdinal("price")),
+                ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
+                LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                SKU = reader.GetString(reader.GetOrdinal("sku")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+            };
+            
         }
     }
 }
