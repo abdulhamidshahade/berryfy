@@ -25,7 +25,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 FROM Products p
                 ORDER BY p.id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
@@ -52,7 +52,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 WHERE p.id = @Id
                 ORDER BY p.id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -75,7 +75,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 WHERE p.name = @Name
                 ORDER BY p.id, pc.id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
@@ -97,7 +97,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 RETURNING id, name, description, stock_quantity, image_url, price,
                 reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -128,7 +128,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
                     low_stock_quantity, is_active, sku, created_at, updated_at;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             AddProductParameters(command, product);
@@ -151,7 +151,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "DELETE FROM Products WHERE id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", product.Id);
@@ -164,7 +164,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Products WHERE id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -177,7 +177,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Products WHERE name = @Name";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
@@ -190,7 +190,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Products";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             var count = await command.ExecuteScalarAsync();
@@ -244,7 +244,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             sql += "OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -316,7 +316,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 sql += "AND p.IsActive = @IsActive ";
             }
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -355,18 +355,18 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             product = new Product()
             {
-                Id = reader.getInt16(reader.getOrdinal("id")),
-                Name = reader.getString(reader.getOrdinal("name")),
-                Description = reader.getString(reader.getOrdinal("description")),
-                StockQuantity = reader.getInt16(reader.getOrdinal("stock_quantity")),
-                ImageUrl = reader.getString(reader.getOrdinal("image_url")),
-                Price = reader.getDecimal(reader.getOrdinal("price")),
-                ReservedStock = reader.getInt16(reader.getOrdinal("reserved_stock")),
-                LowStockThreshold = reader.getInt16(reader.getOrdinal("low_stock_threshold")),
-                IsActive = reader.getBoolean(reader.getOrdinal("is_active")),
-                SKU = reader.getString(reader.getOrdinal("sku")),
-                CreatedAt = reader.getDateTime(reader.getOrdinal("created_at")),
-                UpdatedAt = reader.getDateTime(reader.getOrdinal("updated_at"))
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                Name = reader.GetString(reader.GetOrdinal("name")),
+                Description = reader.GetString(reader.GetOrdinal("description")),
+                StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
+                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Price = reader.GetDecimal(reader.GetOrdinal("price")),
+                ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
+                LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                SKU = reader.GetString(reader.GetOrdinal("sku")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
             return product;
         }
