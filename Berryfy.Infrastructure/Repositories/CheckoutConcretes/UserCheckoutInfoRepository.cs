@@ -20,7 +20,7 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
         {
             string query = @"SELECT * from UserCheckoutInfos where user_id = @UserId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -42,7 +42,7 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
         {
             string query = @"SELECT * from UserCheckoutInfos where session_id = @sessionId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -69,7 +69,7 @@ country, payer_name, billing_address1, billing_address2, billing_postal_code, cr
 @UpdatedAt, @Address, @Address2, @City, @State, @ZipCode, @Country, @PayerName, @BillingAddress1, @BillingAddress2,
 @BillingPostalCode, @CreatedAt, @LastUsedAt) Returning *;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -114,7 +114,7 @@ created_at = @CreatedAt,
 lastused_at = @LastUsedAt
 where id = @Id;";
 
-            await OpenConnectionAsync();
+            var connection =await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -129,7 +129,7 @@ where id = @Id;";
         {
             string query = @"Delete from UserCheckoutInfos where id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -145,7 +145,7 @@ where id = @Id;";
             string query = @"Update UserCheckoutInfos 
 Set lastused_at = @LastUsedAt where id = @Id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -157,10 +157,11 @@ Set lastused_at = @LastUsedAt where id = @Id;";
             return rowEffected > 0;
         }
 
-        private async Task OpenConnectionAsync()
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
             var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
+            return connection;
         }
 
         private UserCheckoutInfo MapUserCheckoutInfo(NpgsqlDataReader reader)
