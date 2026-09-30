@@ -375,7 +375,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<List<User>> GetUsersInRoleAsync(int roleId)
+        public async Task<InfrastructureResponse<List<User>>> GetUsersInRoleAsync(int roleId)
         {
             const string sql = @"
                 SELECT u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
