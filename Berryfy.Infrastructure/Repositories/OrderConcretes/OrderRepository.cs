@@ -30,7 +30,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
             from orders o
             where o.id = @OrderId;";
 
-            avar connection = wait OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             var command = new NpgsqlCommand(query, connection);
 
@@ -78,7 +78,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
                 orders.Add(MapOrder(reader));
             }
 
-            return ordersh;
+            return orders;
         }
 
         public async Task<List<Order>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
@@ -139,7 +139,7 @@ ORDER BY o.CreatedAt DESC;";
                 orders.Add(MapOrder(reader));
             }
 
-            return orders();
+            return orders;
         }
 
 
@@ -408,8 +408,8 @@ END";
                 Id = reader.GetInt16(reader.GetOrdinal("id")),
                 UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
                 CartId = reader.GetInt16(reader.GetOrdinal("cart_id")),
-                IsPaid = reader.GetBoolean(reader.GetOrdinal("is_paid")),
-                Status = reader.GetInt16(reader.GetOrdinal("status")),
+                isPaid = reader.GetBoolean(reader.GetOrdinal("is_paid")),
+                Status = (OrderStatus)reader.GetInt16(reader.GetOrdinal("status")),
                 SubTotal = reader.GetDecimal(reader.GetOrdinal("subtotal")),
                 TaxAmount = reader.GetDecimal(reader.GetOrdinal("tax_amount")),
                 ShippingAmount = reader.GetDecimal(reader.GetOrdinal("shipping_amount")),
@@ -418,7 +418,7 @@ END";
                 CustomerEmail = reader.GetString(reader.GetOrdinal("customer_email")),
                 CustomerPhone = reader.GetString(reader.GetOrdinal("customer_phone")),
                 CompletedAt = reader.GetDateTime(reader.GetOrdinal("completed_at")),
-                CancelledAt = reader.GetDateTime(reader.GetOrdinal("cancelled_at")),
+                CancalledAt = reader.GetDateTime(reader.GetOrdinal("cancelled_at")),
                 ShippingName = reader.GetString(reader.GetOrdinal("shipping_name")),
                 ShippingAddress1 = reader.GetString(reader.GetOrdinal("shipping_address1")),
                 ShippingAddress2 = reader.GetString(reader.GetOrdinal("shipping_address2")),
@@ -479,15 +479,15 @@ END";
 
         private void AddOrderItemParameters(NpgsqlCommand command, OrderItem orderItem)
         {
-            command.Parameters.AddWithValue("@OrderId", item.OrderId);
-            command.Parameters.AddWithValue("@ProductId", item.ProductId);
-            command.Parameters.AddWithValue("@Quantity", item.Quantity);
-            command.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
-            command.Parameters.AddWithValue("@TotalPrice", item.TotalPrice);
-            command.Parameters.AddWithValue("@DiscountAmount", item.DiscountAmount);
-            command.Parameters.AddWithValue("@CreatedAt", item.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", item.UpdatedAt);
-            command.Parameters.AddWithValue("@ProductName", item.ProductName);
+            command.Parameters.AddWithValue("@OrderId", orderItem.OrderId);
+            command.Parameters.AddWithValue("@ProductId", orderItem.ProductId);
+            command.Parameters.AddWithValue("@Quantity", orderItem.Quantity);
+            command.Parameters.AddWithValue("@UnitPrice", orderItem.UnitPrice);
+            command.Parameters.AddWithValue("@TotalPrice", orderItem.TotalPrice);
+            command.Parameters.AddWithValue("@DiscountAmount", orderItem.DiscountAmount);
+            command.Parameters.AddWithValue("@CreatedAt", orderItem.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", orderItem.UpdatedAt);
+            command.Parameters.AddWithValue("@ProductName", orderItem.ProductName);
         }
     }
 }
