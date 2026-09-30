@@ -27,7 +27,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 WHERE w.id = @Id
                 ORDER BY w.id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -48,16 +48,18 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 WHERE w.user_id = @UserId AND w.is_default = true
                 ORDER BY w.id;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            if(await reader.ReadAsync())
+            Wishlist wishlist = new Wishlist();
+
+            if (await reader.ReadAsync())
             {
-                Wishlist wishlist = MapWishlist(reader);
+                wishlist = MapWishlist(reader);
             }   
 
             return wishlist;
@@ -70,7 +72,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 VALUES (@UserId, @Name, @IsDefault, @IsPublic, @CreatedAt, @UpdatedAt)
                 RETURNING id, user_id, name, is_default, is_public, created_at, updated_at";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(insertSql, connection);
             AddWishlistParameters(command, new Wishlist
@@ -102,7 +104,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 FROM wishlists w
                 WHERE w.user_id = @UserId;";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
@@ -126,7 +128,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 VALUES (@UserId, @Name, @IsDefault, @IsPublic, @CreatedAt, @UpdatedAt)
                 RETURNING id, user_id, name, is_default, is_public, created_at, updated_at";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -152,7 +154,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 WHERE id = @Id
                 RETURNING id, user_id, name, is_default, is_public, created_at, updated_at";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             
@@ -173,7 +175,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
         {
             const string sql = "DELETE FROM Wishlists WHERE id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -186,7 +188,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Wishlists WHERE id = @Id";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -203,7 +205,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 FROM wishlist_items wi
                 WHERE wi.wishlist_id = @WishlistId AND wi.product_id = @ProductId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -228,7 +230,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 VALUES (@WishlistId, @ProductId, @Notes, @Priority, @CreatedAt, @UpdatedAt)
                 RETURNING id, wishlist_id, product_id, notes, priority, created_at, updated_at";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -254,7 +256,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 WHERE id = @Id
                 RETURNING id, wishlist_id, product_id, notes, priority, created_at, updated_at";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -274,7 +276,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
         {
             string sql = "DELETE FROM wishlist_items WHERE wishlist_id = @WishlistId AND product_id = @ProductId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -293,7 +295,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 JOIN wishlists w ON wi.wishlist_id = w.id
                 WHERE w.user_id = @UserId AND wi.product_id = @ProductId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -313,7 +315,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 WHERE wi.wishlist_id = @WishlistId
                 ORDER BY wi.created_at DESC";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@WishlistId", wishlistId);
@@ -334,7 +336,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
         {
             const string sql = "SELECT COUNT(1) FROM Wishlists WHERE user_id = @UserId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
@@ -351,7 +353,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 JOIN Wishlists w ON (wi.wishlist_id = w.id)
                 WHERE w.user_id = @UserId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
@@ -369,7 +371,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 JOIN products p ON (wi.product_id = p.id)
                 WHERE w.user_id = @UserId";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
@@ -386,7 +388,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 FROM Wishlists w
                 ORDER BY w.UpdatedAt DESC";
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -412,7 +414,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             int publicWishlists = 0;
             int privateWishlists = 0;
 
-            await OpenConnectionAsync();
+            var connection = await OpenConnectionAsync();
 
             await using var userCommand = new NpgsqlCommand("SELECT COUNT(1) FROM users", connection);
             totalUsers = Convert.ToInt32(await userCommand.ExecuteScalarAsync());
