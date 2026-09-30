@@ -475,26 +475,29 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         private Payment MapPayment(NpgsqlDataReader reader)
         {
-            payment.Id = reader.GetInt16(reader.GetOrdinal("Id"));
-            payment.UserId = reader.GetInt16(reader.GetOrdinal("user_id"));
-            payment.OrderId = reader.GetInt16(reader.GetOrdinal("order_id"));
-            payment.TransactionId = reader.GetString(reader.GetOrdinal("transaction_id"));
-            payment.Status = (PaymentStatus)reader.GetValue(reader.GetOrdinal("status"));
-            payment.Method = (PaymentMethod)reader.GetValue(reader.GetOrdinal("method"));
-            payment.Provider = reader.GetString(reader.GetOrdinal("provider"));
-            payment.Amount = reader.GetDecimal(reader.GetOrdinal("amount"));
-            payment.Currency = reader.GetString(reader.GetOrdinal("currency"));
-            payment.ProviderTransactionId = reader.IsDBNull(reader.GetOrdinal("provider_transaction_id")) ? null : reader.GetString(reader.GetOrdinal("provider_transaction_id"));
-            payment.CardLast4 = reader.IsDBNull(reader.GetOrdinal("card_last4")) ? null : reader.GetString(reader.GetOrdinal("card_last4"));
-            payment.CardBrand = reader.IsDBNull(reader.GetOrdinal("card_brand")) ? null : reader.GetString(reader.GetOrdinal("card_brand"));
-            payment.PayerEmail = reader.IsDBNull(reader.GetOrdinal("payer_email")) ? null : reader.GetString(reader.GetOrdinal("payer_email"));
-            payment.PayerName = reader.IsDBNull(reader.GetOrdinal("payer_name")) ? null : reader.GetString(reader.GetOrdinal("payer_name"));
-            payment.BillingAddress1 = reader.IsDBNull(reader.GetOrdinal("billing_address1")) ? null : reader.GetString(reader.GetOrdinal("billing_address1"));
-            payment.BillingAddress2 = reader.IsDBNull(reader.GetOrdinal("billing_address2")) ? null : reader.GetString(reader.GetOrdinal("billing_address2"));
-            payment.BillingCity = reader.IsDBNull(reader.GetOrdinal("billing_city")) ? null : reader.GetString(reader.GetOrdinal("billing_city"));
-            payment.BillingState = reader.IsDBNull(reader.GetOrdinal("billing_state")) ? null : reader.GetString(reader.GetOrdinal("billing_state"));
-            payment.BillingPostalCode = reader.IsDBNull(reader.GetOrdinal("billing_postal_code")) ? null : reader.GetString(reader.GetOrdinal("billing_postal_code"));
-            payment.BillingCountry = reader.IsDBNull(reader.GetOrdinal("billing_country")) ? null : reader.GetString(reader.GetOrdinal("billing_country"));
+            return new Payment()
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("Id")),
+                UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
+                OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
+                TransactionId = reader.GetString(reader.GetOrdinal("transaction_id")),
+                Status = (PaymentStatus)reader.GetValue(reader.GetOrdinal("status")),
+                Method = (PaymentMethod)reader.GetValue(reader.GetOrdinal("method")),
+                Provider = reader.GetString(reader.GetOrdinal("provider")),
+                Amount = reader.GetDecimal(reader.GetOrdinal("amount")),
+                Currency = reader.GetString(reader.GetOrdinal("currency")),
+                ProviderTransactionId = reader.IsDBNull(reader.GetOrdinal("provider_transaction_id")) ? null : reader.GetString(reader.GetOrdinal("provider_transaction_id")),
+                CardLast4 = reader.IsDBNull(reader.GetOrdinal("card_last4")) ? null : reader.GetString(reader.GetOrdinal("card_last4")),
+                CardBrand = reader.IsDBNull(reader.GetOrdinal("card_brand")) ? null : reader.GetString(reader.GetOrdinal("card_brand")),
+                PayerEmail = reader.IsDBNull(reader.GetOrdinal("payer_email")) ? null : reader.GetString(reader.GetOrdinal("payer_email")),
+                PayerName = reader.IsDBNull(reader.GetOrdinal("payer_name")) ? null : reader.GetString(reader.GetOrdinal("payer_name")),
+                BillingAddress1 = reader.IsDBNull(reader.GetOrdinal("billing_address1")) ? null : reader.GetString(reader.GetOrdinal("billing_address1")),
+                BillingAddress2 = reader.IsDBNull(reader.GetOrdinal("billing_address2")) ? null : reader.GetString(reader.GetOrdinal("billing_address2")),
+                BillingCity = reader.IsDBNull(reader.GetOrdinal("billing_city")) ? null : reader.GetString(reader.GetOrdinal("billing_city")),
+                BillingState = reader.IsDBNull(reader.GetOrdinal("billing_state")) ? null : reader.GetString(reader.GetOrdinal("billing_state")),
+                BillingPostalCode = reader.IsDBNull(reader.GetOrdinal("billing_postal_code")) ? null : reader.GetString(reader.GetOrdinal("billing_postal_code")),
+                BillingCountry = reader.IsDBNull(reader.GetOrdinal("billing_country")) ? null : reader.GetString(reader.GetOrdinal("billing_country")),
+            };        
         }
 
         private void AddPaymentParameters(NpgsqlCommand command, Payment payment)
@@ -518,5 +521,6 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             command.Parameters.AddWithValue("@BillingState", (object)payment.BillingState ?? DBNull.Value);
             command.Parameters.AddWithValue("@BillingPostalCode", (object)payment.BillingPostalCode ?? DBNull.Value);
             command.Parameters.AddWithValue("@BillingCountry", (object)payment.BillingCountry ?? DBNull.Value);
+        }
     }
 }
