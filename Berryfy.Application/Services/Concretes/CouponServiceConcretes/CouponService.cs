@@ -1,9 +1,6 @@
-﻿using AutoMapper;
-using Berryfy.Application.Dtos.CategoryDtos.Responses;
-using Berryfy.Application.Dtos.CouponDtos.Requests;
+﻿using Berryfy.Application.Dtos.CouponDtos.Requests;
 using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
-using Berryfy.Domain.Entities.CouponEntities;
 
 using Berryfy.Domain.Repositories.CouponInterfaces;
 
