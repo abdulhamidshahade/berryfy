@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Repositories.AuthInterfaces;
 using Berryfy.Infrastructure.Data;
@@ -15,7 +17,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<User> CreateAsync(User user)
+        public async Task<InfrastructureResponse<User>> CreateAsync(User user)
         {
             const string sql = @"
                 INSERT INTO users(
@@ -33,50 +35,76 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             AddUserParameters(command, user);
             user.Id = Convert.ToInt32(await command.ExecuteScalarAsync());
-            return user;
+            
+            return new InfrastructureResponse<User>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully.",
+                Value = user
+            };
         }
 
-        public async Task<User?> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<User?>> GetByIdAsync(int id)
         {
             const string sql = "SELECT * FROM users WHERE id = @Id LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", id);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapUser(reader) : null;
+            return new InfrastructureResponse<User?>()
+            {
+                Value = await reader.ReadAsync() ? MapUser(reader) : null,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<User?> GetByEmailAsync(string email)
+        public async Task<InfrastructureResponse<User?>> GetByEmailAsync(string email)
         {
             const string sql = "SELECT * FROM users WHERE email = @Email LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Email", email);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapUser(reader) : null;
+            return new InfrastructureResponse<User?>()
+            {
+                Value = await reader.ReadAsync() ? MapUser(reader) : null,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<User?> GetByNormalizedEmailAsync(string normalizedEmail)
+        public async Task<InfrastructureResponse<User?>> GetByNormalizedEmailAsync(string normalizedEmail)
         {
             const string sql = "SELECT * FROM users WHERE normalized_email = @NormalizedEmail LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedEmail", normalizedEmail);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapUser(reader) : null;
+            return new InfrastructureResponse<User?>()
+            {
+                Value =await reader.ReadAsync() ? MapUser(reader) : null,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<User?> GetByRefreshTokenAsync(string refreshTokenHash)
+        public async Task<InfrastructureResponse<User?>> GetByRefreshTokenAsync(string refreshTokenHash)
         {
             const string sql = "SELECT * FROM users WHERE refresh_token = @RefreshToken LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("RefreshToken", refreshTokenHash);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapUser(reader) : null;
+            return new InfrastructureResponse<User?>()
+            {
+                Value = await reader.ReadAsync() ? MapUser(reader) : null,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<InfrastructureResponse<List<User>>> GetAllAsync()
         {
             const string sql = "SELECT * FROM users ORDER BY id";
             await using var connection = await OpenConnectionAsync();
@@ -88,10 +116,15 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 users.Add(MapUser(reader));
             }
 
-            return users;
+            return new InfrastructureResponse<List<User>>()
+            {
+                Value = users,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> UpdateAsync(User user)
+        public async Task<InfrastructureResponse<bool>> UpdateAsync(User user)
         {
             const string sql = @"
                 UPDATE users SET
@@ -123,62 +156,97 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             AddUserParameters(command, user);
             command.Parameters.AddWithValue("Id", user.Id);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = await command.ExecuteNonQueryAsync() > 0
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(int id)
         {
             const string sql = "DELETE FROM users WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", id);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
 
-        public async Task<bool> ExistsByIdAsync(int id)
+        public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
             const string sql = "SELECT COUNT(1) FROM users WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", id);
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0
+            };
         }
 
-        public async Task<bool> ExistsByEmailAsync(string email)
+        public async Task<InfrastructureResponse<bool>> ExistsByEmailAsync(string email)
         {
             const string sql = "SELECT COUNT(1) FROM users WHERE normalized_email = @NormalizedEmail";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedEmail", email);
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<bool> IsUsernameTakenAsync(string userName)
+        public async Task<InfrastructureResponse<bool>> IsUsernameTakenAsync(string userName)
         {
             const string sql = "SELECT COUNT(1) FROM users WHERE normalized_user_name = @NormalizedUserName";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("NormalizedUserName", Normalize(userName));
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<bool> SetLockoutAsync(int userId, DateTime? lockoutEnd)
+        public async Task<InfrastructureResponse<bool>> SetLockoutAsync(int userId, DateTime? lockoutEnd)
         {
             const string sql = "UPDATE users SET lockout_end = @LockoutEnd WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("LockoutEnd", (object?)lockoutEnd ?? DBNull.Value);
             command.Parameters.AddWithValue("Id", userId);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<bool> ResetAccessFailedCountAsync(int userId)
+        public async Task<InfrastructureResponse<bool>> ResetAccessFailedCountAsync(int userId)
         {
             const string sql = "UPDATE users SET access_failed_count = 0 WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", userId);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = await command.ExecuteNonQueryAsync() > 0
+            };
         }
 
         public async Task<bool> IncrementAccessFailedCountAsync(int userId)
@@ -190,23 +258,33 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             return await command.ExecuteNonQueryAsync() > 0;
         }
 
-        public async Task<bool> UpdatePasswordHashAsync(int userId, string passwordHash)
+        public async Task<InfrastructureResponse<bool>> UpdatePasswordHashAsync(int userId, string passwordHash)
         {
             const string sql = "UPDATE users SET password_hash = @PasswordHash WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("PasswordHash", passwordHash);
             command.Parameters.AddWithValue("Id", userId);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                Message = "The process completed successfully",
+                IsSuccess = true
+            };
         }
 
-        public async Task<bool> ConfirmEmailAsync(int userId)
+        public async Task<InfrastructureResponse<bool>> ConfirmEmailAsync(int userId)
         {
             const string sql = "UPDATE users SET email_confirmed = true WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", userId);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
