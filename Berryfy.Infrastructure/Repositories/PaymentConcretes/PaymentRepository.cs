@@ -8,6 +8,7 @@ using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System.Data;
+using Berryfy.Domain.Entities;
 
 
 namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
@@ -21,7 +22,7 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<Payment?> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<Payment?>> GetByIdAsync(int id)
         {
             string sql = @"SELECT * from payments p
                            Where p.id = @Id
@@ -42,10 +43,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payment = MapPayment(reader);
             }
 
-            return payment;
+            return new InfrastructureResponse<Payment?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payment
+            };
         }
 
-        public async Task<Payment?> GetByTransactionIdAsync(string transactionId)
+        public async Task<InfrastructureResponse<Payment?>> GetByTransactionIdAsync(string transactionId)
         {
             string sql = @"SELECT * from payments p
                            Where p.transaction_id = @TransactionId
@@ -66,10 +72,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payment = MapPayment(reader);
             }
 
-            return payment;
+            return new InfrastructureResponse<Payment?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payment
+            };
         }
 
-        public async Task<Payment?> GetByOrderIdAsync(int orderId)
+        public async Task<InfrastructureResponse<Payment?>> GetByOrderIdAsync(int orderId)
         {
             string query = @"Select p.* from
                           payments p
@@ -94,10 +105,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payment = MapPayment(reader);
             }
 
-            return null;
+            return new InfrastructureResponse<Payment?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payment
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetAllAsync()
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetAllAsync()
         {
             string sql = @"SELECT p.*
                            Order by created_at desc;";
@@ -116,10 +132,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetByUserIdAsync(int userId)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByUserIdAsync(int userId)
         {
             string sql = @"SELECT p.*
                            Where p.user_id = @UserId
@@ -140,10 +161,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByStatusAsync(PaymentStatus status)
         {
             string sql = @"SELECT p.* from payments p
                            Where p.Status = @Status
@@ -164,10 +190,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             string sql = @"SELECT p.* from payments p
                            Where created_at >= @StartDate and created_at <= @EndDate
@@ -189,10 +220,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetPaginatedAsync(int pageNumber, int pageSize)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetPaginatedAsync(int pageNumber, int pageSize)
         {
             string query = @"select p.* from Payments
                              order by p.created_at desc
@@ -217,11 +253,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
-
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<IEnumerable<Payment>> GetPaginatedByUserIdAsync(int userId, int pageNumber, int pageSize)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetPaginatedByUserIdAsync(int userId, int pageNumber, int pageSize)
         {
             string query = @"select p.* from Payments
                              where user_id = @UserId
@@ -248,10 +288,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
-        public async Task<Payment> CreateAsync(Payment payment)
+        public async Task<InfrastructureResponse<Payment>> CreateAsync(Payment payment)
         {
             string query = @"Insert into Payments (user_id, order_id, transaction_id, status, method, provider, amount, currency,
                              provider_transaction_id, provider_payment_method, card_last4, card_brand, payer_email,
@@ -279,10 +324,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 paymentt = MapPayment(reader);
             }
 
-            return paymentt;
+            return new InfrastructureResponse<Payment>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = paymentt
+            };
         }
 
-        public async Task<Payment> UpdateAsync(Payment payment)
+        public async Task<InfrastructureResponse<Payment>> UpdateAsync(Payment payment)
         {
             string query = @"Update Payments 
                              Set user_id = @UserId,
@@ -332,10 +382,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             {
                 paymentObj = MapPayment(reader);
             }
-            return paymentObj;
+            return new InfrastructureResponse<Payment>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = paymentObj
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(int id)
         {
             string query = "delete from Payments where id = @Id";
 
@@ -348,10 +403,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<int> GetTotalCountAsync()
+        public async Task<InfrastructureResponse<int>> GetTotalCountAsync()
         {
             string query = @"SELECT COUNT(1) from payments";
 
@@ -363,10 +423,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return Convert.ToInt16(countObj);
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToInt16(countObj)
+            };
         }
 
-        public async Task<int> GetCountByUserIdAsync(int userId)
+        public async Task<InfrastructureResponse<int>> GetCountByUserIdAsync(int userId)
         {
             string query = "select count(1) from payments where user_id = @UserId";
 
@@ -380,10 +445,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return Convert.ToInt16(countObj);
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToInt16(countObj)
+            };
         }
 
-        public async Task<int> GetCountByStatusAsync(PaymentStatus status)
+        public async Task<InfrastructureResponse<int>> GetCountByStatusAsync(PaymentStatus status)
         {
             string query = @"select count(1) from payments where status = @Status";
 
@@ -397,10 +467,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return Convert.ToInt16(countObj);
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToInt16(countObj)
+            };
         }
 
-        public async Task<decimal> GetTotalAmountByUserIdAsync(int userId)
+        public async Task<InfrastructureResponse<decimal>> GetTotalAmountByUserIdAsync(int userId)
         {
             string sql = @"select sum(Amount) from payments where user_id = @UserId";
 
@@ -414,10 +489,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return Convert.ToDecimal(totalObj);
+            return new InfrastructureResponse<decimal>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToDecimal(totalObj)
+            };
         }
 
-        public async Task<decimal> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<InfrastructureResponse<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             string query = "SELECT sum(amount) from payments where created_at >= @StartDate and created_at <= @EndDate";
 
@@ -432,10 +512,15 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             await connection.CloseAsync();
 
-            return Convert.ToDecimal(totalObj);
+            return new InfrastructureResponse<decimal>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToDecimal(totalObj)
+            };
         }
 
-        public async Task<IEnumerable<Payment>> SearchAsync(string searchTerm, int pageNumber, int pageSize)
+        public async Task<InfrastructureResponse<IEnumerable<Payment>>> SearchAsync(string searchTerm, int pageNumber, int pageSize)
         {
             string query = @"SELECT p.* from payments p
                              where @searchTerm = null or @searchTerm = ''
@@ -463,7 +548,12 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 payments.Add(MapPayment(reader));
             }
 
-            return payments;
+            return new InfrastructureResponse<IEnumerable<Payment>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = payments
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
