@@ -249,13 +249,18 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             };
         }
 
-        public async Task<bool> IncrementAccessFailedCountAsync(int userId)
+        public async Task<InfrastructureResponse<bool>> IncrementAccessFailedCountAsync(int userId)
         {
             const string sql = "UPDATE users SET access_failed_count = access_failed_count + 1 WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", userId);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = await command.ExecuteNonQueryAsync() > 0
+            };
         }
 
         public async Task<InfrastructureResponse<bool>> UpdatePasswordHashAsync(int userId, string passwordHash)
