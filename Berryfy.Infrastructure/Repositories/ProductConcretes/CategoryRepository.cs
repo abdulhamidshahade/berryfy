@@ -1,3 +1,4 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Berryfy.Infrastructure.Data;
@@ -15,7 +16,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<Category> CreateAsync(Category category)
+        public async Task<InfrastructureResponse<Category>> CreateAsync(Category category)
         {
             const string sql = @"
                 INSERT INTO Categories (name, description, image_url, created_at, updated_at)
@@ -32,10 +33,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             Category createdCategory = MapCategory(reader);
 
-            return createdCategory;
+            return new InfrastructureResponse<Category>()
+            {
+                IsSuccess = true,
+                Message = "Category created successfully",
+                Value = createdCategory
+            };
         }
 
-        public async Task<bool> DeleteAsync(Category category)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(Category category)
         {
             const string sql = "DELETE FROM Categories WHERE id = @Id";
 
@@ -45,10 +51,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Id", category.Id);
 
             var rowAffected = await command.ExecuteNonQueryAsync();
-            return rowAffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Category deleted successfully",
+                Value = rowAffected > 0
+            };
         }
 
-        public async Task<bool> ExistsByIdAsync(int id)
+        public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
             const string sql = "SELECT COUNT(1) FROM Categories WHERE id = @Id";
 
@@ -58,10 +69,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Id", id);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Category exists",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<bool> ExistsByNameAsync(string name)
+        public async Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name)
         {
             const string sql = "SELECT COUNT(1) FROM Categories WHERE name = @Name";
 
@@ -71,10 +87,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Name", name);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Category exists",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<IEnumerable<Category>> GetAllAsync()
+        public async Task<InfrastructureResponse<IEnumerable<Category>>> GetAllAsync()
         {
             const string sql = @"SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
                                 FROM Categories order by id";
@@ -90,10 +111,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 categories.Add(MapCategory(reader));
             }
 
-            return categories;
+            return new InfrastructureResponse<IEnumerable<Category>>()
+            {
+                IsSuccess = true,
+                Message = "Categories retrieved successfully",
+                Value = categories
+            };
         }
 
-        public async Task<Category> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<Category>> GetByIdAsync(int id)
         {
             //using variables more good than select * --> using * is not too good
             const string sql = @"
@@ -110,10 +136,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             Category category = MapCategory(reader);
 
-            return category;
+            return new InfrastructureResponse<Category>()
+            {
+                IsSuccess = true,
+                Message = "Category retrieved successfully",
+                Value = category
+            };
         }
 
-        public async Task<Category> GetByNameAsync(string name)
+        public async Task<InfrastructureResponse<Category>> GetByNameAsync(string name)
         {
             const string sql = @"
                 SELECT
@@ -130,10 +161,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             Category category = MapCategory(reader);
             
-            return category;
+            return new InfrastructureResponse<Category>()
+            {
+                IsSuccess = true,
+                Message = "Category retrieved successfully",
+                Value = category
+            };
         } 
 
-        public async Task<Category> UpdateAsync(int id, Category category)
+        public async Task<InfrastructureResponse<Category>> UpdateAsync(int id, Category category)
         {
             const string sql = @"
                 UPDATE Categories
@@ -155,7 +191,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             await using var reader = await command.ExecuteReaderAsync();
             category = MapCategory(reader);
             
-            return category;
+            return new InfrastructureResponse<Category>()
+            {
+                IsSuccess = true,
+                Message = "Category updated successfully",
+                Value = category
+            };
         }
 
         private Category MapCategory(NpgsqlDataReader reader)
