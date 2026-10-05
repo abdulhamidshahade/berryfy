@@ -1,3 +1,4 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.CouponEntities;
 using Berryfy.Domain.Repositories.CouponInterfaces;
@@ -16,7 +17,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<UserCoupon> AddCouponToUserAsync(int userId, int couponId)
+        public async Task<InfrastructureResponse<UserCoupon>> AddCouponToUserAsync(int userId, int couponId)
         {
             const string findSql = @"
                 SELECT id, user_id, coupon_id, is_used, used_at, order_id, created_at, updated_at
@@ -32,7 +33,12 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 await using var reader = await findCommand.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
-                    return MapUserCoupon(reader);
+                    return new InfrastructureResponse<UserCoupon>()
+                    {
+                        IsSuccess = true,
+                        Message = "The process completed successfully",
+                        Value = MapUserCoupon(reader)
+                    };
                 }
             }
 
@@ -51,18 +57,23 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             await using var insertReader = await insertCommand.ExecuteReaderAsync();
             if (await insertReader.ReadAsync())
             {
-                return MapUserCoupon(insertReader);
+                return new InfrastructureResponse<UserCoupon>()
+                {
+                    IsSuccess = true,
+                    Message = "The process completed successfully",
+                    Value = MapUserCoupon(insertReader)
+                };
             }
 
             throw new InvalidOperationException("Failed to assign coupon to user.");
         }
 
-        public Task<UserCoupon> AddUserToCouponAsync(int userId, int couponId)
+        public Task<InfrastructureResponse<UserCoupon>> AddUserToCouponAsync(int userId, int couponId)
         {
             return AddCouponToUserAsync(userId, couponId);
         }
 
-        public async Task<bool> DisableCouponForUserAsync(int userId, int couponId)
+        public async Task<InfrastructureResponse<bool>> DisableCouponForUserAsync(int userId, int couponId)
         {
             const string sql = @"
                 UPDATE user_coupons
@@ -74,10 +85,16 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             command.Parameters.AddWithValue("UserId", userId);
             command.Parameters.AddWithValue("CouponId", couponId);
             command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            return await command.ExecuteNonQueryAsync() > 0;
+            var result = await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = result
+            };
         }
 
-        public async Task<IReadOnlyList<Coupon>> GetCouponsByUserIdAsync(int userId)
+        public async Task<InfrastructureResponse<IReadOnlyList<Coupon>>> GetCouponsByUserIdAsync(int userId)
         {
             const string sql = @"
                 SELECT c.*
@@ -97,10 +114,15 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 coupons.Add(MapCoupon(reader));
             }
 
-            return coupons;
+            return new InfrastructureResponse<IReadOnlyList<Coupon>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupons
+            };
         }
 
-        public async Task<IReadOnlyList<User>> GetUsersByCouponIdAsync(int couponId)
+        public async Task<InfrastructureResponse<IReadOnlyList<User>>> GetUsersByCouponIdAsync(int couponId)
         {
             const string sql = @"
                 SELECT u.*
@@ -120,10 +142,15 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 users.Add(MapUser(reader));
             }
 
-            return users;
+            return new InfrastructureResponse<IReadOnlyList<User>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = users
+            };
         }
 
-        public async Task<bool> IsCouponUsedByUserAsync(int userId, string couponCode)
+        public async Task<InfrastructureResponse<bool>> IsCouponUsedByUserAsync(int userId, string couponCode)
         {
             const string sql = @"
                 SELECT uc.is_used
@@ -138,10 +165,15 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             command.Parameters.AddWithValue("CouponCode", couponCode);
 
             var result = await command.ExecuteScalarAsync();
-            return result is bool isUsed && isUsed;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = result is bool isUsed && isUsed
+            };
         }
 
-        public async Task<bool> MarkCouponAsUsedAsync(int userId, int couponId, int orderId)
+        public async Task<InfrastructureResponse<bool>> MarkCouponAsUsedAsync(int userId, int couponId, int orderId)
         {
             const string sql = @"
                 UPDATE user_coupons
@@ -159,10 +191,16 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             command.Parameters.AddWithValue("OrderId", orderId);
             command.Parameters.AddWithValue("UsedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            return await command.ExecuteNonQueryAsync() > 0;
+            var result = await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = result
+            };
         }
 
-        public async Task<bool> RevertCouponUsageAsync(int userId, int couponId, int orderId)
+        public async Task<InfrastructureResponse<bool>> RevertCouponUsageAsync(int userId, int couponId, int orderId)
         {
             const string sql = @"
                 UPDATE user_coupons
@@ -178,10 +216,16 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             command.Parameters.AddWithValue("CouponId", couponId);
             command.Parameters.AddWithValue("OrderId", orderId);
             command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            return await command.ExecuteNonQueryAsync() > 0;
+            var result = await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = result
+            };
         }
 
-        public async Task<List<int>> GetCouponIdsUsedInOrderAsync(int orderId)
+        public async Task<InfrastructureResponse<List<int>>> GetCouponIdsUsedInOrderAsync(int orderId)
         {
             const string sql = @"
                 SELECT coupon_id
@@ -199,7 +243,12 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 couponIds.Add(reader.GetInt32(0));
             }
 
-            return couponIds;
+            return new InfrastructureResponse<List<int>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = couponIds
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
