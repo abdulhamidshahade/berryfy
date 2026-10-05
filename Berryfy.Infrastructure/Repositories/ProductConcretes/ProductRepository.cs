@@ -1,3 +1,4 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Berryfy.Infrastructure.Data;
@@ -15,7 +16,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<IReadOnlyList<Product>> GetAllAsync()
+        public async Task<InfrastructureResponse<IReadOnlyList<Product>>> GetAllAsync()
         {
             const string sql = @"
                 SELECT
@@ -38,10 +39,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 products.Add(product);
             }
             
-            return products;
+            return new InfrastructureResponse<IReadOnlyList<Product>>()
+            {
+                IsSuccess = true,
+                Message = "Products retrieved successfully",
+                Value = products
+            };
         }
 
-        public async Task<Product> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<Product>> GetByIdAsync(int id)
         {
             const string sql = @"
                 SELECT
@@ -61,10 +67,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             Product product = MapProduct(reader, new Product());
 
-            return product;
+            return new InfrastructureResponse<Product>()
+            {
+                IsSuccess = true,
+                Message = "Product retrieved successfully",
+                Value = product
+            };
         }
 
-        public async Task<Product> GetByNameAsync(string name)
+        public async Task<InfrastructureResponse<Product>> GetByNameAsync(string name)
         {
             const string sql = @"
                 SELECT
@@ -84,10 +95,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             Product product = MapProduct(reader, new Product());
 
-            return product;
+            return new InfrastructureResponse<Product>()
+            {
+                IsSuccess = true,
+                Message = "Product retrieved successfully",
+                Value = product
+            };
         }
 
-        public async Task<Product> CreateAsync(Product product)
+        public async Task<InfrastructureResponse<Product>> CreateAsync(Product product)
         {
             const string sql = @"
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
@@ -107,10 +123,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             
             Product createdProduct = MapProduct(reader, new Product());
 
-            return createdProduct;
+            return new InfrastructureResponse<Product>()
+            {
+                IsSuccess = true,
+                Message = "Product created successfully",
+                Value = createdProduct
+            };
         }
 
-        public async Task<Product> UpdateAsync(int id, Product product)
+        public async Task<InfrastructureResponse<Product>> UpdateAsync(int id, Product product)
         {
             const string sql = @"
                 UPDATE Products
@@ -139,7 +160,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             if(await reader.ReadAsync())
             {
                 Product updatedProduct = MapProduct(reader, new Product());
-                return updatedProduct;
+                return new InfrastructureResponse<Product>()
+                {
+                    IsSuccess = true,
+                    Message = "Product updated successfully",
+                    Value = updatedProduct
+                };
             }
             else
             {
@@ -147,7 +173,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             }
         }
 
-        public async Task<bool> DeleteAsync(Product product)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(Product product)
         {
             const string sql = "DELETE FROM Products WHERE id = @Id";
 
@@ -157,10 +183,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Id", product.Id);
 
             var rowEffected = await command.ExecuteNonQueryAsync();
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Product deleted successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> ExistsByIdAsync(int id)
+        public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
             const string sql = "SELECT COUNT(1) FROM Products WHERE id = @Id";
 
@@ -170,10 +201,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Id", id);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Product exists",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<bool> ExistsByNameAsync(string name)
+        public async Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name)
         {
             const string sql = "SELECT COUNT(1) FROM Products WHERE name = @Name";
 
@@ -183,10 +219,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Name", name);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Product exists",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<int> GetTotalCountAsync()
+        public async Task<InfrastructureResponse<int>> GetTotalCountAsync()
         {
             const string sql = "SELECT COUNT(1) FROM Products";
 
@@ -194,10 +235,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var command = new NpgsqlCommand(sql, connection);
             var count = await command.ExecuteScalarAsync();
-            return count != null ? Convert.ToInt32(count) : 0;
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "Total count retrieved successfully",
+                Value = count != null ? Convert.ToInt32(count) : 0
+            };
         }
 
-        public async Task<IReadOnlyList<Product>> GetFilteredAsync(string? searchTerm = null, string? category = null,
+        public async Task<InfrastructureResponse<IReadOnlyList<Product>>> GetFilteredAsync(string? searchTerm = null, string? category = null,
             string? sortBy = "name", decimal? minPrice = null, decimal? maxPrice = null,
             bool? isActive = true, int pageNumber = 1, int pageSize = 10)
         {
@@ -280,10 +326,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 products.Add(product);
             }
 
-            return products;
+            return new InfrastructureResponse<IReadOnlyList<Product>>()
+            {
+                IsSuccess = true,
+                Message = "Products retrieved successfully",
+                Value = products
+            };
         }
 
-        public async Task<int> GetFilteredCountAsync(string? searchTerm = null, string? category = null,
+        public async Task<InfrastructureResponse<int>> GetFilteredCountAsync(string? searchTerm = null, string? category = null,
             decimal? minPrice = null, decimal? maxPrice = null, bool? isActive = true)
         {
             var sql = @"
@@ -341,7 +392,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             }
 
             var count = await command.ExecuteScalarAsync();
-            return count != null ? Convert.ToInt32(count) : 0;
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "Filtered count retrieved successfully",
+                Value = count != null ? Convert.ToInt32(count) : 0
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
