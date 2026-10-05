@@ -1,24 +1,25 @@
-﻿using Berryfy.Domain.Entities.ProductEntities;
+﻿using Berryfy.Domain.Entities;
+using Berryfy.Domain.Entities.ProductEntities;
 
 namespace Berryfy.Domain.Repositories.ProductInterfaces
 {
     public interface IProductRepository
     {
-        Task<IReadOnlyList<Product>> GetAllAsync();
-        Task<Product> GetByIdAsync(int id);
-        Task<Product> GetByNameAsync(string name);
-        Task<Product> CreateAsync(Product product);
-        Task<Product> UpdateAsync(int id, Product product);
-        Task<bool> DeleteAsync(Product product);
-        Task<bool> ExistsByIdAsync(int id);
-        Task<bool> ExistsByNameAsync(string name);
-        Task<int> GetTotalCountAsync();
+        Task<InfrastructureResponse<IReadOnlyList<Product>>> GetAllAsync();
+        Task<InfrastructureResponse<Product>> GetByIdAsync(int id);
+        Task<InfrastructureResponse<Product>> GetByNameAsync(string name);
+        Task<InfrastructureResponse<Product>> CreateAsync(Product product);
+        Task<InfrastructureResponse<Product>> UpdateAsync(int id, Product product);
+        Task<InfrastructureResponse<bool>> DeleteAsync(Product product);
+        Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id);
+        Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name);
+        Task<InfrastructureResponse<int>> GetTotalCountAsync();
 
-        Task<IReadOnlyList<Product>> GetFilteredAsync(string? searchTerm = null, string? category = null,
+        Task<InfrastructureResponse<IReadOnlyList<Product>>> GetFilteredAsync(string? searchTerm = null, string? category = null,
             string? sortBy = "name", decimal? minPrice = null, decimal? maxPrice = null,
             bool? isActive = true, int pageNumber = 1, int pageSize = 10);
 
-        Task<int> GetFilteredCountAsync(string? searchTerm = null, string? category = null,
+        Task<InfrastructureResponse<int>> GetFilteredCountAsync(string? searchTerm = null, string? category = null,
             decimal? minPrice = null, decimal? maxPrice = null, bool? isActive = true);
     }
 }
