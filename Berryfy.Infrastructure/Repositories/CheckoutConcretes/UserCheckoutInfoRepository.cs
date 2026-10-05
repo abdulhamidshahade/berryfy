@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using Berryfy.Domain.Entities;
 
 namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
 {
@@ -16,7 +17,7 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<UserCheckoutInfo?> GetByUserIdAsync(int userId)
+        public async Task<InfrastructureResponse<UserCheckoutInfo?>> GetByUserIdAsync(int userId)
         {
             string query = @"SELECT * from UserCheckoutInfos where user_id = @UserId";
 
@@ -35,10 +36,15 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
                 checkoutInfo = MapUserCheckoutInfo(reader);
             }
 
-            return checkoutInfo;
+            return new InfrastructureResponse<UserCheckoutInfo?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = checkoutInfo
+            };
         }
 
-        public async Task<UserCheckoutInfo?> GetBySessionIdAsync(string sessionId)
+        public async Task<InfrastructureResponse<UserCheckoutInfo?>> GetBySessionIdAsync(string sessionId)
         {
             string query = @"SELECT * from UserCheckoutInfos where session_id = @sessionId";
 
@@ -57,10 +63,15 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
                 checkoutInfo = MapUserCheckoutInfo(reader);     
             }
 
-            return checkoutInfo;
+            return new InfrastructureResponse<UserCheckoutInfo?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = checkoutInfo
+            };
         }
 
-        public async Task<UserCheckoutInfo> CreateAsync(UserCheckoutInfo checkoutInfo)
+        public async Task<InfrastructureResponse<UserCheckoutInfo>> CreateAsync(UserCheckoutInfo checkoutInfo)
         {
             string query = @"Insert into user_checkout_infos (user_id, session_id, firstname, lastname, email,
 phone, payer_email, billing_city, billing_state, billing_country, updated_at, address, address2, city, state, zipcode,
@@ -83,10 +94,15 @@ country, payer_name, billing_address1, billing_address2, billing_postal_code, cr
                 checkoutInfoObj = MapUserCheckoutInfo(reader);
             }
 
-            return checkoutInfoObj;
+            return new InfrastructureResponse<UserCheckoutInfo>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = checkoutInfoObj
+            };
         }
 
-        public async Task<bool> UpdateAsync(UserCheckoutInfo checkoutInfo)
+        public async Task<InfrastructureResponse<bool>> UpdateAsync(UserCheckoutInfo checkoutInfo)
         {
             string query = @"Update UserCheckoutInfos 
 Set user_id = @UserId,
@@ -122,10 +138,15 @@ where id = @Id;";
             AddUserCheckoutInfoParameters(command, checkoutInfo);
 
             int rowEffected = await command.ExecuteNonQueryAsync();
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(int id)
         {
             string query = @"Delete from UserCheckoutInfos where id = @Id";
 
@@ -137,10 +158,15 @@ where id = @Id;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> UpdateLastUsedAsync(int id)
+        public async Task<InfrastructureResponse<bool>> UpdateLastUsedAsync(int id)
         {
             string query = @"Update UserCheckoutInfos 
 Set lastused_at = @LastUsedAt where id = @Id;";
@@ -154,7 +180,12 @@ Set lastused_at = @LastUsedAt where id = @Id;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
