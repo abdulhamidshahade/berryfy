@@ -1,4 +1,5 @@
 ﻿using Berryfy.Domain.Constants;
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
@@ -17,7 +18,7 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<InventoryLog> CreateInventory(InventoryLog inventoryLog)
+        public async Task<InfrastructureResponse<InventoryLog>> CreateInventory(InventoryLog inventoryLog)
         {
             string query = @"Insert into InventoryLogs (product_id, current_stock_quantity, quantity_changed,
 change_type, reference_id, reference_type, performed_by_user_id, notes, created_at, updated_at) values (@ProductId,
@@ -39,10 +40,15 @@ change_type, reference_id, reference_type, performed_by_user_id, notes, created_
                 inventoryLogObj = MapInventoryLog(reader);
             }
 
-            return inventoryLogObj;
+            return new InfrastructureResponse<InventoryLog>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = inventoryLogObj
+            };
         }
 
-        public async Task<List<InventoryLog>> GetInventoryHistoryAsync(int productId, int limit = 50)
+        public async Task<InfrastructureResponse<List<InventoryLog>>> GetInventoryHistoryAsync(int productId, int limit = 50)
         {
             string query = @"select * from inventory_logs where product_id = @ProductId limit @limit";
 
@@ -62,11 +68,16 @@ change_type, reference_id, reference_type, performed_by_user_id, notes, created_
                 logs.Add(MapInventoryLog(reader));
             }
 
-            return logs;
+            return new InfrastructureResponse<List<InventoryLog>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = logs
+            };
         }
 
 
-        public async Task<bool> IsInStockAsync(int productId, int quantity)
+        public async Task<InfrastructureResponse<bool>> IsInStockAsync(int productId, int quantity)
         {
             string productQuery = @"select stock_quantity, reserved_stock from products where id = @ProductId";
 
@@ -87,11 +98,15 @@ change_type, reference_id, reference_type, performed_by_user_id, notes, created_
                 reservedQuantity = reader.GetInt32(reader.GetOrdinal("reserved_stock"));
             }
 
-            return (quantity <= (stockQuantity - reservedQuantity));
-            
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = quantity <= (stockQuantity - reservedQuantity)
+            }; 
         }
 
-        public async Task<bool> ReserveStockAsync(
+        public async Task<InfrastructureResponse<bool>> ReserveStockAsync(
     int productId,
     int quantity,
     int referenceId,
@@ -113,10 +128,15 @@ change_type, reference_id, reference_type, performed_by_user_id, notes, created_
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
 
-            return rowsAffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowsAffected > 0
+            };
         }
 
-        public async Task<bool> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
+        public async Task<InfrastructureResponse<bool>> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
             string query = @"Update products
 Set reserved_stock = reserved_stock - @quantity
@@ -131,10 +151,15 @@ where id = @productId;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
+        public async Task<InfrastructureResponse<bool>> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
         {
             string query = @"Update products
 Set stock_quantity = stock_quantity - @quantity,
@@ -149,11 +174,16 @@ where id = @ProductId;";
             command.Parameters.AddWithValue("@ProductId", productId);
 
             int rowEffected = await command.ExecuteNonQueryAsync();
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
 
-        public async Task<bool> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
+        public async Task<InfrastructureResponse<bool>> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
         {
             string query = @"Update products
 Set stock_quantity = stock_quantity + @quantity
@@ -168,10 +198,15 @@ where id = @productId;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
+        public async Task<InfrastructureResponse<bool>> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
         {
             string query = @"Update products
 set stock_quantity = @newQuantity
@@ -186,10 +221,15 @@ where id = @productId;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<List<Product>> GetLowStockProductsAsync(int limit = 50)
+        public async Task<InfrastructureResponse<List<Product>>> GetLowStockProductsAsync(int limit = 50)
         {
             string query = @"Select * from products
 where stock_quantity < low_stock_threshold
@@ -211,10 +251,15 @@ limit @limit;";
                 products.Add(MapProduct(reader));
             }
 
-            return products;
+            return new InfrastructureResponse<List<Product>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = products
+            };
         }
 
-        public async Task<Product> GetProductWithStockInfoAsync(int productId)
+        public async Task<InfrastructureResponse<Product>> GetProductWithStockInfoAsync(int productId)
         {
             string sql = @"select p.*, il.* from products p
 left join InventoryLogs il on (p.id = il.product_id)
@@ -243,7 +288,12 @@ limit 20;";
                 productObj.InventoryLogs.Add(MapInventoryLog(reader));
             }
 
-            return product.Values.FirstOrDefault();
+            return new InfrastructureResponse<Product>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = product.Values.FirstOrDefault()
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
