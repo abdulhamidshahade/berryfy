@@ -1,4 +1,5 @@
-﻿using Berryfy.Domain.Entities.CouponEntities;
+﻿using Berryfy.Domain.Entities;
+using Berryfy.Domain.Entities.CouponEntities;
 using Berryfy.Domain.Repositories.CouponInterfaces;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +22,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<IEnumerable<Coupon>> GetAllAsync()
+        public async Task<InfrastructureResponse<IEnumerable<Coupon>>> GetAllAsync()
         {
             const string sql = "SELECT * FROM coupons ORDER BY id";
             await using var connection = await OpenConnectionAsync();
@@ -34,30 +35,47 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 coupons.Add(MapCoupon(reader));
             }
 
-            return coupons;
+            return new InfrastructureResponse<IEnumerable<Coupon>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupons
+            };
         }
 
-        public async Task<Coupon?> GetByCodeAsync(string code)
+        public async Task<InfrastructureResponse<Coupon?>> GetByCodeAsync(string code)
         {
             const string sql = "SELECT * FROM coupons WHERE code = @Code LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Code", code);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapCoupon(reader) : null;
+            var coupon = await reader.ReadAsync() ? MapCoupon(reader) : null;
+            return new InfrastructureResponse<Coupon?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupon
+            };
         }
 
-        public async Task<Coupon?> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<Coupon?>> GetByIdAsync(int id)
         {
             const string sql = "SELECT * FROM coupons WHERE id = @Id LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
             await using var reader = await command.ExecuteReaderAsync();
-            return await reader.ReadAsync() ? MapCoupon(reader) : null;
+            var coupon = await reader.ReadAsync() ? MapCoupon(reader) : null;
+            return new InfrastructureResponse<Coupon?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupon
+            };
         }
 
-        public async Task<Coupon> CreateAsync(Coupon coupon)
+        public async Task<InfrastructureResponse<Coupon>> CreateAsync(Coupon coupon)
         {
             const string sql = @"
                 INSERT INTO coupons (
@@ -76,10 +94,15 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             AddCouponParameters(command, coupon);
             coupon.Id = Convert.ToInt32(await command.ExecuteScalarAsync());
-            return coupon;
+            return new InfrastructureResponse<Coupon>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupon
+            };
         }
 
-        public async Task<Coupon?> UpdateAsync(int id, Coupon coupon)
+        public async Task<InfrastructureResponse<Coupon?>> UpdateAsync(int id, Coupon coupon)
         {
             const string sql = @"
                 UPDATE coupons SET
@@ -103,25 +126,45 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
             if (await command.ExecuteNonQueryAsync() == 0)
             {
-                return null;
+                return new InfrastructureResponse<Coupon?>()
+                {
+                    IsSuccess = false,
+                    Message = "The process failed",
+                    Value = null
+                };
             }
 
-            return await GetByIdAsync(id);
+            return new InfrastructureResponse<Coupon?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = GetByIdAsync(id).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> DeleteAsync(Coupon coupon)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(Coupon coupon)
         {
             const string sql = "DELETE FROM coupons WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", coupon.Id);
-            return await command.ExecuteNonQueryAsync() > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = await command.ExecuteNonQueryAsync() > 0
+            };
         }
 
-        public async Task<bool> ExistsAsync(Expression<Func<Coupon, bool>> expression)
+        public async Task<InfrastructureResponse<bool>> ExistsAsync(Expression<Func<Coupon, bool>> expression)
         {
             var coupons = await GetAllAsync();
-            return coupons.AsQueryable().Any(expression);
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = coupons.AsQueryable().Any(expression)
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
