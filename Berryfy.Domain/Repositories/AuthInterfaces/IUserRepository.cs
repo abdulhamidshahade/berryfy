@@ -1,24 +1,25 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 
 namespace Berryfy.Domain.Repositories.AuthInterfaces
 {
     public interface IUserRepository
     {
-        Task<User?> GetByIdAsync(int id);
-        Task<User?> GetByEmailAsync(string email);
-        Task<User?> GetByNormalizedEmailAsync(string normalizedEmail);
-        Task<User?> GetByRefreshTokenAsync(string refreshTokenHash);
-        Task<List<User>> GetAllAsync();
-        Task<User> CreateAsync(User user);
-        Task<bool> UpdateAsync(User user);
-        Task<bool> DeleteAsync(int id);
-        Task<bool> ExistsByIdAsync(int id);
-        Task<bool> ExistsByEmailAsync(string email);
-        Task<bool> IsUsernameTakenAsync(string userName);
-        Task<bool> SetLockoutAsync(int userId, DateTime? lockoutEnd);
-        Task<bool> ResetAccessFailedCountAsync(int userId);
-        Task<bool> IncrementAccessFailedCountAsync(int userId);
-        Task<bool> UpdatePasswordHashAsync(int userId, string passwordHash);
-        Task<bool> ConfirmEmailAsync(int userId);
+        Task<InfrastructureResponse<User?>> GetByIdAsync(int id);
+        Task<InfrastructureResponse<User?>> GetByEmailAsync(string email);
+        Task<InfrastructureResponse<User?>> GetByNormalizedEmailAsync(string normalizedEmail);
+        Task<InfrastructureResponse<User?>> GetByRefreshTokenAsync(string refreshTokenHash);
+        Task<InfrastructureResponse<List<User>>> GetAllAsync();
+        Task<InfrastructureResponse<User>> CreateAsync(User user);
+        Task<InfrastructureResponse<bool>> UpdateAsync(User user);
+        Task<InfrastructureResponse<bool>> DeleteAsync(int id);
+        Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id);
+        Task<InfrastructureResponse<bool>> ExistsByEmailAsync(string email);
+        Task<InfrastructureResponse<bool>> IsUsernameTakenAsync(string userName);
+        Task<InfrastructureResponse<bool>> SetLockoutAsync(int userId, DateTime? lockoutEnd);
+        Task<InfrastructureResponse<bool>> ResetAccessFailedCountAsync(int userId);
+        Task<InfrastructureResponse<bool>> IncrementAccessFailedCountAsync(int userId);
+        Task<InfrastructureResponse<bool>> UpdatePasswordHashAsync(int userId, string passwordHash);
+        Task<InfrastructureResponse<bool>> ConfirmEmailAsync(int userId);
     }
 }
