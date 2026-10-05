@@ -1,4 +1,5 @@
 using Berryfy.Domain.Constants;
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.OrderEntities;
 using Berryfy.Domain.Entities.ProductEntities;
@@ -20,7 +21,7 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<Order?> GetOrderByIdAsync(int orderId)
+        public async Task<InfrastructureResponse<Order?>> GetOrderByIdAsync(int orderId)
         {
             string query = @"select id, user_id, cart_id, is_paid, status, subtotal,
             tax_amount, shipping_amount, total, discount_total, customer_email, customer_phone,
@@ -45,10 +46,15 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
                 order = MapOrder(reader);
             }                
 
-            return order;
+            return new InfrastructureResponse<Order?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = order
+            };
         }
 
-        public async Task<List<Order>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
+        public async Task<InfrastructureResponse<List<Order>>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
         {
             string query = @"select id, user_id, cart_id, is_paid, status, subtotal, tax_amount, shipping_amount, total
             discount_total, customer_email, customer_phone, completed_at, cancelled_at, shipping_name, shipping_address1,
@@ -78,10 +84,15 @@ namespace Berryfy.Infrastructure.Repositories.OrderConcretes
                 orders.Add(MapOrder(reader));
             }
 
-            return orders;
+            return new InfrastructureResponse<List<Order>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = orders
+            };
         }
 
-        public async Task<List<Order>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
+        public async Task<InfrastructureResponse<List<Order>>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
         {
             string query = @"SELECT
     o.id,
@@ -139,11 +150,16 @@ ORDER BY o.CreatedAt DESC;";
                 orders.Add(MapOrder(reader));
             }
 
-            return orders;
+            return new InfrastructureResponse<List<Order>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = orders
+            };
         }
 
 
-        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
+        public async Task<InfrastructureResponse<bool>> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
         {
             string query = @"Update Orders
                             Set Status = @newStatus,
@@ -162,7 +178,12 @@ ORDER BY o.CreatedAt DESC;";
 
             var rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = rowEffected > 0,
+                Message = rowEffected > 0 ? "The process completed successfully" : "No rows were affected",
+                Value = rowEffected > 0
+            };
         }
 
         public Task<string> GenerateUniqueReferenceNumberAsync()
@@ -171,7 +192,7 @@ ORDER BY o.CreatedAt DESC;";
             return Task.FromResult(uniqueRef);
         }
 
-        public async Task<Order> CreateOrderAsync(Order order)
+        public async Task<InfrastructureResponse<Order>> CreateOrderAsync(Order order)
         {
             string query = @"Insert into Orders (user_id, cart_id, status, subtotal, tax_amount, shipping_amount,
 total, discount_total, customer_email, customer_phone, reference_number, completed_at, cancelled_at, shipping_name,
@@ -195,10 +216,15 @@ created_at, updated_at, is_paid, session_id) Values (@UserId, @CartId, @Status, 
                 orderObj = MapOrder(reader);
             }
 
-            return orderObj;
+            return new InfrastructureResponse<Order>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = orderObj
+            };
         }
 
-        public async Task<OrderItem> CreateOrderItemAsync(OrderItem item)
+        public async Task<InfrastructureResponse<OrderItem>> CreateOrderItemAsync(OrderItem item)
         {
             string query = @"insert into order_items (order_id, product_id, quantity, unit_price, total_price,
 discount_amount, created_at, updated_at, product_name) values (@OrderId, @ProductId, @Quantity, @UnitPrice,
@@ -218,10 +244,15 @@ discount_amount, created_at, updated_at, product_name) values (@OrderId, @Produc
                 orderItem = MapOrderItem(reader);
             }
 
-            return orderItem;
+            return new InfrastructureResponse<OrderItem>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = orderItem
+            };
         }
 
-        public async Task<Order?> GetOrderByReferenceNumberAsync(string referenceNumber)
+        public async Task<InfrastructureResponse<Order?>> GetOrderByReferenceNumberAsync(string referenceNumber)
         {
             string query = @"select o.*
                              from Orders o
@@ -242,10 +273,15 @@ discount_amount, created_at, updated_at, product_name) values (@OrderId, @Produc
                 order = MapOrder(reader);
             }
 
-            return order;
+            return new InfrastructureResponse<Order?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = order
+            };
         }
 
-        public async Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
+        public async Task<InfrastructureResponse<List<Order>>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
         {
             string query = @"select * from orders where Status = @OrderStatus offset @offset limit @pageSize;";
 
@@ -268,10 +304,15 @@ discount_amount, created_at, updated_at, product_name) values (@OrderId, @Produc
                 orders.Add(MapOrder(reader));
             }
 
-            return orders;
+            return new InfrastructureResponse<List<Order>>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = orders
+            };
         }
 
-        public async Task<bool> UpdateOrderPaymentStatusAsync(int orderId, PaymentStatus paymentStatus)
+        public async Task<InfrastructureResponse<bool>> UpdateOrderPaymentStatusAsync(int orderId, PaymentStatus paymentStatus)
         {
             string query = @"Update Orders
 set is_paid = case when @paymentStatus = @completedStatus then 1 else 0 end
@@ -286,10 +327,15 @@ where id = @orderId;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<Order?> GetOrderByCartIdAsync(int cartId)
+        public async Task<InfrastructureResponse<Order?>> GetOrderByCartIdAsync(int cartId)
         {
             string query = @"select o.*
                              from Orders o
@@ -310,10 +356,15 @@ where id = @orderId;";
                 order = MapOrder(reader);
             }
 
-            return order;
+            return new InfrastructureResponse<Order?>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = order
+            };
         }
 
-        public async Task<bool> UpdateOrderAsync(Order order)
+        public async Task<InfrastructureResponse<bool>> UpdateOrderAsync(Order order)
         {
             string query = @"Update Orders
 set user_id = @userId,
@@ -351,10 +402,15 @@ where id = @orderId;";
 
             int rowEffected = await command.ExecuteNonQueryAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> DeleteOrderItemsAsync(int orderId)
+        public async Task<InfrastructureResponse<bool>> DeleteOrderItemsAsync(int orderId)
         {
             string query = @"Delete from order_items oi where oi.order_id = @orderId;";
 
@@ -367,10 +423,15 @@ where id = @orderId;";
 
             await connection.CloseAsync();
 
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> UserHasPaidOrderAsync(int userId)
+        public async Task<InfrastructureResponse<bool>> UserHasPaidOrderAsync(int userId)
         {
             string query = @"SELECT CASE 
     WHEN EXISTS (
@@ -390,7 +451,12 @@ END";
 
             await connection.CloseAsync();
 
-            return Convert.ToBoolean(result);
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "The process completed successfully",
+                Value = Convert.ToBoolean(result)
+            };
         }
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
