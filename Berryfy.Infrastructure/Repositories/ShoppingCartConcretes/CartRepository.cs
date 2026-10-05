@@ -6,6 +6,7 @@ using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using Berryfy.Domain.Entities;
 
 namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 {
@@ -18,7 +19,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<Cart> CreateCartAsync(int? userId, CartStatus status)
+        public async Task<InfrastructureResponse<Cart>> CreateCartAsync(int? userId, CartStatus status)
         {
             const string sql = @"
                 INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
@@ -49,13 +50,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
                     Version = reader.GetInt32(reader.GetOrdinal("Version"))
                 };
-                return cart;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart created successfully",
+                    Value = cart
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = false,
+                Message = "Failed to create cart",
+                Value = null
+            };
         }
 
-        public async Task<Cart> CreateCartAsync(string? sessionId, CartStatus status)
+        public async Task<InfrastructureResponse<Cart>> CreateCartAsync(string? sessionId, CartStatus status)
         {
             const string sql = @"
                 INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
@@ -86,13 +97,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
                     Version = reader.GetInt32(reader.GetOrdinal("Version"))
                 };
-                return cart;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart created successfully",
+                    Value = cart
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = false,
+                Message = "Failed to create cart",
+                Value = null
+            };
         }
 
-        public async Task<bool> DeleteCartAsync(int? userId, string? sessionId)
+        public async Task<InfrastructureResponse<bool>> DeleteCartAsync(int? userId, string? sessionId)
         {
             if (userId.HasValue)
             {
@@ -106,7 +127,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
 
                 var affected = await command.ExecuteNonQueryAsync();
-                return affected > 0;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart deleted successfully",
+                    Value = affected > 0
+                };
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
@@ -120,16 +146,31 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
 
                 var affected = await command.ExecuteNonQueryAsync();
-                return affected > 0;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart deleted successfully",
+                    Value = affected > 0
+                };
             }
 
-            return false;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = false,
+                Message = "Failed to delete cart",
+                Value = false
+            };
         }
 
-        public async Task<Cart> GetCartByUserIdAsync(int? userId, CartStatus? status = CartStatus.Active)
+        public async Task<InfrastructureResponse<Cart>> GetCartByUserIdAsync(int? userId, CartStatus? status = CartStatus.Active)
         {
             if (!userId.HasValue)
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Invalid user ID",
+                    Value = null
+                };
 
             const string sql = @"
                 SELECT
@@ -269,13 +310,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 }
             }
 
-            return cart;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = true,
+                Message = "Cart retrieved successfully",
+                Value = cart
+            };
         }
 
-        public async Task<Cart> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
+        public async Task<InfrastructureResponse<Cart>> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
         {
             if (string.IsNullOrEmpty(sessionId))
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Invalid session ID",
+                    Value = null
+                };
 
             const string sql = @"
                 SELECT
@@ -413,10 +464,15 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 }
             }
 
-            return cart;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = true,
+                Message = "Cart retrieved successfully",
+                Value = cart
+            };
         }
 
-        public async Task<List<Cart>> GetCartsAsync()
+        public async Task<InfrastructureResponse<List<Cart>>> GetCartsAsync()
         {
             const string sql = @"
                 SELECT
@@ -451,10 +507,15 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 carts.Add(cart);
             }
 
-            return carts;
+            return new InfrastructureResponse<List<Cart>>()
+            {
+                IsSuccess = true,
+                Message = "Carts retrieved successfully",
+                Value = carts
+            };
         }
 
-        public async Task<Cart> UpdateCartAsync(Cart cart)
+        public async Task<InfrastructureResponse<Cart>> UpdateCartAsync(Cart cart)
         {
             const string sql = @"
                 UPDATE shopping_carts
@@ -486,16 +547,31 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 cart.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
                 cart.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
                 cart.Version = reader.GetInt32(reader.GetOrdinal("Version"));
-                return cart;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart updated successfully",
+                    Value = cart
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = false,
+                Message = "Cart not found",
+                Value = null
+            };
         }
 
-        public async Task<bool> DeleteCartById(int Id)
+        public async Task<InfrastructureResponse<bool>> DeleteCartById(int Id)
         {
             if (Id <= 0)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "Invalid cart ID",
+                    Value = false
+                };
 
             const string sql = "DELETE FROM shopping_carts WHERE Id = @Id AND Status = @Status";
 
@@ -507,13 +583,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
 
             var affected = await command.ExecuteNonQueryAsync();
-            return affected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = affected > 0 ? "Cart deleted successfully" : "Cart not found",
+                Value = affected > 0
+            };
         }
 
-        public async Task<Cart> UpdateCartStatusAsync(int? userId, CartStatus status)
+        public async Task<InfrastructureResponse<Cart>> UpdateCartStatusAsync(int? userId, CartStatus status)
         {
             if (!userId.HasValue)
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Invalid user ID",
+                    Value = null
+                };
 
             const string sql = @"
                 UPDATE shopping_carts
@@ -546,16 +632,31 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     CartItems = new List<CartItem>(),
                     CartCoupons = new List<CartCoupon>()
                 };
-                return cart;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = true,
+                    Message = "Cart updated successfully",
+                    Value = cart
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = false,
+                Message = "Cart not found",
+                Value = null
+            };
         }
 
-        public async Task<Cart> GetCartByIdAsync(int cartId, CartStatus status)
+        public async Task<InfrastructureResponse<Cart>> GetCartByIdAsync(int cartId, CartStatus status)
         {
             if (cartId <= 0)
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Invalid cart ID",
+                    Value = null
+                };
 
             const string sql = @"
                 SELECT
@@ -694,27 +795,42 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 }
             }
 
-            return cart;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = true,
+                Message = "Cart retrieved successfully",
+                Value = cart
+            };
         }
 
-        public async Task<Cart> UpdateItemQuantityAsync(int? userId, string? sessionId, int productId, int quantity)
+        public async Task<InfrastructureResponse<Cart>> UpdateItemQuantityAsync(int? userId, string? sessionId, int productId, int quantity)
         {
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart = await GetCartByUserIdAsync(userId, CartStatus.Active);
+                cart =  GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = await GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null)
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Cart not found",
+                    Value = null
+                };
 
             var cartItem = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
             if (cartItem == null)
-                return null;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = false,
+                    Message = "Product not found in cart",
+                    Value = null
+                };
 
             cartItem.Quantity = quantity;
             cartItem.UpdatedAt = DateTime.UtcNow;
@@ -739,26 +855,41 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             {
                 cartItem.Quantity = reader.GetInt32(reader.GetOrdinal("Quantity"));
                 cartItem.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-                return cart;
+                return new InfrastructureResponse<Cart>()
+                {
+                    IsSuccess = true,
+                    Message = "Item quantity updated successfully",
+                    Value = cart
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<Cart>()
+            {
+                IsSuccess = false,
+                Message = "Failed to update item quantity",
+                Value = null
+            };
         }
 
-        public async Task<CartItem> CreateItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity, decimal unitPrice)
+        public async Task<InfrastructureResponse<CartItem>> CreateItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity, decimal unitPrice)
         {
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart = await GetCartByUserIdAsync(userId, CartStatus.Active);
+                cart = GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = await GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null || cart.Id != cartId)
-                return null;
+                return new InfrastructureResponse<CartItem>()
+                {
+                    IsSuccess = false,
+                    Message = "Cart not found",
+                    Value = null
+                };
 
             const string sql = @"
                 INSERT INTO cart_items (ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt)
@@ -793,30 +924,50 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
                     UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
                 };
-                return cartItem;
+                return new InfrastructureResponse<CartItem>()
+                {
+                    IsSuccess = true,
+                    Message = "Item found",
+                    Value = cartItem
+                };
             }
 
-            return null;
+            return new InfrastructureResponse<CartItem>()
+            {
+                IsSuccess = false,
+                Message = "Item not found",
+                Value = null
+            };
         }
 
-        public async Task<bool> RemoveItemAsync(int? userId, string? sessionId, int productId)
+        public async Task<InfrastructureResponse<bool>> RemoveItemAsync(int? userId, string? sessionId, int productId)
         {
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart = await GetCartByUserIdAsync(userId, CartStatus.Active);
+                cart = GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = await GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "Cart not found",
+                    Value = false
+                };
 
             var cartItem = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
             if (cartItem == null)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "Item not found",
+                    Value = false
+                };
 
             const string sql = "DELETE FROM cart_items WHERE Id = @Id";
 
@@ -827,13 +978,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("Id", cartItem.Id);
 
             var affected = await command.ExecuteNonQueryAsync();
-            return affected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Item removed successfully",
+                Value = affected > 0
+            };
         }
 
-        public async Task<bool> UpdateItemsAsync(List<CartItem> items)
+        public async Task<InfrastructureResponse<bool>> UpdateItemsAsync(List<CartItem> items)
         {
             if (items == null || items.Count == 0)
-                return true;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = true,
+                    Message = "No items to update",
+                    Value = true
+                };
 
             foreach (var item in items)
             {
@@ -855,13 +1016,23 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
                 var affected = await command.ExecuteNonQueryAsync();
                 if (affected <= 0)
-                    return false;
+                    return new InfrastructureResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        Message = "Failed to update item",
+                        Value = false
+                    };
             }
 
-            return true;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Items updated successfully",
+                Value = true
+            };
         }
 
-        public async Task<bool> IsItemExistingByRealCart(int cartId, int productId, int userId)
+        public async Task<InfrastructureResponse<bool>> IsItemExistingByRealCart(int cartId, int productId, int userId)
         {
             const string sql = @"
                 SELECT COUNT(1)
@@ -880,10 +1051,15 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("UserId", userId);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Item existence check completed",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<bool> RemoveItemAsync(int cartId, int userId, int productId)
+        public async Task<InfrastructureResponse<bool>> RemoveItemAsync(int cartId, int userId, int productId)
         {
             const string getCartSql = @"
                 SELECT Id
@@ -910,7 +1086,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             }
 
             if (cart == null || cart.Id != cartId)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "Cart not found or invalid",
+                    Value = false
+                };
 
             const string getItemSql = @"
                 SELECT Id
@@ -924,7 +1105,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             var itemIdObj = await command2.ExecuteScalarAsync();
             if (itemIdObj == null)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "Item not found",
+                    Value = false
+                };
 
             int itemId = Convert.ToInt32(itemIdObj);
 
@@ -934,10 +1120,15 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command3.Parameters.AddWithValue("Id", itemId);
 
             var affected = await command3.ExecuteNonQueryAsync();
-            return affected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Item removed successfully",
+                Value = affected > 0
+            };
         }
 
-        public async Task<bool> IsConverted(int cartId)
+        public async Task<InfrastructureResponse<bool>> IsConverted(int cartId)
         {
             const string sql = "SELECT COUNT(1) FROM shopping_carts WHERE Id = @Id AND Status = @Status";
 
@@ -949,7 +1140,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("Status", CartStatus.Converted.ToString());
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Conversion status check completed",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
     }
 }
