@@ -1,3 +1,4 @@
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Berryfy.Infrastructure.Data;
@@ -15,10 +16,14 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<bool> AddProductCategoryAsync(Product product, List<int> categories)
+        public async Task<InfrastructureResponse<bool>> AddProductCategoryAsync(Product product, List<int> categories)
         {
             if (categories == null || categories.Count == 0)
-                return false;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Message = "No categories provided"
+                };
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -45,7 +50,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 }
 
                 await transaction.CommitAsync();
-                return true;
+                return new InfrastructureResponse<bool>()
+                {
+                    IsSuccess = true,
+                    Message = "Product categories added successfully",
+                    Value = true
+                };
             }
             catch
             {
@@ -54,12 +64,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             }
         }
 
-        public async Task<bool> UpdateProductCategoryAsync(Product product, List<int> categories)
+        public async Task<InfrastructureResponse<bool>> UpdateProductCategoryAsync(Product product, List<int> categories)
         {
             return await AddProductCategoryAsync(product, categories);
         }
 
-        public async Task<List<Category>> GetCategoriesByProuductId(int productId)
+        public async Task<InfrastructureResponse<List<Category>>> GetCategoriesByProuductId(int productId)
         {
             const string sql = @"
                 SELECT c.Id, c.Name, c.Description, c.ImageUrl, c.CreatedAt, c.UpdatedAt
@@ -90,10 +100,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 });
             }
 
-            return categories;
+            return new InfrastructureResponse<List<Category>>()
+            {
+                IsSuccess = true,
+                Message = "Categories retrieved successfully",
+                Value = categories
+            };
         }
 
-        public async Task<bool> RemoveCategoriesByProductId(int productId)
+        public async Task<InfrastructureResponse<bool>> RemoveCategoriesByProductId(int productId)
         {
             const string sql = "DELETE FROM ProductCategories WHERE ProductId = @ProductId";
 
@@ -104,7 +119,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("ProductId", productId);
 
             var affected = await command.ExecuteNonQueryAsync();
-            return affected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Categories removed successfully",
+                Value = affected > 0
+            };
         }
     }
 }
