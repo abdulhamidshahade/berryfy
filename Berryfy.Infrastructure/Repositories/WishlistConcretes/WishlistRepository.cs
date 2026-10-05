@@ -6,6 +6,7 @@ using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using Berryfy.Application.Dtos.WishlistDtos;
+using Berryfy.Domain.Entities;
 
 namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
 {
@@ -18,7 +19,7 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<Wishlist> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<Wishlist>> GetByIdAsync(int id)
         {
             const string sql = @"
                 SELECT
@@ -36,10 +37,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
 
             Wishlist wishlist = MapWishlist(reader);
 
-            return wishlist;
+            return new InfrastructureResponse<Wishlist>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist found",
+                Value = wishlist
+            };
         }
 
-        public async Task<Wishlist> GetUserDefaultWishlistAsync(int userId)
+        public async Task<InfrastructureResponse<Wishlist>> GetUserDefaultWishlistAsync(int userId)
         {
             const string sql = @"
                 SELECT
@@ -62,10 +68,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlist = MapWishlist(reader);
             }   
 
-            return wishlist;
+            return new InfrastructureResponse<Wishlist>()
+            {
+                IsSuccess = true,
+                Message = "Default wishlist found",
+                Value = wishlist
+            };
         }
 
-        private async Task<Wishlist> CreateDefaultWishlistForUser(int userId)
+        private async Task<InfrastructureResponse<Wishlist>> CreateDefaultWishlistForUser(int userId)
         {
             const string insertSql = @"
                 INSERT INTO Wishlists (user_id, name, is_default, is_public, created_at, updated_at)
@@ -93,10 +104,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlist = MapWishlist(reader);
             }
 
-            return wishlist;
+            return new InfrastructureResponse<Wishlist>()
+            {
+                IsSuccess = true,
+                Message = "Default wishlist created",
+                Value = wishlist
+            };
         }
 
-        public async Task<IEnumerable<Wishlist>> GetUserWishlistsAsync(int userId)
+        public async Task<InfrastructureResponse<IEnumerable<Wishlist>>> GetUserWishlistsAsync(int userId)
         {
             const string sql = @"
                 SELECT
@@ -118,10 +134,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlists.Add(MapWishlist(reader));
             }
 
-            return wishlists;
+            return new InfrastructureResponse<IEnumerable<Wishlist>>()
+            {
+                IsSuccess = true,
+                Message = "Wishlists found",
+                Value = wishlists
+            };
         }
 
-        public async Task<Wishlist> CreateAsync(Wishlist wishlist)
+        public async Task<InfrastructureResponse<Wishlist>> CreateAsync(Wishlist wishlist)
         {
             const string sql = @"
                 INSERT INTO Wishlists (user_id, name, is_default, is_public, created_at, updated_at)
@@ -140,10 +161,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlist = MapWishlist(reader);
             }
 
-            return wishlist;
+            return new InfrastructureResponse<Wishlist>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist created",
+                Value = wishlist
+            };
         }
 
-        public async Task<Wishlist> UpdateAsync(Wishlist wishlist)
+        public async Task<InfrastructureResponse<Wishlist>> UpdateAsync(Wishlist wishlist)
         {
             const string sql = @"
                 UPDATE Wishlists
@@ -168,10 +194,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlist = MapWishlist(reader);
             }
 
-            return wishlist;
+            return new InfrastructureResponse<Wishlist>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist updated",
+                Value = wishlist
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(int id)
         {
             const string sql = "DELETE FROM Wishlists WHERE id = @Id";
 
@@ -181,10 +212,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@Id", id);
 
             var rowEffected = await command.ExecuteNonQueryAsync();
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist deleted",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> ExistsAsync(int id)
+        public async Task<InfrastructureResponse<bool>> ExistsAsync(int id)
         {
             const string sql = "SELECT COUNT(1) FROM Wishlists WHERE id = @Id";
 
@@ -194,10 +230,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@Id", id);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist exists",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<Domain.Entities.WishlistEntities.WishlistItem> GetWishlistItemAsync(int wishlistId, int productId)
+        public async Task<InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>> GetWishlistItemAsync(int wishlistId, int productId)
         {
             const string sql = @"
                 SELECT
@@ -220,10 +261,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlistItem = MapWishlistItem(reader);
             }
 
-            return wishlistItem;
+            return new InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist item found",
+                Value = wishlistItem
+            };
         }
 
-        public async Task<Domain.Entities.WishlistEntities.WishlistItem> AddItemAsync(Domain.Entities.WishlistEntities.WishlistItem item)
+        public async Task<InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>> AddItemAsync(Domain.Entities.WishlistEntities.WishlistItem item)
         {
             const string sql = @"
                 INSERT INTO wishlist_items (wishlist_id, product_id, notes, priority, created_at, updated_at)
@@ -243,10 +289,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 item = MapWishlistItem(reader);
             }
 
-            return item;
+            return new InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist item added",
+                Value = item
+            };
         }
 
-        public async Task<Domain.Entities.WishlistEntities.WishlistItem> UpdateItemAsync(Domain.Entities.WishlistEntities.WishlistItem item)
+        public async Task<InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>> UpdateItemAsync(Domain.Entities.WishlistEntities.WishlistItem item)
         {
             const string sql = @"
                 UPDATE wishlist_items
@@ -269,10 +320,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 item = MapWishlistItem(reader);
             }
 
-            return item;
+            return new InfrastructureResponse<Domain.Entities.WishlistEntities.WishlistItem>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist item updated",
+                Value = item
+            };
         }
 
-        public async Task<bool> RemoveItemAsync(int wishlistId, int productId)
+        public async Task<InfrastructureResponse<bool>> RemoveItemAsync(int wishlistId, int productId)
         {
             string sql = "DELETE FROM wishlist_items WHERE wishlist_id = @WishlistId AND product_id = @ProductId";
 
@@ -284,10 +340,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@ProductId", productId);
 
             var rowEffected = await command.ExecuteNonQueryAsync();
-            return rowEffected > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist item removed",
+                Value = rowEffected > 0
+            };
         }
 
-        public async Task<bool> IsProductInWishlistAsync(int userId, int productId)
+        public async Task<InfrastructureResponse<bool>> IsProductInWishlistAsync(int userId, int productId)
         {
             const string sql = @"
                 SELECT COUNT(1)
@@ -303,10 +364,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@ProductId", productId);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null && Convert.ToInt32(count) > 0;
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Message = "Product in wishlist checked",
+                Value = count != null && Convert.ToInt32(count) > 0
+            };
         }
 
-        public async Task<IEnumerable<Domain.Entities.WishlistEntities.WishlistItem>> GetWishlistItemsAsync(int wishlistId)
+        public async Task<InfrastructureResponse<IEnumerable<Domain.Entities.WishlistEntities.WishlistItem>>> GetWishlistItemsAsync(int wishlistId)
         {
             const string sql = @"
                 SELECT
@@ -329,10 +395,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlistItems.Add(MapWishlistItem(reader));
             }
 
-            return wishlistItems;
+            return new InfrastructureResponse<IEnumerable<Domain.Entities.WishlistEntities.WishlistItem>>()
+            {
+                IsSuccess = true,
+                Message = "Wishlist items retrieved",
+                Value = wishlistItems
+            };
         }
 
-        public async Task<int> GetUserWishlistCountAsync(int userId)
+        public async Task<InfrastructureResponse<int>> GetUserWishlistCountAsync(int userId)
         {
             const string sql = "SELECT COUNT(1) FROM Wishlists WHERE user_id = @UserId";
 
@@ -342,10 +413,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@UserId", userId);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null ? Convert.ToInt32(count) : 0;
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "User wishlist count retrieved",
+                Value = count != null ? Convert.ToInt32(count) : 0
+            };
         }
 
-        public async Task<int> GetUserTotalItemsAsync(int userId)
+        public async Task<InfrastructureResponse<int>> GetUserTotalItemsAsync(int userId)
         {
             const string sql = @"
                 SELECT COUNT(1)
@@ -359,10 +435,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@UserId", userId);
 
             var count = await command.ExecuteScalarAsync();
-            return count != null ? Convert.ToInt32(count) : 0;
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Message = "User total items retrieved",
+                Value = count != null ? Convert.ToInt32(count) : 0
+            };
         }
 
-        public async Task<decimal> GetUserTotalValueAsync(int userId)
+        public async Task<InfrastructureResponse<decimal>> GetUserTotalValueAsync(int userId)
         {
             const string sql = @"
                 SELECT COALESCE(SUM(p.price), 0)
@@ -377,10 +458,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
             command.Parameters.AddWithValue("@UserId", userId);
 
             var result = await command.ExecuteScalarAsync();
-            return result != null ? Convert.ToDecimal(result) : 0;
+            return new InfrastructureResponse<decimal>()
+            {
+                IsSuccess = true,
+                Message = "User total value retrieved",
+                Value = result != null ? Convert.ToDecimal(result) : 0
+            };
         }
 
-        public async Task<IEnumerable<Wishlist>> GetAllWishlistsAsync()
+        public async Task<InfrastructureResponse<IEnumerable<Wishlist>>> GetAllWishlistsAsync()
         {
             const string sql = @"
                 SELECT
@@ -401,10 +487,15 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 wishlists.Add(MapWishlist(reader));
             }
 
-            return wishlists;
+            return new InfrastructureResponse<IEnumerable<Wishlist>>()
+            {
+                IsSuccess = true,
+                Message = "All wishlists retrieved",
+                Value = wishlists
+            };
         }
 
-        public async Task<GlobalWishlistStats> GetGlobalStatsAsync()
+        public async Task<InfrastructureResponse<GlobalWishlistStats>> GetGlobalStatsAsync()
         {
  
             int totalUsers = 0;
@@ -471,17 +562,22 @@ namespace Berryfy.Infrastructure.Repositories.WishlistConcretes
                 });
             }
 
-            return new GlobalWishlistStats
+            return new InfrastructureResponse<GlobalWishlistStats>()
             {
-                TotalUsers = totalUsers,
-                TotalWishlists = totalWishlists,
-                TotalItems = totalItems,
-                TotalValue = totalValue,
-                AverageItemsPerWishlist = averageItemsPerWishlist,
-                AverageWishlistsPerUser = averageWishlistsPerUser,
-                PublicWishlists = publicWishlists,
-                PrivateWishlists = privateWishlists,
-                RecentActivity = recentActivity
+                IsSuccess = true,
+                Message = "Global wishlist stats retrieved",
+                Value = new GlobalWishlistStats
+                {
+                    TotalUsers = totalUsers,
+                    TotalWishlists = totalWishlists,
+                    TotalItems = totalItems,
+                    TotalValue = totalValue,
+                    AverageItemsPerWishlist = averageItemsPerWishlist,
+                    AverageWishlistsPerUser = averageWishlistsPerUser,
+                    PublicWishlists = publicWishlists,
+                    PrivateWishlists = privateWishlists,
+                    RecentActivity = recentActivity
+                }
             };
         }
 
