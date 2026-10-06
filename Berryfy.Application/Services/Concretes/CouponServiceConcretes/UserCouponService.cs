@@ -1,4 +1,5 @@
 using AutoMapper;
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.AuthDtos.Responses;
 using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
@@ -28,11 +29,15 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
         }
 
 
-        public async Task<bool> AddCouponToAllUsersAsync(int couponId)
+        public async Task<ApplicationResponse<bool>> AddCouponToAllUsersAsync(int couponId)
         {
             if (couponId <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon ID"
+                };
             }
 
             var users = await _userService.GetAllUsers();
@@ -44,52 +49,85 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
                 if (addedCouponToUser == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to add coupon to user"
+                    };
                 }
             }
 
-            return true;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon added to all users successfully"
+            };
         }
 
-        public async Task<bool> AddCouponToNewUsersAsync(int couponId)
+        public async Task<ApplicationResponse<bool>> AddCouponToNewUsersAsync(int couponId)
         {
-            if (couponId <= 0 || !await _couponService.ExistsByIdAsync(couponId)) return false;
+            if (couponId <= 0 || ! _couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value) return new ApplicationResponse<bool>
+            {
+                IsSuccess = false,
+                ErrorMessage = "Invalid coupon ID"
+            };
             var users = await _userService.GetAllUsers();
             foreach (var userId in users.Select(u => u.Id).Distinct())
             {
-                if (await _orderRepository.UserHasPaidOrderAsync(userId)) continue;
+                if (_orderRepository.UserHasPaidOrderAsync(userId).GetAwaiter().GetResult().Value) continue;
                 var addedCoupon = await AddCouponToUserAsync(userId, couponId);
 
                 if (addedCoupon == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to add coupon to user"
+                    };
                 }
             }
 
-            return true;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon added to new users successfully"
+            };
         }
 
-        public async Task<UserCouponResponse> AddCouponToUserAsync(int userId, int couponId)
+        public async Task<ApplicationResponse<UserCouponResponse>> AddCouponToUserAsync(int userId, int couponId)
         {
             if(userId <= 0 || couponId <= 0)
             {
-                return null;
+                return new ApplicationResponse<UserCouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid user or coupon ID"
+                };
             }
 
-            var userExists = await _userService.IsUserExistsByIdAsync(userId);
-            var couponExists = await _couponService.ExistsByIdAsync(couponId);
+            var userExists = _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
+            var couponExists = _couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value;
 
             if (!userExists || !couponExists)
             {
-                return null;
+                return new ApplicationResponse<UserCouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User or coupon not found"
+                };
             }
 
-            var addedCouponToUser = await _userCouponRepository.AddCouponToUserAsync(userId, couponId);
+            var addedCouponToUser = _userCouponRepository.AddCouponToUserAsync(userId, couponId).GetAwaiter().GetResult().Value;
             var userCouponDto = UserCouponResponse.MapFromUserCoupon(addedCouponToUser);
-            return userCouponDto;
+            return new ApplicationResponse<UserCouponResponse>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon added to user successfully",
+                Value = userCouponDto
+            };
         }
 
-        public async Task<bool> AddCouponToUsersAsync(List<int> userIds, int couponId)
+        public async Task<ApplicationResponse<bool>> AddCouponToUsersAsync(List<int> userIds, int couponId)
         {
             foreach( var userId in userIds)
             {
@@ -97,126 +135,212 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
                 if(addedCoupon == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to add coupon to user"
+                    };
                 }
             }
 
-            return true;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon added to users successfully"
+            };
         }
 
-        public async Task<bool> DisableCouponToUser(int userId, int couponId)
+        public async Task<ApplicationResponse<bool>> DisableCouponToUser(int userId, int couponId)
         {
-            var userExists = await _userService.IsUserExistsByIdAsync(userId);
-            var couponExists = await _couponService.GetByIdAsync(couponId);
+            var userExists = _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
+            var couponExists = _couponService.GetByIdAsync(couponId).GetAwaiter().GetResult().Value;
 
             if (!userExists || couponExists == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User or coupon not found"
+                };
             }
 
             List<CouponResponse> userHasCoupons = CouponResponse.MapFromCoupon(
-                (await _userCouponRepository.GetCouponsByUserIdAsync(userId)));
+                (_userCouponRepository.GetCouponsByUserIdAsync(userId).GetAwaiter().GetResult().Value));
 
             if (!userHasCoupons.Any(i => i.Code == couponExists.Code))
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found for user"
+                };
             }
 
             var disabledCoupon = await _userCouponRepository.DisableCouponForUserAsync(userId, couponId);
 
-            return disabledCoupon;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon disabled for user successfully"
+            };
         }
 
-        public async Task<List<CouponResponse>> GetCouponsByUserIdAsync(int userId)
+        public async Task<ApplicationResponse<List<CouponResponse>>> GetCouponsByUserIdAsync(int userId)
         {
             if (!await _userService.IsUserExistsByIdAsync(userId))
             {
-                return null;
+                return new ApplicationResponse<List<CouponResponse>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User not found"
+                };
             }
 
             List<CouponResponse> coupons = 
-                CouponResponse.MapFromCoupon(await _userCouponRepository.GetCouponsByUserIdAsync(userId));
+                CouponResponse.MapFromCoupon(_userCouponRepository.GetCouponsByUserIdAsync(userId).GetAwaiter().GetResult().Value);
 
             if(coupons == null)
             {
-                return null;
+                return new ApplicationResponse<List<CouponResponse>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "No coupons found for user"
+                };
             }
 
-            return coupons.ToList();
+            return new ApplicationResponse<List<CouponResponse>>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupons retrieved successfully",
+                Value = coupons.ToList()
+            };
         }
 
-        public async Task<List<UserResponse>> GetUsersByCouponIdAsync(int couponId)
+        public async Task<ApplicationResponse<List<UserResponse>>> GetUsersByCouponIdAsync(int couponId)
         {
-            if (!await _couponService.ExistsByIdAsync(couponId))
+            if (!_couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value)
             {
-                return null;
+                return new ApplicationResponse<List<UserResponse>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found"
+                };
             }
 
             List<UserResponse> userList = 
-                UserResponse.MapFromUser(await _userCouponRepository.GetUsersByCouponIdAsync(couponId));
+                UserResponse.MapFromUser(_userCouponRepository.GetUsersByCouponIdAsync(couponId).GetAwaiter().GetResult().Value);
 
-            return userList.ToList();
+            return new ApplicationResponse<List<UserResponse>>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Users retrieved successfully",
+                Value = userList.ToList()
+            };
         }
 
-        public async Task<bool> IsCouponUsedByUser(int userId, string couponCode)
+        public async Task<ApplicationResponse<bool>> IsCouponUsedByUser(int userId, string couponCode)
         {
-            var userExists = await _userService.IsUserExistsByIdAsync(userId);
-            var couponExists = await _couponService.ExistsByCodeAsync(couponCode);
+            var userExists =  _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
+            var couponExists = _couponService.ExistsByCodeAsync(couponCode).GetAwaiter().GetResult().Value;
 
             if (!userExists || !couponExists)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User or coupon not found"
+                };
             }
 
-            var isCouponUsed = await _userCouponRepository.IsCouponUsedByUserAsync(userId, couponCode);
+            var isCouponUsed = _userCouponRepository.IsCouponUsedByUserAsync(userId, couponCode).GetAwaiter().GetResult().Value;
 
-            return isCouponUsed;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon usage checked successfully",
+                Value = isCouponUsed
+            };
         }
 
-        public async Task<bool> MarkCouponAsUsedAsync(int userId, int couponId, int orderId)
-        {
-            if (userId <= 0 || couponId <= 0 || orderId <= 0)
-            {
-                return false;
-            }
-
-            var userExists = await _userService.IsUserExistsByIdAsync(userId);
-            var couponExists = await _couponService.ExistsByIdAsync(couponId);
-
-            if (!userExists || !couponExists)
-            {
-                return false;
-            }
-
-            return await _userCouponRepository.MarkCouponAsUsedAsync(userId, couponId, orderId);
-        }
-
-        public async Task<bool> RevertCouponUsageAsync(int userId, int couponId, int orderId)
+        public async Task<ApplicationResponse<bool>> MarkCouponAsUsedAsync(int userId, int couponId, int orderId)
         {
             if (userId <= 0 || couponId <= 0 || orderId <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid user, coupon, or order ID"
+                };
             }
 
-            var userExists = await _userService.IsUserExistsByIdAsync(userId);
-            var couponExists = await _couponService.ExistsByIdAsync(couponId);
+            var userExists = _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
+            var couponExists = _couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value;
 
             if (!userExists || !couponExists)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User or coupon not found"
+                };
             }
 
-            return await _userCouponRepository.RevertCouponUsageAsync(userId, couponId, orderId);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon marked as used successfully",
+                Value = _userCouponRepository.MarkCouponAsUsedAsync(userId, couponId, orderId).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<List<int>> GetCouponIdsUsedInOrderAsync(int orderId)
+        public async Task<ApplicationResponse<bool>> RevertCouponUsageAsync(int userId, int couponId, int orderId)
+        {
+            if (userId <= 0 || couponId <= 0 || orderId <= 0)
+            {
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid user, coupon, or order ID"
+                };
+            }
+
+            var userExists = _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
+            var couponExists = _couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value;
+
+            if (!userExists || !couponExists)
+            {
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User or coupon not found"
+                };
+            }
+
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon usage reverted successfully",
+                Value = _userCouponRepository.RevertCouponUsageAsync(userId, couponId, orderId).GetAwaiter().GetResult().Value
+            };
+        }
+
+        public async Task<ApplicationResponse<List<int>>> GetCouponIdsUsedInOrderAsync(int orderId)
         {
             if (orderId <= 0)
             {
-                return new List<int>();
+                return new ApplicationResponse<List<int>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid order ID"
+                };
             }
 
-            return await _userCouponRepository.GetCouponIdsUsedInOrderAsync(orderId);
+            return new ApplicationResponse<List<int>>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon IDs retrieved successfully",
+                Value = _userCouponRepository.GetCouponIdsUsedInOrderAsync(orderId).GetAwaiter().GetResult().Value
+            };
         }
     }
 }
