@@ -1,4 +1,5 @@
-﻿using Berryfy.Application.Dtos.CategoryDtos.Responses;
+﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Dtos.WishlistDtos.Requests;
 using Berryfy.Application.Dtos.WishlistDtos.Responses;
@@ -21,25 +22,37 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
 
         }
 
-        public async Task<WishlistResponse> GetByIdAsync(int id)
+        public async Task<ApplicationResponse<WishlistResponse>> GetByIdAsync(int id)
         {
-            var wishlist = await _wishlistRepository.GetByIdAsync(id);
-            return wishlist == null ? null : MapToDto(wishlist);
+            var wishlist = _wishlistRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<WishlistResponse>
+            {
+                IsSuccess = wishlist != null,
+                Value = wishlist == null ? null : MapToDto(wishlist)
+            };
         }
 
-        public async Task<WishlistResponse> GetUserDefaultWishlistAsync(int userId)
+        public async Task<ApplicationResponse<WishlistResponse>> GetUserDefaultWishlistAsync(int userId)
         {
-            var wishlist = await _wishlistRepository.GetUserDefaultWishlistAsync(userId);
-            return MapToDto(wishlist);
+            var wishlist = _wishlistRepository.GetUserDefaultWishlistAsync(userId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<WishlistResponse>
+            {
+                IsSuccess = wishlist != null,
+                Value = wishlist == null ? null : MapToDto(wishlist)
+            };
         }
 
-        public async Task<IEnumerable<WishlistResponse>> GetUserWishlistsAsync(int userId)
+        public async Task<ApplicationResponse<IEnumerable<WishlistResponse>>> GetUserWishlistsAsync(int userId)
         {
-            var wishlists = await _wishlistRepository.GetUserWishlistsAsync(userId);
-            return wishlists.Select(MapToDto);
+            var wishlists = _wishlistRepository.GetUserWishlistsAsync(userId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<IEnumerable<WishlistResponse>>
+            {
+                IsSuccess = true,
+                Value = wishlists.Select(MapToDto)
+            };
         }
 
-        public async Task<WishlistResponse> CreateAsync(int userId, CreateWishlist createWishlistDto)
+        public async Task<ApplicationResponse<WishlistResponse>> CreateAsync(int userId, CreateWishlist createWishlistDto)
         {
             var wishlist = new Wishlist
             {
@@ -49,40 +62,47 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 IsDefault = false // Only the first wishlist should be default
             };
 
-            var userWishlistCount = await _wishlistRepository.GetUserWishlistCountAsync(userId);
+            var userWishlistCount = _wishlistRepository.GetUserWishlistCountAsync(userId).GetAwaiter().GetResult().Value;
             if (userWishlistCount == 0)
             {
                 wishlist.IsDefault = true;
             }
 
-            var createdWishlist = await _wishlistRepository.CreateAsync(wishlist);
-            return MapToDto(createdWishlist);
+            var createdWishlist = _wishlistRepository.CreateAsync(wishlist).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<WishlistResponse>
+            {
+                IsSuccess = true,
+                Value = MapToDto(createdWishlist)
+            };
         }
 
-        public async Task<WishlistResponse> UpdateAsync(int id, UpdateWishlist updateWishlistDto)
+        public async Task<ApplicationResponse<WishlistResponse>> UpdateAsync(int id, UpdateWishlist updateWishlistDto)
         {
-            var wishlist = await _wishlistRepository.GetByIdAsync(id);
-            if (wishlist == null) return null;
+            var wishlist = _wishlistRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            if (wishlist == null) return new ApplicationResponse<WishlistResponse> { IsSuccess = false, ErrorMessage = "Wishlist not found" };
 
             wishlist.Name = updateWishlistDto.Name;
             wishlist.IsPublic = updateWishlistDto.IsPublic;
 
-            var updatedWishlist = await _wishlistRepository.UpdateAsync(wishlist);
-            return MapToDto(updatedWishlist);
+            var updatedWishlist = _wishlistRepository.UpdateAsync(wishlist).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<WishlistResponse>
+            {
+                IsSuccess = true,
+                Value = MapToDto(updatedWishlist)
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApplicationResponse<bool>> DeleteAsync(int id)
         {
-            var wishlist = await _wishlistRepository.GetByIdAsync(id);
-            if (wishlist == null) return false;
-
+            var wishlist = _wishlistRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            if (wishlist == null) return new ApplicationResponse<bool> { IsSuccess = false, ErrorMessage = "Wishlist not found" };
 
             if (wishlist.IsDefault)
             {
-                var userWishlistCount = await _wishlistRepository.GetUserWishlistCountAsync(wishlist.UserId);
-                if (userWishlistCount <= 1) return false;
+                var userWishlistCount = _wishlistRepository.GetUserWishlistCountAsync(wishlist.UserId).GetAwaiter().GetResult().Value;
+                if (userWishlistCount <= 1) return new ApplicationResponse<bool> { IsSuccess = false, ErrorMessage = "Cannot delete the default wishlist" };
 
-                var userWishlists = await _wishlistRepository.GetUserWishlistsAsync(wishlist.UserId);
+                var userWishlists = _wishlistRepository.GetUserWishlistsAsync(wishlist.UserId).GetAwaiter().GetResult().Value;
                 var nextWishlist = userWishlists.FirstOrDefault(w => w.Id != id);
                 if (nextWishlist != null)
                 {
@@ -91,32 +111,41 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 }
             }
 
-            return await _wishlistRepository.DeleteAsync(id);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = _wishlistRepository.DeleteAsync(id).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> ExistsAsync(int id)
+        public async Task<ApplicationResponse<bool>> ExistsAsync(int id)
         {
-            return await _wishlistRepository.ExistsAsync(id);
+            var exists = _wishlistRepository.ExistsAsync(id).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = exists
+            };
         }
 
-        public async Task<Dtos.WishlistDtos.Responses.WishlistItem> AddItemAsync(int userId, AddToWishlist addToWishlistDto)
+        public async Task<ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem>> AddItemAsync(int userId, AddToWishlist addToWishlistDto)
         {
             Wishlist wishlist;
             if (addToWishlistDto.WishlistId.HasValue)
             {
-                wishlist = await _wishlistRepository.GetByIdAsync(addToWishlistDto.WishlistId.Value);
-                if (wishlist == null || wishlist.UserId != userId) return null;
+                wishlist = _wishlistRepository.GetByIdAsync(addToWishlistDto.WishlistId.Value).GetAwaiter().GetResult().Value;
+                if (wishlist == null || wishlist.UserId != userId) return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = false, ErrorMessage = "Wishlist not found" };
             }
             else
             {
-                wishlist = await _wishlistRepository.GetUserDefaultWishlistAsync(userId);
+                wishlist = _wishlistRepository.GetUserDefaultWishlistAsync(userId).GetAwaiter().GetResult().Value;
             }
 
-            var productExists = await _productRepository.ExistsByIdAsync(addToWishlistDto.ProductId);
-            if (!productExists) return null;
+            var productExists = _productRepository.ExistsByIdAsync(addToWishlistDto.ProductId).GetAwaiter().GetResult().Value;
+            if (!productExists) return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = false, ErrorMessage = "Product not found" };
 
-            var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlist.Id, addToWishlistDto.ProductId);
-            if (existingItem != null) return MapToItemDto(existingItem);
+            var existingItem = _wishlistRepository.GetWishlistItemAsync(wishlist.Id, addToWishlistDto.ProductId).GetAwaiter().GetResult().Value;
+            if (existingItem != null) return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = true, Value = MapToItemDto(existingItem) };
 
             var wishlistItem = new Domain.Entities.WishlistEntities.WishlistItem
             {
@@ -126,49 +155,51 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 Priority = addToWishlistDto.Priority
             };
 
-            var addedItem = await _wishlistRepository.AddItemAsync(wishlistItem);
-            return MapToItemDto(addedItem);
+            var addedItem = _wishlistRepository.AddItemAsync(wishlistItem).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = true, Value = MapToItemDto(addedItem) };
         }
 
-        public async Task<Dtos.WishlistDtos.Responses.WishlistItem> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItem updateItemDto)
+        public async Task<ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem>> UpdateItemAsync(int wishlistId, int productId, UpdateWishlistItem updateItemDto)
         {
-            var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlistId, productId);
-            if (existingItem == null) return null;
+            var existingItem = _wishlistRepository.GetWishlistItemAsync(wishlistId, productId).GetAwaiter().GetResult().Value;
+            if (existingItem == null) return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = false, ErrorMessage = "Item not found" };
 
             existingItem.Notes = updateItemDto.Notes;
             existingItem.Priority = updateItemDto.Priority;
 
-            var updatedItem = await _wishlistRepository.UpdateItemAsync(existingItem);
-            return MapToItemDto(updatedItem);
+            var updatedItem = _wishlistRepository.UpdateItemAsync(existingItem).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<Dtos.WishlistDtos.Responses.WishlistItem> { IsSuccess = true, Value = MapToItemDto(updatedItem) };
         }
 
-        public async Task<bool> RemoveItemAsync(int wishlistId, int productId)
+        public async Task<ApplicationResponse<bool>> RemoveItemAsync(int wishlistId, int productId)
         {
-            return await _wishlistRepository.RemoveItemAsync(wishlistId, productId);
+            return new ApplicationResponse<bool> 
+            { IsSuccess = true, Value = _wishlistRepository.RemoveItemAsync(wishlistId, productId).GetAwaiter().GetResult().Value };
         }
 
-        public async Task<bool> IsProductInWishlistAsync(int userId, int productId)
+        public async Task<ApplicationResponse<bool>> IsProductInWishlistAsync(int userId, int productId)
         {
-            return await _wishlistRepository.IsProductInWishlistAsync(userId, productId);
+            return new ApplicationResponse<bool> 
+            { IsSuccess = true, Value =_wishlistRepository.IsProductInWishlistAsync(userId, productId).GetAwaiter().GetResult().Value };
         }
 
-        public async Task<IEnumerable<Dtos.WishlistDtos.Responses.WishlistItem>> GetWishlistItemsAsync(int wishlistId)
+        public async Task<ApplicationResponse<IEnumerable<Dtos.WishlistDtos.Responses.WishlistItem>>> GetWishlistItemsAsync(int wishlistId)
         {
-            var items = await _wishlistRepository.GetWishlistItemsAsync(wishlistId);
-            return items.Select(MapToItemDto);
+            var items = _wishlistRepository.GetWishlistItemsAsync(wishlistId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<IEnumerable<Dtos.WishlistDtos.Responses.WishlistItem>> { IsSuccess = true, Value = items.Select(MapToItemDto) };
         }
 
-        public async Task<bool> AddMultipleItemsAsync(int userId, int wishlistId, List<int> productIds)
+        public async Task<ApplicationResponse<bool>> AddMultipleItemsAsync(int userId, int wishlistId, List<int> productIds)
         {
-            var wishlist = await _wishlistRepository.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.UserId != userId) return false;
+            var wishlist = _wishlistRepository.GetByIdAsync(wishlistId).GetAwaiter().GetResult().Value;
+            if (wishlist == null || wishlist.UserId != userId) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             foreach (var productId in productIds)
             {
-                var productExists = await _productRepository.ExistsByIdAsync(productId);
+                var productExists = _productRepository.ExistsByIdAsync(productId).GetAwaiter().GetResult().Value;
                 if (!productExists) continue;
 
-                var existingItem = await _wishlistRepository.GetWishlistItemAsync(wishlistId, productId);
+                var existingItem = _wishlistRepository.GetWishlistItemAsync(wishlistId, productId).GetAwaiter().GetResult().Value;
                 if (existingItem != null) continue;
 
                 var wishlistItem = new Domain.Entities.WishlistEntities.WishlistItem
@@ -181,57 +212,57 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 await _wishlistRepository.AddItemAsync(wishlistItem);
             }
 
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
-        public async Task<bool> RemoveMultipleItemsAsync(int wishlistId, List<int> productIds)
+        public async Task<ApplicationResponse<bool>> RemoveMultipleItemsAsync(int wishlistId, List<int> productIds)
         {
             foreach (var productId in productIds)
             {
                 await _wishlistRepository.RemoveItemAsync(wishlistId, productId);
             }
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
-        public async Task<bool> MoveItemsToWishlistAsync(int fromWishlistId, int toWishlistId, List<int> productIds)
+        public async Task<ApplicationResponse<bool>> MoveItemsToWishlistAsync(int fromWishlistId, int toWishlistId, List<int> productIds)
         {
-            var fromWishlist = await _wishlistRepository.GetByIdAsync(fromWishlistId);
-            var toWishlist = await _wishlistRepository.GetByIdAsync(toWishlistId);
+            var fromWishlist = _wishlistRepository.GetByIdAsync(fromWishlistId).GetAwaiter().GetResult().Value;
+            var toWishlist = _wishlistRepository.GetByIdAsync(toWishlistId).GetAwaiter().GetResult().Value;
 
             if (fromWishlist == null || toWishlist == null || fromWishlist.UserId != toWishlist.UserId)
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             foreach (var productId in productIds)
             {
-                var item = await _wishlistRepository.GetWishlistItemAsync(fromWishlistId, productId);
+                var item = _wishlistRepository.GetWishlistItemAsync(fromWishlistId, productId).GetAwaiter().GetResult().Value;
                 if (item == null) continue;
 
-                var existingInTarget = await _wishlistRepository.GetWishlistItemAsync(toWishlistId, productId);
+                var existingInTarget = _wishlistRepository.GetWishlistItemAsync(toWishlistId, productId).GetAwaiter().GetResult().Value;
                 if (existingInTarget != null) continue;
 
                 item.WishlistId = toWishlistId;
                 await _wishlistRepository.UpdateItemAsync(item);
             }
 
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
-        public async Task<bool> ClearWishlistAsync(int wishlistId)
+        public async Task<ApplicationResponse<bool>> ClearWishlistAsync(int wishlistId)
         {
-            var items = await _wishlistRepository.GetWishlistItemsAsync(wishlistId);
+            var items = _wishlistRepository.GetWishlistItemsAsync(wishlistId).GetAwaiter().GetResult().Value;
             foreach (var item in items)
             {
                 await _wishlistRepository.RemoveItemAsync(wishlistId, item.ProductId);
             }
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
         public async Task<WishlistSummary> GetUserSummaryAsync(int userId)
         {
-            var totalWishlists = await _wishlistRepository.GetUserWishlistCountAsync(userId);
-            var totalItems = await _wishlistRepository.GetUserTotalItemsAsync(userId);
-            var totalValue = await _wishlistRepository.GetUserTotalValueAsync(userId);
-            var recentWishlists = (await GetUserWishlistsAsync(userId)).Take(3).ToList();
+            var totalWishlists =  _wishlistRepository.GetUserWishlistCountAsync(userId).GetAwaiter().GetResult().Value;
+            var totalItems =  _wishlistRepository.GetUserTotalItemsAsync(userId).GetAwaiter().GetResult().Value;
+            var totalValue =  _wishlistRepository.GetUserTotalValueAsync(userId).GetAwaiter().GetResult().Value;
+            var recentWishlists = GetUserWishlistsAsync(userId).GetAwaiter().GetResult().Value.Take(3).ToList();
 
             return new WishlistSummary
             {
@@ -242,20 +273,21 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             };
         }
 
-        public async Task<bool> ShareWishlistAsync(int wishlistId, bool isPublic)
+        public async Task<ApplicationResponse<bool>> ShareWishlistAsync(int wishlistId, bool isPublic)
         {
-            var wishlist = await _wishlistRepository.GetByIdAsync(wishlistId);
-            if (wishlist == null) return false;
+            var wishlist = _wishlistRepository.GetByIdAsync(wishlistId).GetAwaiter().GetResult().Value;
+            if (wishlist == null) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             wishlist.IsPublic = isPublic;
             await _wishlistRepository.UpdateAsync(wishlist);
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
-        public async Task<WishlistResponse> DuplicateWishlistAsync(int wishlistId, string newName)
+        public async Task<ApplicationResponse<WishlistResponse>> DuplicateWishlistAsync(int wishlistId, string newName)
         {
-            var originalWishlist = await _wishlistRepository.GetByIdAsync(wishlistId);
-            if (originalWishlist == null) return null;
+            var originalWishlist = _wishlistRepository.GetByIdAsync(wishlistId).GetAwaiter().GetResult().Value;
+            if (originalWishlist == null) 
+                return new ApplicationResponse<WishlistResponse> { IsSuccess = false, Value = new WishlistResponse { Id = 0, Name = "Original wishlist not found" } };
 
             var newWishlist = new Wishlist
             {
@@ -265,7 +297,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 IsDefault = false
             };
 
-            var createdWishlist = await _wishlistRepository.CreateAsync(newWishlist);
+            var createdWishlist = _wishlistRepository.CreateAsync(newWishlist).GetAwaiter().GetResult().Value;
 
 
             foreach (var item in originalWishlist.WishlistItems)
@@ -281,19 +313,19 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 await _wishlistRepository.AddItemAsync(newItem);
             }
 
-            return await GetByIdAsync(createdWishlist.Id);
+            return new ApplicationResponse<WishlistResponse> { IsSuccess = true, Value = GetByIdAsync(createdWishlist.Id).GetAwaiter().GetResult().Value };
         }
 
-        public async Task<IEnumerable<WishlistResponse>> GetAllWishlistsAsync()
+        public async Task<ApplicationResponse<IEnumerable<WishlistResponse>>> GetAllWishlistsAsync()
         {
-            var allWishlists = await _wishlistRepository.GetAllWishlistsAsync();
-            return allWishlists.Select(MapToDto);
+            var allWishlists = _wishlistRepository.GetAllWishlistsAsync().GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<IEnumerable<WishlistResponse>> { IsSuccess = true, Value = allWishlists.Select(MapToDto) };
         }
 
-        public async Task<GlobalWishlistStats> GetGlobalStatsAsync()
+        public async Task<ApplicationResponse<GlobalWishlistStats>> GetGlobalStatsAsync()
         {
-            var globalStats = await _wishlistRepository.GetGlobalStatsAsync();
-            return new GlobalWishlistStats
+            var globalStats = _wishlistRepository.GetGlobalStatsAsync().GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<GlobalWishlistStats> { IsSuccess = true, Value = new GlobalWishlistStats
             {
                 AverageItemsPerWishlist = globalStats.AverageItemsPerWishlist,
                 TotalUsers = globalStats.TotalUsers,
@@ -309,7 +341,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                     NewWishlists = a.NewWishlists,
                     NewItems = a.NewItems
                 }).ToList()
-            };
+            }};
         }
 
         private WishlistResponse MapToDto(Wishlist wishlist)
