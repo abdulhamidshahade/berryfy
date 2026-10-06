@@ -9,6 +9,7 @@ using Berryfy.Domain.Repositories.OrderInterfaces;
 using Microsoft.Extensions.Logging;
 using Berryfy.Application.Dtos.OrderDtos.Requests;
 using Berryfy.Application.Dtos.OrderDtos.Responses;
+using Berryfy.Application.Dtos;
 
 namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 {
@@ -37,14 +38,14 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
         }
 
 
-        public async Task<OrderTotal> CalculateOrderTotalsAsync(int cartId)
+        public async Task<ApplicationResponse<OrderTotal>> CalculateOrderTotalsAsync(int cartId)
         {
             var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
                 ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
 
             if (cart == null)
             {
-                return null;
+                return new ApplicationResponse<OrderTotal> { IsSuccess = false, Value = null };
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
@@ -52,25 +53,29 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             decimal taxAmount = PricingPolicy.Tax(subTotal, discountTotal);
             decimal shippingAmount = PricingPolicy.Shipping(subTotal);
 
-            return new OrderTotal
+            return new ApplicationResponse<OrderTotal>
             {
-                SubTotal = subTotal,
-                DiscountTotal = discountTotal,
-                TaxAmount = taxAmount,
-                ShippingAmount = shippingAmount,
-                Total = subTotal - discountTotal + taxAmount + shippingAmount
+                IsSuccess = true,
+                Value = new OrderTotal
+                {
+                    SubTotal = subTotal,
+                    DiscountTotal = discountTotal,
+                    TaxAmount = taxAmount,
+                    ShippingAmount = shippingAmount,
+                    Total = subTotal - discountTotal + taxAmount + shippingAmount
+                }
             };
         }
 
-        public async Task<bool> CancelOrderAsync(int orderId, string reason)
+        public async Task<ApplicationResponse<bool>> CancelOrderAsync(int orderId, string reason)
         {
             var result = await _orderCancellationService.CancelOrderAsync(orderId, reason);
-            return result.IsSuccess;
+            return new ApplicationResponse<bool> { IsSuccess = result.IsSuccess, Value = result.IsSuccess };
         }
 
-        public async Task<Order?> CreateOrderFromCartAsync(int cartId, CreateOrder orderDto)
+        public async Task<ApplicationResponse<Order?>> CreateOrderFromCartAsync(int cartId, CreateOrder orderDto)
         {
-            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
+            var cart = _cartService.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (cart == null)
             {
                 cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
@@ -78,18 +83,18 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
             if (cart == null || orderDto.UserId <= 0 || cart.UserId != orderDto.UserId)
             {
-                return null;
+                return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
 
             var existingOrder = await _orderRepository.GetOrderByCartIdAsync(cartId);
             if (existingOrder != null)
             {
-                return null;
+                return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
 
             if (cart.CartItems == null || !cart.CartItems.Any())
             {
-                return null;
+                return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
@@ -124,11 +129,11 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 UpdatedAt = DateTime.UtcNow
             };
 
-            order = await _orderRepository.CreateOrderAsync(order);
+            order = _orderRepository.CreateOrderAsync(order).GetAwaiter().GetResult().Value;
 
             if (order == null)
             {
-                return null;
+                return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
 
             foreach (var cartItem in cart.CartItems)
@@ -153,23 +158,23 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 throw new InvalidOperationException($"Failed to update cart {cartId} status to PendingPayment. Order creation aborted.");
             }
 
-            return order;
+            return new ApplicationResponse<Order?> { IsSuccess = true, Value = order };
         }
 
-        public async Task<bool> RefundOrderAsync(int orderId, string reason)
+        public async Task<ApplicationResponse<bool>> RefundOrderAsync(int orderId, string reason)
         {
             var result = await _refundOrchestrationService.ProcessRefundAsync(orderId, reason);
-            return result.IsSuccess;
+            return new ApplicationResponse<bool> { IsSuccess = result.IsSuccess, Value = result.IsSuccess };
         }
 
-        public async Task<bool> UpdateOrderStatusAsync(Order order, OrderStatus newStatus)
+        public async Task<ApplicationResponse<bool>> UpdateOrderStatusAsync(Order order, OrderStatus newStatus)
         {
-            if (order == null || !Enum.IsDefined(newStatus)) return false;
+            if (order == null || !Enum.IsDefined(newStatus)) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             // Settlement and returns must use their dedicated workflows.
-            if (newStatus is OrderStatus.Cancelled or OrderStatus.Refunded) return false;
-            if (order.Status == newStatus) return true;
-            if (!order.isPaid) return false;
+            if (newStatus is OrderStatus.Cancelled or OrderStatus.Refunded) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
+            if (order.Status == newStatus) return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
+            if (!order.isPaid) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             var allowed = (order.Status, newStatus) switch
             {
@@ -179,25 +184,25 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 (OrderStatus.Delivered, OrderStatus.Completed) => true,
                 _ => false
             };
-            if (!allowed) return false;
+            if (!allowed) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
-            var saved = await _orderRepository.UpdateOrderStatusAsync(order.Id, newStatus);
+            var saved = _orderRepository.UpdateOrderStatusAsync(order.Id, newStatus).GetAwaiter().GetResult().Value;
             if (saved)
             {
                 order.Status = newStatus;
                 order.UpdatedAt = DateTime.UtcNow;
                 if (newStatus == OrderStatus.Completed) order.CompletedAt = DateTime.UtcNow;
             }
-            return saved;
+            return new ApplicationResponse<bool> { IsSuccess = saved, Value = saved };
         }
 
-        public async Task<string> GenerateUniqueReferenceNumberAsync()
+        public async Task<ApplicationResponse<string>> GenerateUniqueReferenceNumberAsync()
         {
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             var randomComponent = new Random().Next(1000, 9999);
             var referenceNumber = $"ORD-{timestamp}-{randomComponent}";
 
-            var existingOrder = await _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber);
+            var existingOrder = _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber).GetAwaiter().GetResult().Value;
 
             if (existingOrder != null)
             {
@@ -205,48 +210,48 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 referenceNumber = $"ORD-{timestamp}-{randomComponent}-{additionalRandom}";
             }
 
-            return referenceNumber;
+            return new ApplicationResponse<string> { IsSuccess = true, Value = referenceNumber };
         }
 
-        public async Task<OrderResponse?> GetOrderByIdAsync(int orderId)
+        public async Task<ApplicationResponse<OrderResponse?>> GetOrderByIdAsync(int orderId)
         {
-            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
 
-            return OrderResponse.MapFromOrder(order);
+            return new ApplicationResponse<OrderResponse?> { IsSuccess = true, Value = OrderResponse.MapFromOrder(order) };
         }
 
-        public async Task<Order?> GetOrderByReferenceNumberAsync(string referenceNumber)
+        public async Task<ApplicationResponse<Order?>> GetOrderByReferenceNumberAsync(string referenceNumber)
         {
-            var order = await _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber);
-            return order;
+            var order = _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<Order?> { IsSuccess = true, Value = order };
         }
 
-        public async Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
+        public async Task<ApplicationResponse<List<Order>>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
         {
-            var orders = await _orderRepository.GetOrdersByStatusAsync(status, page, pageSize);
-            return orders;
+            var orders = _orderRepository.GetOrdersByStatusAsync(status, page, pageSize).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<List<Order>>() { IsSuccess = true, Value = orders };
         }
 
-        public async Task<List<OrderResponse>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
+        public async Task<ApplicationResponse<List<OrderResponse>>> GetUserOrdersAsync(int userId, int page = 1, int pageSize = 10)
         {
-            var orders = await _orderRepository.GetUserOrdersAsync(userId, page, pageSize);
+            var orders = _orderRepository.GetUserOrdersAsync(userId, page, pageSize).GetAwaiter().GetResult().Value;
 
             var mappedOrder = OrderResponse.MapFromOrder(orders);
-            return mappedOrder;
+            return new ApplicationResponse<List<OrderResponse>> { IsSuccess = true, Value = mappedOrder };
         }
 
-        public async Task<List<OrderResponse>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
+        public async Task<ApplicationResponse<List<OrderResponse>>> GetAllOrdersAsync(int page = 1, int pageSize = 50)
         {
-            var orders = await _orderRepository.GetAllOrdersAsync(page, pageSize);
+            var orders = _orderRepository.GetAllOrdersAsync(page, pageSize).GetAwaiter().GetResult().Value;
 
             var mappedOrders = OrderResponse.MapFromOrder(orders);
-            return mappedOrders;
+            return new ApplicationResponse<List<OrderResponse>> { IsSuccess = true, Value = mappedOrders };
         }
 
 
         public async Task<bool> ProcessOrderAsync(int orderId)
         {
-            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
 
             if (order == null)
             {
@@ -258,39 +263,41 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 return false;
             }
 
-            var orderStatusUpdated = await UpdateOrderStatusAsync(order, OrderStatus.Processing);
+            var orderStatusUpdated = UpdateOrderStatusAsync(order, OrderStatus.Processing).GetAwaiter().GetResult().Value;
 
             return orderStatusUpdated;
         }
 
-        public Task<bool> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus)
+        public Task<ApplicationResponse<bool>> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus)
         {
-            return _orderRepository.UpdateOrderPaymentStatusAsync(order.Id, paymentStatus);
+            return _orderRepository.UpdateOrderPaymentStatusAsync(order.Id, paymentStatus).GetAwaiter().GetResult().Value
+                ? Task.FromResult(new ApplicationResponse<bool> { IsSuccess = true, Value = true })
+                : Task.FromResult(new ApplicationResponse<bool> { IsSuccess = true, Value = false });
         }
 
-        public async Task<Order?> GetOrderByCartIdAsync(int cartId)
+        public async Task<ApplicationResponse<Order>> GetOrderByCartIdAsync(int cartId)
         {
-            var order = await _orderRepository.GetOrderByCartIdAsync(cartId);
-            return order;
+            var order = _orderRepository.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<Order> { IsSuccess = true, Value = order };
         }
 
-        public async Task<bool> SyncOrderWithCartAsync(int orderId, int cartId)
+        public async Task<ApplicationResponse<bool>> SyncOrderWithCartAsync(int orderId, int cartId)
         {
-            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
             if (order == null || order.Status != OrderStatus.Pending || order.CartId != cartId)
             {
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = true, Value = false };
             }
 
-            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
+            var cart = _cartService.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (cart == null)
             {
-                cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                cart = _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null || cart.CartItems == null || !cart.CartItems.Any())
             {
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = true, Value = false };
             }
 
             decimal subTotal = cart.CartItems.Sum(item => item.UnitPrice * item.Quantity);
@@ -324,30 +331,30 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 await _orderRepository.CreateOrderItemAsync(orderItem);
             }
 
-            return await _orderRepository.UpdateOrderAsync(order);
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = await _orderRepository.UpdateOrderAsync(order) };
         }
 
-        public async Task<bool> DeductInventoryForPaidOrderAsync(int orderId)
+        public async Task<ApplicationResponse<bool>> DeductInventoryForPaidOrderAsync(int orderId)
         {
-            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
             if (order == null || order.OrderItems == null || !order.OrderItems.Any())
             {
                 _logger.LogWarning("DeductInventoryForPaidOrderAsync: order {OrderId} missing or has no items", orderId);
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = true, Value = false };
             }
 
             if (order.Status != OrderStatus.Pending)
             {
-                return true;
+                return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
             }
 
             foreach (var item in order.OrderItems)
             {
-                var ok = await _inventoryService.ConfirmStockDeductionAsync(
+                var ok = _inventoryService.ConfirmStockDeductionAsync(
                     item.ProductId,
                     item.Quantity,
                     orderId,
-                    "Order");
+                    "Order").GetAwaiter().GetResult().Value;
 
                 if (!ok)
                 {
@@ -356,11 +363,11 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                         orderId,
                         item.ProductId,
                         item.Quantity);
-                    return false;
+                    return new ApplicationResponse<bool> { IsSuccess = true, Value = false };
                 }
             }
 
-            return true;
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
     }
 }
