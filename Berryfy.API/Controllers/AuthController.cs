@@ -107,7 +107,7 @@ namespace Berryfy.API.Controllers
 
             if (loginResult.Token != string.Empty)
             {
-                var user = await _userService.GetUserByEmail(requestDto.Email);
+                var user = _userService.GetUserByEmail(requestDto.Email).GetAwaiter().GetResult().Value;
                 if (user != null)
                 {
                     var sessionId = GetSessionId();
