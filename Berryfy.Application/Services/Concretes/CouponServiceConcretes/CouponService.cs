@@ -1,4 +1,5 @@
-﻿using Berryfy.Application.Dtos.CouponDtos.Requests;
+﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.CouponDtos.Requests;
 using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 
@@ -16,120 +17,208 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             _couponRepository = couponRepository;
         }
 
-        public async Task<CouponResponse> GetByIdAsync(int id)
+        public async Task<ApplicationResponse<CouponResponse?>> GetByIdAsync(int id)
         {
             if(id <= 0)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse?>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon ID"
+                };
             }
 
-            var coupon = await _couponRepository.GetByIdAsync(id);
+            var coupon = _couponRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
 
             if (coupon == null)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse?>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found"
+                };
             }
 
-            return CouponResponse.MapFromCoupon(coupon);
+            return new ApplicationResponse<CouponResponse?>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon retrieved successfully",
+                Value = CouponResponse.MapFromCoupon(coupon)
+            };
         }
 
-        public async Task<CouponResponse> GetByCodeAsync(string code)
+        public async Task<ApplicationResponse<CouponResponse?>> GetByCodeAsync(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
             {
-                return null;
+                return new ApplicationResponse<CouponResponse?>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon code"
+                };
             }
 
-            var coupon = await _couponRepository.GetByCodeAsync(code);
+            var coupon = _couponRepository.GetByCodeAsync(code).GetAwaiter().GetResult().Value;
             if (coupon == null)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse?>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found"
+                };
             }
 
-            return CouponResponse.MapFromCoupon(coupon);
+            return new ApplicationResponse<CouponResponse?>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon retrieved successfully",
+                Value = CouponResponse.MapFromCoupon(coupon)
+            };
         }
 
-        public async Task<IEnumerable<CouponResponse>> GetAllAsync()
+        public async Task<ApplicationResponse<IEnumerable<CouponResponse>>> GetAllAsync()
         {
-            var coupons = await _couponRepository.GetAllAsync();
-            return CouponResponse.MapFromCoupon(coupons);
+            var coupons = _couponRepository.GetAllAsync().GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<IEnumerable<CouponResponse>>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupons retrieved successfully",
+                Value = CouponResponse.MapFromCoupon(coupons)
+            };
         }
 
-        public async Task<CouponResponse> CreateAsync(CreateCoupon request)
+        public async Task<ApplicationResponse<CouponResponse>> CreateAsync(CreateCoupon request)
         {
             if (request == null)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon request"
+                };
             }
 
-            if (await ExistsByCodeAsync(request.Code))
+            if (ExistsByCodeAsync(request.Code).GetAwaiter().GetResult().Value)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon with this code already exists"
+                };
             }
 
             var coupon = CreateCoupon.MapToCoupon(request);
-            var createdCoupon = await _couponRepository.CreateAsync(coupon);
+            var createdCoupon = _couponRepository.CreateAsync(coupon).GetAwaiter().GetResult().Value;
 
-            return CouponResponse.MapFromCoupon(createdCoupon);
+            return new ApplicationResponse<CouponResponse>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon created successfully",
+                Value = CouponResponse.MapFromCoupon(createdCoupon)
+            };
         }
 
-        public async Task<CouponResponse> UpdateAsync(int id, UpdateCoupon request)
+        public async Task<ApplicationResponse<CouponResponse>> UpdateAsync(int id, UpdateCoupon request)
         {
             if (request == null)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon request"
+                };
             }
 
-            var existingCoupon = await _couponRepository.GetByIdAsync(id);
-            
+            var existingCoupon = _couponRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+
             if (existingCoupon == null)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found"
+                };
             }
 
-            var isCouponExists = await GetByCodeAsync(request.Code);
+            var isCouponExists = _couponRepository.GetByCodeAsync(request.Code).GetAwaiter().GetResult().Value;
 
             if(isCouponExists != null && isCouponExists.Id != request.Id)
             {
-                return null;
+                return new ApplicationResponse<CouponResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon with this code already exists"
+                };
             }
 
             var mappedCoupon = UpdateCoupon.MapToCoupon(request);
 
-            var updatedCoupon = await _couponRepository.UpdateAsync(id, mappedCoupon);
-            return CouponResponse.MapFromCoupon(updatedCoupon);
+            var updatedCoupon = _couponRepository.UpdateAsync(id, mappedCoupon).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<CouponResponse>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon updated successfully",
+                Value = CouponResponse.MapFromCoupon(updatedCoupon)
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApplicationResponse<bool>> DeleteAsync(int id)
         {
             if(id <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon ID"
+                };
             }
 
-            var coupon = await _couponRepository.GetByIdAsync(id);
+            var coupon = _couponRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
             if (coupon == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Coupon not found"
+                };
             }
 
-            var deletedCoupon = await _couponRepository.DeleteAsync(coupon);
-            return deletedCoupon;
+            var deletedCoupon = _couponRepository.DeleteAsync(coupon).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Coupon deleted successfully",
+                Value = deletedCoupon
+            };
         }
 
-        public async Task<bool> ExistsByIdAsync(int id)
+        public async Task<ApplicationResponse<bool>> ExistsByIdAsync(int id)
         {
-            return await _couponRepository.ExistsAsync(i => i.Id == id);
+            var exists = _couponRepository.ExistsAsync(i => i.Id == id).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = exists
+            };
         }
 
-        public async Task<bool> ExistsByCodeAsync(string code)
+        public async Task<ApplicationResponse<bool>> ExistsByCodeAsync(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid coupon code"
+                };
             }
 
-            return await _couponRepository.ExistsAsync(c => c.Code == code);
+            var exists = _couponRepository.ExistsAsync(c => c.Code == code).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = exists
+            };
         }
     }
 }
