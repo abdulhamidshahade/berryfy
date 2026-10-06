@@ -1,3 +1,4 @@
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.InventoryEntities;
@@ -19,35 +20,55 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             _inventoryRepository = inventoryRepository;
         }
 
-        public async Task<bool> IsInStockAsync(int productId, int quantity)
+        public async Task<ApplicationResponse<bool>> IsInStockAsync(int productId, int quantity)
         {
             if (quantity <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
-            var product = await _productRepository.GetByIdAsync(productId);
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
             if (product == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             var available = product.StockQuantity - product.ReservedStock;
-            return available >= quantity;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = available >= quantity
+            };
         }
 
-        public async Task<bool> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
+        public async Task<ApplicationResponse<bool>> AddStockAsync(int productId, int quantity, string notes, int? performedByUserId)
         {
-            var product = await _productRepository.GetByIdAsync(productId);
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
 
             if (product == null)
             {
-                throw new KeyNotFoundException($"Product with ID {productId} not found");
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             if (quantity <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             product.StockQuantity += quantity;
@@ -73,23 +94,39 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
             if (createdInventory == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
-            return true;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = true
+            };
         }
 
-        public async Task<bool> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
+        public async Task<ApplicationResponse<bool>> AdjustStockAsync(int productId, int newQuantity, string notes, int? performedByUserId)
         {
-            var product = await _productRepository.GetByIdAsync(productId);
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
             if (product == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             if (newQuantity < 0 || newQuantity < product.ReservedStock)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             int difference = newQuantity - product.StockQuantity;
@@ -113,20 +150,32 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
             if (createdInventory == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
-            return true;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = true
+            };
         }
 
-        public async Task<bool> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
+        public async Task<ApplicationResponse<bool>> ConfirmStockDeductionAsync(int productId, int quantity, int referenceId, string referenceType)
         {
-            if (quantity <= 0) return false;
-            var product = await _productRepository.GetByIdAsync(productId);
+            if (quantity <= 0) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
 
             if (product == null || product.ReservedStock < quantity || product.StockQuantity < quantity)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    Value = false
+                };
             }
 
             product.ReservedStock -= quantity;
@@ -148,30 +197,48 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
-            return createdInventory != null && updatedProduct != null;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = createdInventory != null && updatedProduct != null,
+                Value = createdInventory != null && updatedProduct != null
+            };
         }
 
 
-        public async Task<List<InventoryLog>> GetInventoryHistoryAsync(int productId, int limit = 50)
+        public async Task<ApplicationResponse<List<InventoryLog>>> GetInventoryHistoryAsync(int productId, int limit = 50)
         {
-            var inventoryHistory = await _inventoryRepository.GetInventoryHistoryAsync(productId, limit);
+            var inventoryHistory = _inventoryRepository.GetInventoryHistoryAsync(productId, limit).GetAwaiter().GetResult().Value;
 
-            return inventoryHistory;
+            return new ApplicationResponse<List<InventoryLog>>
+            {
+                IsSuccess = true,
+                Value = inventoryHistory
+            };
         }
 
-        public async Task<List<Product>> GetLowStockProductsAsync(int limit = 50)
+        public async Task<ApplicationResponse<List<Product>>> GetLowStockProductsAsync(int limit = 50)
         {
-            return await _inventoryRepository.GetLowStockProductsAsync(limit);
+            var lowStockProducts = _inventoryRepository.GetLowStockProductsAsync(limit).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<List<Product>>
+            {
+                IsSuccess = true,
+                Value = lowStockProducts
+            };
         }
 
-        public async Task<Product> GetProductWithStockInfoAsync(int productId)
+        public async Task<ApplicationResponse<Product>> GetProductWithStockInfoAsync(int productId)
         {
-            return await _inventoryRepository.GetProductWithStockInfoAsync(productId);
+            var product = _inventoryRepository.GetProductWithStockInfoAsync(productId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<Product>
+            {
+                IsSuccess = true,
+                Value = product
+            };
         }
 
-        public async Task ProcessStockNotificationsAsync()
+        public async Task<ApplicationResponse<bool>> ProcessStockNotificationsAsync()
         {
-            var lowStockProducts = await GetLowStockProductsAsync(100);
+            var lowStockProducts = GetLowStockProductsAsync(100).GetAwaiter().GetResult().Value;
 
             foreach (var product in lowStockProducts)
             {
@@ -187,20 +254,25 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
                 await _inventoryRepository.CreateInventory(inventoryLog);
             }
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = true
+            };
         }
 
-        public async Task<bool> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
+        public async Task<ApplicationResponse<bool>> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
-            if (quantity <= 0) return false;
-            var product = await _productRepository.GetByIdAsync(productId);
+            if (quantity <= 0) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
             if (product == null)
             {
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
             }
 
             if (product.ReservedStock < quantity)
             {
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
             }
 
             product.ReservedStock -= quantity;
@@ -221,19 +293,23 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
-            return createdInventory != null && updatedProduct != null;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = createdInventory != null && updatedProduct != null
+            };
         }
 
-        public async Task<bool> ReserveStockAsync(int productId, int quantity, int referenceId, string referenceType)
+        public async Task<ApplicationResponse<bool>> ReserveStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
-            if (quantity <= 0) return false;
-            var product = await _productRepository.GetByIdAsync(productId);
+            if (quantity <= 0) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
+            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
             if (product == null)
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             int availableStock = product.StockQuantity - product.ReservedStock;
             if (availableStock < quantity)
-                return false;
+                return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
 
             product.ReservedStock += quantity;
             product.UpdatedAt = DateTime.UtcNow;
@@ -253,9 +329,11 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
-            return createdInventory != null && updatedProduct != null;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = createdInventory != null && updatedProduct != null
+            };
         }
-
-
     }
 }
