@@ -1,4 +1,5 @@
-﻿using Berryfy.Application.Dtos.CategoryDtos.Requests;
+﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.CategoryDtos.Requests;
 using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -14,128 +15,210 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             _categoryRepository = categoryRepository;
         }
 
-        public async Task<CategoryResponse> GetByIdAsync(int id)
+        public async Task<ApplicationResponse<CategoryResponse>> GetByIdAsync(int id)
         {
-            var category = await _categoryRepository.GetByIdAsync(id);
+            var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
 
             if (category == null)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category not found"
+                };
             }
 
-            return CategoryResponse.MapFromCategory(category);
+            return new ApplicationResponse<CategoryResponse>
+            {
+                IsSuccess = true,
+                Value = CategoryResponse.MapFromCategory(category)
+            };
         }
 
-        public async Task<CategoryResponse> GetByNameAsync(string name)
+        public async Task<ApplicationResponse<CategoryResponse>> GetByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category name"
+                };
             }
 
-            var category = await _categoryRepository.GetByNameAsync(name);
+            var category = _categoryRepository.GetByNameAsync(name).GetAwaiter().GetResult().Value;
             
             if (category == null)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category not found"
+                };
             }
 
-            return CategoryResponse.MapFromCategory(category);
+            return new ApplicationResponse<CategoryResponse>
+            {
+                IsSuccess = true,
+                Value = CategoryResponse.MapFromCategory(category)
+            };
         }
 
-        public async Task<IEnumerable<CategoryResponse>> GetAllAsync()
+        public async Task<ApplicationResponse<IEnumerable<CategoryResponse>>> GetAllAsync()
         {
-            var categories = await _categoryRepository.GetAllAsync();
-            return categories.Select(CategoryResponse.MapFromCategory);
+            var categories = _categoryRepository.GetAllAsync().GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<IEnumerable<CategoryResponse>>
+            {
+                IsSuccess = true,
+                Value = categories.Select(CategoryResponse.MapFromCategory)
+            };
         }
 
-        public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest categoryRequest)
+        public async Task<ApplicationResponse<CategoryResponse>> CreateAsync(CreateCategoryRequest categoryRequest)
         {
             if (categoryRequest == null)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category request"
+                };
             }
 
-            if (await ExistsByNameAsync(categoryRequest.Name))
+            if (ExistsByNameAsync(categoryRequest.Name).GetAwaiter().GetResult().Value)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category already exists"
+                };
             }
 
             var category = CreateCategoryRequest.MapToCategory(categoryRequest);
 
-            var createdCategory = await _categoryRepository.CreateAsync(category);
-            return CategoryResponse.MapFromCategory(createdCategory);
+            var createdCategory = _categoryRepository.CreateAsync(category).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<CategoryResponse>
+            {
+                IsSuccess = true,
+                Value = CategoryResponse.MapFromCategory(createdCategory)
+            };
         }
 
 
-        public async Task<CategoryResponse> UpdateAsync(int id, UpdateCategoryRequest request)
+        public async Task<ApplicationResponse<CategoryResponse>> UpdateAsync(int id, UpdateCategoryRequest request)
         {
             if (request == null)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category request"
+                };
             }
 
-            var existingCategory = await _categoryRepository.GetByIdAsync(id);
+            var existingCategory = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
 
             if (existingCategory == null)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category not found"
+                };
             }
 
-            var isNameExists = await GetByNameAsync(request.Name);
+            var isNameExists = GetByNameAsync(request.Name).GetAwaiter().GetResult().Value;
 
             if(isNameExists != null && isNameExists.Id != id)
             {
-                return null;
+                return new ApplicationResponse<CategoryResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category already exists"
+                };
             }
 
             var mappedCategory = UpdateCategoryRequest.MapToCategory(request);
 
-            var updatedCategory = await _categoryRepository.UpdateAsync(id, mappedCategory);
+            var updatedCategory = _categoryRepository.UpdateAsync(id, mappedCategory).GetAwaiter().GetResult().Value;
 
 
-            return CategoryResponse.MapFromCategory(updatedCategory);
+            return new ApplicationResponse<CategoryResponse>
+            {
+                IsSuccess = true,
+                Value = CategoryResponse.MapFromCategory(updatedCategory)
+            };
         }
 
         
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApplicationResponse<bool>> DeleteAsync(int id)
         {
             if(id <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category ID"
+                };
             }
 
-            var category = await _categoryRepository.GetByIdAsync(id);
+            var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
             if (category == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Category not found"
+                };
             }
 
-            var deletedCategory = await _categoryRepository.DeleteAsync(category);
+            var deletedCategory = _categoryRepository.DeleteAsync(category).GetAwaiter().GetResult().Value;
 
 
-            return deletedCategory;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = deletedCategory
+            };
         }
 
-        public async Task<bool> ExistsAsync(int id)
+        public async Task<ApplicationResponse<bool>> ExistsAsync(int id)
         {
             if(id <= 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category ID"
+                };
             }
 
-            return await _categoryRepository.ExistsByIdAsync(id);
+            var exists = _categoryRepository.ExistsByIdAsync(id).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = exists
+            };
         }
 
-        public async Task<bool> ExistsByNameAsync(string name)
+        public async Task<ApplicationResponse<bool>> ExistsByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid category name"
+                };
             }
 
-            return await _categoryRepository.ExistsByNameAsync(name);
+            var exists = _categoryRepository.ExistsByNameAsync(name).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = exists
+            };
         }
     }
 }
