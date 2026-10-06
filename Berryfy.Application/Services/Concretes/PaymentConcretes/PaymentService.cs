@@ -23,12 +23,12 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
             _logger = logger;
         }
 
-        public async Task<ApiResponse<PaymentResponseDto>> ProcessPaymentAsync(CreatePayment createPaymentDto, int? userId, string? sessionId)
+        public async Task<ApplicationResponse<PaymentResponseDto>> ProcessPaymentAsync(CreatePayment createPaymentDto, int? userId, string? sessionId)
         {
             try
             {
-                var transactionId = await GenerateTransactionIdAsync();
-                var processingFee = CalculateProcessingFee(createPaymentDto.Amount, createPaymentDto.Provider);
+                var transactionId = GenerateTransactionIdAsync().Value;
+                var processingFee = CalculateProcessingFee(createPaymentDto.Amount, createPaymentDto.Provider).Value;
                 var netAmount = createPaymentDto.Amount - processingFee;
 
                 var payment = new Payment
@@ -59,7 +59,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Notes = createPaymentDto.Notes
                 };
 
-                var providerResult = await ProcessWithPaymentProvider(payment);
+                var providerResult = ProcessWithPaymentProvider(payment).GetAwaiter().GetResult().Value;
 
                 if (providerResult.Success)
                 {
@@ -75,7 +75,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     payment.FailureReason = providerResult.FailureReason;
                 }
 
-                var createdPayment = await _paymentRepository.CreateAsync(payment);
+                var createdPayment = _paymentRepository.CreateAsync(payment).GetAwaiter().GetResult().Value;
                 var paymentDto = PaymentResponse.MapFromPayment(createdPayment);
 
                 var response = new PaymentResponseDto
@@ -88,275 +88,275 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     RedirectUrl = providerResult.Success ? "/payment/success" : "/payment/failed"
                 };
 
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
-                    StatusMessage = "Payment processing completed",
-                    Data = response
+                    SuccessMessage = "Payment processing completed",
+                    Value = response
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing payment");
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while processing payment"
+                    ErrorMessage = "An error occurred while processing payment"
                 };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponse>> GetPaymentByIdAsync(int id)
+        public async Task<ApplicationResponse<PaymentResponse>> GetPaymentByIdAsync(int id)
         {
             try
             {
-                var payment = await _paymentRepository.GetByIdAsync(id);
+                var payment = _paymentRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponse>
+                    return new ApplicationResponse<PaymentResponse>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Payment not found"
+                        ErrorMessage = "Payment not found"
                     };
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = true,
-                    Data = paymentDto
+                    Value = paymentDto
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by ID: {PaymentId}", id);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payment"
+                    ErrorMessage = "An error occurred while retrieving payment"
                 };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponse>> GetPaymentByTransactionIdAsync(string transactionId)
+        public async Task<ApplicationResponse<PaymentResponse>> GetPaymentByTransactionIdAsync(string transactionId)
         {
             try
             {
-                var payment = await _paymentRepository.GetByTransactionIdAsync(transactionId);
+                var payment = _paymentRepository.GetByTransactionIdAsync(transactionId).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponse>
+                    return new ApplicationResponse<PaymentResponse>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Payment not found"
+                        ErrorMessage = "Payment not found"
                     };
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = true,
-                    Data = paymentDto
+                    Value = paymentDto
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by transaction ID: {TransactionId}", transactionId);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payment"
+                    ErrorMessage = "An error occurred while retrieving payment"
                 };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponse>> GetPaymentByOrderIdAsync(int orderId)
+        public async Task<ApplicationResponse<PaymentResponse>> GetPaymentByOrderIdAsync(int orderId)
         {
             try
             {
-                var payment = await _paymentRepository.GetByOrderIdAsync(orderId);
+                var payment = _paymentRepository.GetByOrderIdAsync(orderId).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponse>
+                    return new ApplicationResponse<PaymentResponse>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Payment not found for this order"
+                        ErrorMessage = "Payment not found for this order"
                     };
                 }
 
                 var paymentDto = PaymentResponse.MapFromPayment(payment);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = true,
-                    Data = paymentDto
+                    Value = paymentDto
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment by order ID: {OrderId}", orderId);
-                return new ApiResponse<PaymentResponse>
+                return new ApplicationResponse<PaymentResponse>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payment"
+                    ErrorMessage = "An error occurred while retrieving payment"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetAllPaymentsAsync()
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetAllPaymentsAsync()
         {
             try
             {
-                var payments = await _paymentRepository.GetAllAsync();
+                var payments = _paymentRepository.GetAllAsync().GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all payments");
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payments"
+                    ErrorMessage = "An error occurred while retrieving payments"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByUserIdAsync(int userId)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetPaymentsByUserIdAsync(int userId)
         {
             try
             {
-                var payments = await _paymentRepository.GetByUserIdAsync(userId);
+                var payments = _paymentRepository.GetByUserIdAsync(userId).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by user ID: {UserId}", userId);
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving user payments"
+                    ErrorMessage = "An error occurred while retrieving user payments"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByStatusAsync(PaymentStatus status)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetPaymentsByStatusAsync(PaymentStatus status)
         {
             try
             {
-                var payments = await _paymentRepository.GetByStatusAsync(status);
+                var payments = _paymentRepository.GetByStatusAsync(status).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by status: {Status}", status);
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payments by status"
+                    ErrorMessage = "An error occurred while retrieving payments by status"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetPaymentsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             try
             {
-                var payments = await _paymentRepository.GetByDateRangeAsync(startDate, endDate);
+                var payments = _paymentRepository.GetByDateRangeAsync(startDate, endDate).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payments by date range");
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving payments by date range"
+                    ErrorMessage = "An error occurred while retrieving payments by date range"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsAsync(int pageNumber, int pageSize)
         {
             try
             {
-                var payments = await _paymentRepository.GetPaginatedAsync(pageNumber, pageSize);
+                var payments = _paymentRepository.GetPaginatedAsync(pageNumber, pageSize).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments");
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving paginated payments"
+                    ErrorMessage = "An error occurred while retrieving paginated payments"
                 };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> GetPaginatedPaymentsByUserIdAsync(int userId, int pageNumber, int pageSize)
         {
             try
             {
-                var payments = await _paymentRepository.GetPaginatedByUserIdAsync(userId, pageNumber, pageSize);
+                var payments = _paymentRepository.GetPaginatedByUserIdAsync(userId, pageNumber, pageSize).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = true,
-                    Data = paymentDtos
+                    Value = paymentDtos
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting paginated payments by user ID: {UserId}", userId);
-                return new ApiResponse<IEnumerable<PaymentResponse>>
+                return new ApplicationResponse<IEnumerable<PaymentResponse>>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while retrieving user payments"
+                    ErrorMessage = "An error occurred while retrieving user payments"
                 };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponseDto>> UpdatePaymentStatusAsync(int id, PaymentStatus status, string? notes = null)
+        public async Task<ApplicationResponse<PaymentResponseDto>> UpdatePaymentStatusAsync(int id, PaymentStatus status, string? notes = null)
         {
             try
             {
-                var payment = await _paymentRepository.GetByIdAsync(id);
+                var payment = _paymentRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponseDto>
+                    return new ApplicationResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Payment not found"
+                        ErrorMessage = "Payment not found"
                     };
                 }
 
@@ -376,7 +376,7 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                         break;
                 }
 
-                var updatedPayment = await _paymentRepository.UpdateAsync(payment);
+                var updatedPayment = _paymentRepository.UpdateAsync(payment).GetAwaiter().GetResult().Value;
                 var paymentDto = PaymentResponse.MapFromPayment(updatedPayment);
 
                 var response = new PaymentResponseDto
@@ -388,215 +388,214 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Status = payment.Status
                 };
 
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
-                    Data = response
+                    Value = response
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating payment status for ID: {PaymentId}", id);
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while updating payment status"
+                    ErrorMessage = "An error occurred while updating payment status"
                 };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponseDto>> RefundPaymentAsync(int id, decimal? refundAmount = null, string? reason = null)
+        public async Task<ApplicationResponse<PaymentResponseDto>> RefundPaymentAsync(int id, decimal? refundAmount = null, string? reason = null)
         {
             try
             {
-                var payment = await _paymentRepository.GetByIdAsync(id);
+                var payment = _paymentRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponseDto>
+                    return new ApplicationResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Payment not found"
+                        ErrorMessage = "Payment not found"
                     };
                 }
 
                 if (payment.Status != PaymentStatus.Completed)
                 {
-                    return new ApiResponse<PaymentResponseDto>
+                    return new ApplicationResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Only completed payments can be refunded"
+                        ErrorMessage = "Only completed payments can be refunded"
                     };
                 }
 
                 var amountToRefund = refundAmount ?? payment.Amount;
                 if (amountToRefund <= 0 || amountToRefund > payment.Amount)
                 {
-                    return new ApiResponse<PaymentResponseDto>
+                    return new ApplicationResponse<PaymentResponseDto>
                     {
                         IsSuccess = false,
-                        StatusMessage = "Refund amount must be positive and cannot exceed payment amount"
+                        ErrorMessage = "Refund amount must be positive and cannot exceed payment amount"
                     };
                 }
 
                 var refundResult = await ProcessRefundWithProvider(payment, amountToRefund);
 
-                if (refundResult.Success)
+                if (refundResult.Value.Success)
                 {
                     payment.Status = amountToRefund == payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
                     payment.RefundedAt = DateTime.UtcNow;
                     payment.Notes = reason ?? payment.Notes;
                 }
 
-                var updatedPayment = await _paymentRepository.UpdateAsync(payment);
+                var updatedPayment = _paymentRepository.UpdateAsync(payment).GetAwaiter().GetResult().Value;
                 var paymentDto = PaymentResponse.MapFromPayment(updatedPayment);
 
                 var response = new PaymentResponseDto
                 {
-                    Success = refundResult.Success,
-                    Message = refundResult.Success ? "Payment refunded successfully" : "Refund failed",
+                    Success = refundResult.Value.Success,
+                    Message = refundResult.Value.Success ? "Payment refunded successfully" : "Refund failed",
                     Payment = paymentDto,
                     TransactionId = payment.TransactionId,
                     Status = payment.Status
                 };
 
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = true,
-                    Data = response
+                    Value = response
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refunding payment for ID: {PaymentId}", id);
-                return new ApiResponse<PaymentResponseDto>
+                return new ApplicationResponse<PaymentResponseDto>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while processing refund"
+                    ErrorMessage = "An error occurred while processing refund"
                 };
             }
         }
 
-        public async Task<ApiResponse<bool>> DeletePaymentAsync(int id)
+        public async Task<ApplicationResponse<bool>> DeletePaymentAsync(int id)
         {
             try
             {
-                var result = await _paymentRepository.DeleteAsync(id);
-                return new ApiResponse<bool>
+                var result = _paymentRepository.DeleteAsync(id).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<bool>
                 {
                     IsSuccess = result,
-                    StatusMessage = result ? "Payment deleted successfully" : "Payment not found or could not be deleted",
-                    Data = result
+                    Value = result
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting payment for ID: {PaymentId}", id);
-                return new ApiResponse<bool>
+                return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
-                    StatusMessage = "An error occurred while deleting payment",
-                    Data = false
+                    ErrorMessage = "An error occurred while deleting payment",
+                    Value = false
                 };
             }
         }
 
-        public async Task<ApiResponse<int>> GetTotalPaymentCountAsync()
+        public async Task<ApplicationResponse<int>> GetTotalPaymentCountAsync()
         {
             try
             {
-                var count = await _paymentRepository.GetTotalCountAsync();
-                return new ApiResponse<int> { IsSuccess = true, Data = count };
+                var count = _paymentRepository.GetTotalCountAsync().GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<int> { IsSuccess = true, Value = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total payment count");
-                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count" };
+                return new ApplicationResponse<int> { IsSuccess = false, ErrorMessage = "An error occurred while retrieving payment count" };
             }
         }
 
-        public async Task<ApiResponse<int>> GetPaymentCountByUserIdAsync(int userId)
+        public async Task<ApplicationResponse<int>> GetPaymentCountByUserIdAsync(int userId)
         {
             try
             {
-                var count = await _paymentRepository.GetCountByUserIdAsync(userId);
-                return new ApiResponse<int> { IsSuccess = true, Data = count };
+                var count = _paymentRepository.GetCountByUserIdAsync(userId).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<int> { IsSuccess = true, Value = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment count by user ID: {UserId}", userId);
-                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving user payment count" };
+                return new ApplicationResponse<int> { IsSuccess = false, ErrorMessage = "An error occurred while retrieving user payment count" };
             }
         }
 
-        public async Task<ApiResponse<int>> GetPaymentCountByStatusAsync(PaymentStatus status)
+        public async Task<ApplicationResponse<int>> GetPaymentCountByStatusAsync(PaymentStatus status)
         {
             try
             {
-                var count = await _paymentRepository.GetCountByStatusAsync(status);
-                return new ApiResponse<int> { IsSuccess = true, Data = count };
+                var count = _paymentRepository.GetCountByStatusAsync(status).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<int> { IsSuccess = true, Value = count };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting payment count by status: {Status}", status);
-                return new ApiResponse<int> { IsSuccess = false, StatusMessage = "An error occurred while retrieving payment count by status" };
+                return new ApplicationResponse<int> { IsSuccess = false, ErrorMessage = "An error occurred while retrieving payment count by status" };
             }
         }
 
-        public async Task<ApiResponse<decimal>> GetTotalAmountByUserIdAsync(int userId)
+        public async Task<ApplicationResponse<decimal>> GetTotalAmountByUserIdAsync(int userId)
         {
             try
             {
-                var total = await _paymentRepository.GetTotalAmountByUserIdAsync(userId);
-                return new ApiResponse<decimal> { IsSuccess = true, Data = total };
+                var total = _paymentRepository.GetTotalAmountByUserIdAsync(userId).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<decimal> { IsSuccess = true, Value = total };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total amount by user ID: {UserId}", userId);
-                return new ApiResponse<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
+                return new ApplicationResponse<decimal> { IsSuccess = false, ErrorMessage = "An error occurred while retrieving total amount" };
             }
         }
 
-        public async Task<ApiResponse<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ApplicationResponse<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             try
             {
-                var total = await _paymentRepository.GetTotalAmountByDateRangeAsync(startDate, endDate);
-                return new ApiResponse<decimal> { IsSuccess = true, Data = total };
+                var total = _paymentRepository.GetTotalAmountByDateRangeAsync(startDate, endDate).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<decimal> { IsSuccess = true, Value = total };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting total amount by date range");
-                return new ApiResponse<decimal> { IsSuccess = false, StatusMessage = "An error occurred while retrieving total amount" };
+                return new ApplicationResponse<decimal> { IsSuccess = false, ErrorMessage = "An error occurred while retrieving total amount" };
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<PaymentResponse>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
+        public async Task<ApplicationResponse<IEnumerable<PaymentResponse>>> SearchPaymentsAsync(string searchTerm, int pageNumber, int pageSize)
         {
             try
             {
-                var payments = await _paymentRepository.SearchAsync(searchTerm, pageNumber, pageSize);
+                var payments = _paymentRepository.SearchAsync(searchTerm, pageNumber, pageSize).GetAwaiter().GetResult().Value;
                 var paymentDtos = PaymentResponse.MapFromPayment(payments);
 
-                return new ApiResponse<IEnumerable<PaymentResponse>> { IsSuccess = true, Data = paymentDtos };
+                return new ApplicationResponse<IEnumerable<PaymentResponse>> { IsSuccess = true, Value = paymentDtos };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching payments with term: {SearchTerm}", searchTerm);
-                return new ApiResponse<IEnumerable<PaymentResponse>> { IsSuccess = false, StatusMessage = "An error occurred while searching payments" };
+                return new ApplicationResponse<IEnumerable<PaymentResponse>> { IsSuccess = false, ErrorMessage = "An error occurred while searching payments" };
             }
         }
 
-        public async Task<ApiResponse<PaymentResponseDto>> VerifyPaymentWithProviderAsync(string transactionId)
+        public async Task<ApplicationResponse<PaymentResponseDto>> VerifyPaymentWithProviderAsync(string transactionId)
         {
             try
             {
-                var payment = await _paymentRepository.GetByTransactionIdAsync(transactionId);
+                var payment = _paymentRepository.GetByTransactionIdAsync(transactionId).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
-                    return new ApiResponse<PaymentResponseDto> { IsSuccess = false, StatusMessage = "Payment not found" };
+                    return new ApplicationResponse<PaymentResponseDto> { IsSuccess = false, ErrorMessage = "Payment not found" };
                 }
 
-                var verificationResult = await VerifyWithPaymentProvider(payment);
+                var verificationResult = VerifyWithPaymentProvider(payment).GetAwaiter().GetResult().Value;
 
                 if (verificationResult.Success && payment.Status != PaymentStatus.Completed)
                 {
@@ -615,65 +614,78 @@ namespace Berryfy.Application.Services.Concretes.PaymentConcretes
                     Status = payment.Status
                 };
 
-                return new ApiResponse<PaymentResponseDto> { IsSuccess = true, Data = response };
+                return new ApplicationResponse<PaymentResponseDto> { IsSuccess = true, Value = response };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error verifying payment with transaction ID: {TransactionId}", transactionId);
-                return new ApiResponse<PaymentResponseDto> { IsSuccess = false, StatusMessage = "An error occurred while verifying payment" };
+                return new ApplicationResponse<PaymentResponseDto> { IsSuccess = false, ErrorMessage = "An error occurred while verifying payment" };
             }
         }
 
-        public async Task<string> GenerateTransactionIdAsync()
+        public ApplicationResponse<string> GenerateTransactionIdAsync()
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var randomPart = Guid.NewGuid().ToString("N")[..8].ToUpper();
-            return $"PAY-{timestamp}-{randomPart}";
+            return new ApplicationResponse<string> { IsSuccess = true, Value = $"PAY-{timestamp}-{randomPart}" };
         }
 
-        private decimal CalculateProcessingFee(decimal amount, string provider)
+        private ApplicationResponse<decimal> CalculateProcessingFee(decimal amount, string provider)
         {
-            return provider.ToLower() switch
+            return new ApplicationResponse<decimal>()
             {
-                "stripe" => amount * 0.029m + 0.30m,
-                "paypal" => amount * 0.034m + 0.30m,
-                _ => amount * 0.025m
+                Value = provider.ToLower() switch
+                {
+                    "stripe" => amount * 0.029m + 0.30m,
+                    "paypal" => amount * 0.034m + 0.30m,
+                    _ => amount * 0.025m
+                },
+                IsSuccess = true
             };
         }
 
-        private async Task<ProviderResult> ProcessWithPaymentProvider(Payment payment)
+        private async Task<ApplicationResponse<ProviderResult>> ProcessWithPaymentProvider(Payment payment)
         {
             await Task.Delay(100);
             var random = new Random();
             var success = random.NextDouble() > 0.1;
 
-            return new ProviderResult
+            return new ApplicationResponse<ProviderResult>()
             {
-                Success = success,
-                ProviderTransactionId = success ? $"pi_{Guid.NewGuid().ToString("N")[..24]}" : null,
-                ErrorMessage = success ? null : "Payment declined by bank",
-                FailureReason = success ? null : "insufficient_funds"
-            };
+                Value = new ProviderResult()
+                {
+                    Success = success,
+                    ProviderTransactionId = success ? $"pi_{Guid.NewGuid().ToString("N")[..24]}" : null,
+                    ErrorMessage = success ? null : "Payment declined by bank",
+                    FailureReason = success ? null : "insufficient_funds"
+                }
+            };          
         }
 
-        private async Task<ProviderResult> ProcessRefundWithProvider(Payment payment, decimal amount)
+        private async Task<ApplicationResponse<ProviderResult>> ProcessRefundWithProvider(Payment payment, decimal amount)
         {
             await Task.Delay(100);
-            return new ProviderResult
+            return new ApplicationResponse<ProviderResult>
             {
-                Success = true,
-                ProviderTransactionId = $"re_{Guid.NewGuid().ToString("N")[..24]}",
-                Message = "Refund processed successfully"
+                Value = new ProviderResult
+                {
+                    Success = true,
+                    ProviderTransactionId = $"re_{Guid.NewGuid().ToString("N")[..24]}",
+                    Message = "Refund processed successfully"
+                }
             };
         }
 
-        private async Task<ProviderResult> VerifyWithPaymentProvider(Payment payment)
+        private async Task<ApplicationResponse<ProviderResult>> VerifyWithPaymentProvider(Payment payment)
         {
             await Task.Delay(50);
-            return new ProviderResult
+            return new ApplicationResponse<ProviderResult>
             {
-                Success = payment.Status == PaymentStatus.Completed || payment.Status == PaymentStatus.Processing,
-                Message = "Payment verification completed"
+                Value = new ProviderResult
+                {
+                    Success = payment.Status == PaymentStatus.Completed || payment.Status == PaymentStatus.Processing,
+                    Message = "Payment verification completed"
+                }
             };
         }
 
