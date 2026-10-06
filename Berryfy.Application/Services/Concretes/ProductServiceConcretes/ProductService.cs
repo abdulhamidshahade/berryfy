@@ -28,93 +28,147 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
         }
 
         
-        public async Task<IReadOnlyList<ProductResponse>> GetAllAsync()
+        public async Task<ApplicationResponse<IReadOnlyList<ProductResponse>>> GetAllAsync()
         {
-            var products = await _productRepository.GetAllAsync();
-            return ProductResponse.MapFromProduct(products);
+            var products = _productRepository.GetAllAsync().GetAwaiter().GetResult().Value;
+
+            return new ApplicationResponse<IReadOnlyList<ProductResponse>>
+            {
+                IsSuccess = true,
+                Value = ProductResponse.MapFromProduct(products)
+            };
         }
 
-        public async Task<ProductResponse> GetByIdAsync(int id)
+        public async Task<ApplicationResponse<ProductResponse>> GetByIdAsync(int id)
         {
-            var product = await _productRepository.GetByIdAsync(id);
+            var product = _productRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
 
             if (product == null)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product not found"
+                };
             }
 
-            return ProductResponse.MapFromProduct(product);
+            return new ApplicationResponse<ProductResponse>
+            {
+                IsSuccess = true,
+                Value = ProductResponse.MapFromProduct(product)
+            };
         }
 
-        public async Task<ProductResponse> GetByNameAsync(string name)
+        public async Task<ApplicationResponse<ProductResponse>> GetByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid product name"
+                };
+
             }
 
-            var product = await _productRepository.GetByNameAsync(name);
+            var product = _productRepository.GetByNameAsync(name).GetAwaiter().GetResult().Value;
 
             if (product == null)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product not found"
+                };
             }
 
-            return ProductResponse.MapFromProduct(product);
+            return new ApplicationResponse<ProductResponse>
+            {
+                IsSuccess = true,
+                Value = ProductResponse.MapFromProduct(product)
+            };
         }
 
 
-        public async Task<ProductResponse> CreateAsync(CreateProduct productDto, List<int> categories)
+        public async Task<ApplicationResponse<ProductResponse>> CreateAsync(CreateProduct productDto, List<int> categories)
         {
             if (productDto == null || productDto.Price < 0 || productDto.StockQuantity < 0 ||
                 productDto.ReservedStock != 0 || productDto.LowStockThreshold < 0)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid product data"
+                };
             }
 
-            if (await ExistsByNameAsync(productDto.Name))
+            if (ExistsByNameAsync(productDto.Name).GetAwaiter().GetResult().Value)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product with the same name already exists"
+                };
             }
 
             await _unitOfWork.BeginTransactionAsync();
 
             var product = CreateProduct.MapToProduct(productDto);
-            var createdProduct = await _productRepository.CreateAsync(product);
+            var createdProduct = _productRepository.CreateAsync(product).GetAwaiter().GetResult().Value;
 
             var productToDto = ProductResponse.MapFromProduct(createdProduct);
 
-            if (!await _productCategoryService.AddProductCategoryAsync(productToDto, categories))
+            if (!_productCategoryService.AddProductCategoryAsync(productToDto, categories).GetAwaiter().GetResult().Value)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to add product categories"
+                };
             }
 
             await _unitOfWork.CommitTransactionAsync();
 
-            return ProductResponse.MapFromProduct(await _productRepository.GetByIdAsync(createdProduct.Id));
+            return new ApplicationResponse<ProductResponse>
+            {
+                IsSuccess = true,
+                Value = ProductResponse.MapFromProduct(_productRepository.GetByIdAsync(createdProduct.Id).GetAwaiter().GetResult().Value)
+            };
         }
 
         
-        public async Task<ProductResponse> UpdateAsync(int id, UpdateProduct productDto, List<int> categories)
+        public async Task<ApplicationResponse<ProductResponse>> UpdateAsync(int id, UpdateProduct productDto, List<int> categories)
         {
             if (productDto == null || productDto.Price < 0 || productDto.LowStockThreshold < 0)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid product data"
+                };
             }
 
-            var existingProduct = await _productRepository.GetByIdAsync(id);
+            var existingProduct = _productRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
 
             if (existingProduct == null)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product not found"
+                };
             }
 
-            var isProductExists = await GetByNameAsync(productDto.Name);
+            var isProductExists = _productRepository.GetByNameAsync(productDto.Name).GetAwaiter().GetResult().Value;
 
             if (isProductExists != null && isProductExists.Id != id)
             {
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product with the same name already exists"
+                };
             }
 
             var mappedProduct = UpdateProduct.MapToProduct(productDto);
@@ -124,53 +178,81 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             await _unitOfWork.BeginTransactionAsync();
 
-            var updatedProduct = await _productRepository.UpdateAsync(id, mappedProduct);
+            var updatedProduct = _productRepository.UpdateAsync(id, mappedProduct).GetAwaiter().GetResult().Value;
 
             var productToDto = ProductResponse.MapFromProduct(updatedProduct);
 
-            if (!await _productCategoryService.UpdateProductCategoryAsync(productToDto, categories))
+            if (!_productCategoryService.UpdateProductCategoryAsync(productToDto, categories).GetAwaiter().GetResult().Value)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return null;
+                return new ApplicationResponse<ProductResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to update product categories"
+                };
             }
 
             await _unitOfWork.CommitTransactionAsync();
 
-            var returnProduct = await _productRepository.GetByIdAsync(updatedProduct.Id);
+            var returnProduct = _productRepository.GetByIdAsync(updatedProduct.Id).GetAwaiter().GetResult().Value;
 
-            return ProductResponse.MapFromProduct(returnProduct);
+            return new ApplicationResponse<ProductResponse>
+            {
+                IsSuccess = true,
+                Value = ProductResponse.MapFromProduct(returnProduct)
+            };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApplicationResponse<bool>> DeleteAsync(int id)
         {
-            var product = await _productRepository.GetByIdAsync(id);
+            var product = _productRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
             if (product == null)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Product not found"
+                };
             }
 
-            return await _productRepository.DeleteAsync(product);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = _productRepository.DeleteAsync(product).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> ExistsByIdAsync(int id)
+        public async Task<ApplicationResponse<bool>> ExistsByIdAsync(int id)
         {
-            return await _productRepository.ExistsByIdAsync(id);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = _productRepository.ExistsByIdAsync(id).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> ExistsByNameAsync(string name)
+        public async Task<ApplicationResponse<bool>> ExistsByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Name is required"
+                };
             }
 
-            return await _productRepository.ExistsByNameAsync(name);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = _productRepository.ExistsByNameAsync(name).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<PaginationResponse<ProductResponse>> GetPaginatedAsync(ProductFilter filter)
+        public async Task<ApplicationResponse<PaginationResponse<ProductResponse>>> GetPaginatedAsync(ProductFilter filter)
         {
             _logger.LogInformation("Getting paginated products with filter: {MaxPrice}", filter.MaxPrice);
-            var products = await _productRepository.GetFilteredAsync(
+            var products = _productRepository.GetFilteredAsync(
                 filter.SearchTerm,
                 filter.Category,
                 filter.SortBy,
@@ -179,15 +261,15 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 filter.IsActive,
                 filter.PageNumber,
                 filter.PageSize
-            );
+            ).GetAwaiter().GetResult().Value;
 
-            var totalCount = await _productRepository.GetFilteredCountAsync(
+            var totalCount = _productRepository.GetFilteredCountAsync(
                 filter.SearchTerm,
                 filter.Category,
                 filter.MinPrice,
                 filter.MaxPrice,
                 filter.IsActive
-            );
+            ).GetAwaiter().GetResult().Value;
 
             var productDtos = ProductResponse.MapFromProduct(products);
             var paginationResult = new PaginationResponse<ProductResponse>(
@@ -197,7 +279,11 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 totalCount
             );
 
-            return paginationResult;
+            return new ApplicationResponse<PaginationResponse<ProductResponse>>
+            {
+                IsSuccess = true,
+                Value = paginationResult
+            };
         }
     }
 }
