@@ -1,4 +1,5 @@
 ﻿
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Entities.ProductEntities;
@@ -22,44 +23,64 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             _productRepository = productRepository;
         }
 
-        public async Task<bool> AddProductCategoryAsync(ProductResponse product, List<int> categories)
+        public async Task<ApplicationResponse<bool>> AddProductCategoryAsync(ProductResponse product, List<int> categories)
         {
             if(categories.Count == 0)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "No categories provided"
+                };
             }
 
             var mappedProduct = ProductResponse.MapToProduct(product);
 
-            var created = await _productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories);
+            var created = _productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories).GetAwaiter().GetResult().Value;
 
-            return created;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = created
+            };
         }
 
-        public async Task<bool> UpdateProductCategoryAsync(ProductResponse product, List<int> categories)
+        public async Task<ApplicationResponse<bool>> UpdateProductCategoryAsync(ProductResponse product, List<int> categories)
         {
-            if (categories.Count == 0 || !await _productRepository.ExistsByIdAsync(product.Id))
+            if (categories.Count == 0 || !_productRepository.ExistsByIdAsync(product.Id).GetAwaiter().GetResult().Value)
             {
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid product or no categories provided"
+                };
             }
 
             //await _unitOfWork.BeginTransactionAsync();
 
             var existingCategories = await _productCategoryRepository.GetCategoriesByProuductId(product.Id);
             
-            if(!await _productCategoryRepository.RemoveCategoriesByProductId(product.Id))
+            if(!_productCategoryRepository.RemoveCategoriesByProductId(product.Id).GetAwaiter().GetResult().Value)
             {
                 //await _unitOfWork.RollbackTransactionAsync();
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to update product categories"
+                };
             }
 
             //await _unitOfWork.CommitTransactionAsync();
 
             var mappedProduct = ProductResponse.MapToProduct(product);
 
-            bool result = await _productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories);
+            bool result =_productCategoryRepository.AddProductCategoryAsync(mappedProduct, categories).GetAwaiter().GetResult().Value;
 
-            return result;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = result
+            };
         }
     }
 }
