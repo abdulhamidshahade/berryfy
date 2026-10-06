@@ -1,3 +1,4 @@
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.CheckoutDtos.Requests;
 using Berryfy.Application.Dtos.CheckoutDtos.Responses;
 using Berryfy.Application.Services.Interfaces.CheckoutServiceInterfaces;
@@ -15,21 +16,27 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
             _repository = repository;
         }
 
-        public async Task<UserCheckoutInfoResponse?> GetCheckoutInfoAsync(int userId)
+        public async Task<ApplicationResponse<UserCheckoutInfoResponse?>> GetCheckoutInfoAsync(int userId)
         {
-            var checkoutInfo = await _repository.GetByUserIdAsync(userId);
+            var checkoutInfo = _repository.GetByUserIdAsync(userId).GetAwaiter().GetResult().Value;
 
-            if (checkoutInfo == null) return null;
+            if (checkoutInfo == null) return new ApplicationResponse<UserCheckoutInfoResponse?>();
+
 
             // Update last used timestamp
             await _repository.UpdateLastUsedAsync(checkoutInfo.Id);
 
-            return MapToDto(checkoutInfo);
+            return new ApplicationResponse<UserCheckoutInfoResponse?>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Checkout info retrieved successfully",
+                Value = MapToDto(checkoutInfo)
+            };
         }
 
-        public async Task<UserCheckoutInfoResponse> SaveCheckoutInfoAsync(int userId, SaveCheckoutInfo dto)
+        public async Task<ApplicationResponse<UserCheckoutInfoResponse?>> SaveCheckoutInfoAsync(int userId, SaveCheckoutInfo dto)
         {
-            var existing = await _repository.GetByUserIdAsync(userId);
+            var existing = _repository.GetByUserIdAsync(userId).GetAwaiter().GetResult().Value;
 
             if (existing != null)
             {
@@ -46,7 +53,12 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
                 existing.Country = dto.Country;
 
                 await _repository.UpdateAsync(existing);
-                return MapToDto(existing);
+                return new ApplicationResponse<UserCheckoutInfoResponse?>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "Checkout info updated successfully",
+                    Value = MapToDto(existing)
+                };
             }
             else
             {
@@ -67,14 +79,19 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
                     Country = dto.Country
                 };
 
-                var created = await _repository.CreateAsync(newCheckoutInfo);
-                return MapToDto(created);
+                var created = _repository.CreateAsync(newCheckoutInfo).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<UserCheckoutInfoResponse?>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "Checkout info created successfully",
+                    Value = MapToDto(created)
+                };
             }
         }
 
-        public async Task<UserCheckoutInfoResponse> SavePaymentBillingInfoAsync(int userId, SavePaymentBilling dto)
+        public async Task<ApplicationResponse<UserCheckoutInfoResponse?>> SavePaymentBillingInfoAsync(int userId, SavePaymentBilling dto)
         {
-            var existing = await _repository.GetByUserIdAsync(userId);
+            var existing = _repository.GetByUserIdAsync(userId).GetAwaiter().GetResult().Value;
 
             if (existing != null)
             {
@@ -89,7 +106,12 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
                 existing.BillingCountry = dto.BillingCountry;
 
                 await _repository.UpdateAsync(existing);
-                return MapToDto(existing);
+                return new ApplicationResponse<UserCheckoutInfoResponse?>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "Payment billing info updated successfully",
+                    Value = MapToDto(existing)
+                };
             }
             else
             {
@@ -116,18 +138,32 @@ namespace Berryfy.Application.Services.Concretes.CheckoutServiceConcretes
                     BillingCountry = dto.BillingCountry
                 };
 
-                var created = await _repository.CreateAsync(newCheckoutInfo);
-                return MapToDto(created);
+                var created = _repository.CreateAsync(newCheckoutInfo).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<UserCheckoutInfoResponse?>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "Checkout info created successfully",
+                    Value = MapToDto(created)
+                };
             }
         }
 
-        public async Task<bool> DeleteCheckoutInfoAsync(int userId)
+        public async Task<ApplicationResponse<bool>> DeleteCheckoutInfoAsync(int userId)
         {
-            var existing = await _repository.GetByUserIdAsync(userId);
+            var existing = _repository.GetByUserIdAsync(userId).GetAwaiter().GetResult().Value;
 
-            if (existing == null) return false;
+            if (existing == null) return new ApplicationResponse<bool>
+            {
+                IsSuccess = false,
+                ErrorMessage = "Checkout info not found"
+            };
 
-            return await _repository.DeleteAsync(existing.Id);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Checkout info deleted successfully",
+                Value = _repository.DeleteAsync(existing.Id).GetAwaiter().GetResult().Value
+            };
         }
 
         private UserCheckoutInfoResponse MapToDto(UserCheckoutInfo entity)
