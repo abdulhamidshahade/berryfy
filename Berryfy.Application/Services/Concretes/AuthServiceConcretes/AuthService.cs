@@ -87,7 +87,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 };
                 user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
-                user = await _userRepository.CreateAsync(user);
+                user = _userRepository.CreateAsync(user).GetAwaiter().GetResult().Value;
 
                 if (!_roleService.AssignRoleToUserAsync(user.Id, RoleConstants.User).GetAwaiter().GetResult().Value)
                 {
