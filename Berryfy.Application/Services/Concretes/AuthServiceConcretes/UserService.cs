@@ -1,3 +1,4 @@
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.AuthDtos.Requests;
 using Berryfy.Application.Halpers;
 using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
@@ -28,98 +29,174 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             _passwordHasher = passwordHasher;
         }
 
-        public Task<List<User>> GetAllUsers()
+        public async Task<ApplicationResponse<List<User>>> GetAllUsers()
         {
-            return _userRepository.GetAllAsync();
+            return new ApplicationResponse<List<User>>
+            {
+                IsSuccess = true,
+                SuccessMessage = "Users retrieved successfully",
+                Value = _userRepository.GetAllAsync().GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<User> GetUserById(int id)
+        public async Task<ApplicationResponse<User>> GetUserById(int id)
         {
-            return await _userRepository.GetByIdAsync(id);
+            var user = _userRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            if (user == null)
+            {
+                return new ApplicationResponse<User>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "User not found"
+                };
+            }
+
+            return new ApplicationResponse<User>
+            {
+                IsSuccess = true,
+                SuccessMessage = "User retrieved successfully",
+                Value = user
+            };
         }
 
-        public Task<bool> IsUserExistsByEmailAsync(string emailAddress)
+        public async Task<ApplicationResponse<bool>> IsUserExistsByEmailAsync(string emailAddress)
         {
-            return _userRepository.ExistsByEmailAsync(EmailNormalizer.NormalizeEmail(emailAddress));
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "User exists",
+                Value = _userRepository.ExistsByEmailAsync(EmailNormalizer.NormalizeEmail(emailAddress)).GetAwaiter().GetResult().Value
+            };
         }
 
-        public Task<bool> IsUserExistsByIdAsync(int userId)
+        public async Task<ApplicationResponse<bool>> IsUserExistsByIdAsync(int userId)
         {
-            return _userRepository.ExistsByIdAsync(userId);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                SuccessMessage = "User exists",
+                Value = _userRepository.ExistsByIdAsync(userId).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> LockUserAccountAsync(int userId, DateTime? lockoutEnd = null)
+        public async Task<ApplicationResponse<bool>> LockUserAccountAsync(int userId, DateTime? lockoutEnd = null)
         {
             try
             {
-                if (!await _userRepository.ExistsByIdAsync(userId))
+                if (!_userRepository.ExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
                 {
                     _logger.LogWarning("User with ID {UserId} not found for lock operation", userId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found"
+                    };
                 }
 
-                return await _userRepository.SetLockoutAsync(userId, lockoutEnd ?? DateTime.UtcNow.AddYears(100));
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "User account locked successfully",
+                    Value = _userRepository.SetLockoutAsync(userId, lockoutEnd ?? DateTime.UtcNow.AddYears(100)).GetAwaiter().GetResult().Value
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error locking user with ID {UserId}", userId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error locking user account"
+                };
             }
         }
 
-        public async Task<bool> UnlockUserAccountAsync(int userId)
+        public async Task<ApplicationResponse<bool>> UnlockUserAccountAsync(int userId)
         {
             try
             {
-                if (!await _userRepository.SetLockoutAsync(userId, null))
+                if (!_userRepository.SetLockoutAsync(userId, null).GetAwaiter().GetResult().Value)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Error unlocking user account"
+                    };
                 }
 
                 await _userRepository.ResetAccessFailedCountAsync(userId);
-                return true;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "User account unlocked successfully"
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error unlocking user with ID {UserId}", userId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error unlocking user account"
+                };
             }
         }
 
-        public async Task<bool> ResetUserPasswordAsync(int userId, string newPassword)
+        public async Task<ApplicationResponse<bool>> ResetUserPasswordAsync(int userId, string newPassword)
         {
             try
             {
-                var user = await _userRepository.GetByIdAsync(userId);
+                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
                 if (user == null)
                 {
                     _logger.LogWarning("User with ID {UserId} not found for password reset", userId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found"
+                    };
                 }
 
                 var passwordHash = _passwordHasher.HashPassword(user, newPassword);
-                return await _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash);
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "Password reset successfully"
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resetting password for user with ID {UserId}", userId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error resetting password"
+                };
             }
         }
 
-        public Task<bool> VerifyUserEmailAsync(int userId)
+        public async Task<ApplicationResponse<bool>> VerifyUserEmailAsync(int userId)
         {
-            return _userRepository.ConfirmEmailAsync(userId);
+            var result = _userRepository.ConfirmEmailAsync(userId).GetAwaiter().GetResult().Value;
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = result,
+                SuccessMessage = "Email verified successfully"
+            };
         }
 
-        public async Task<bool> UpdateUserAsync(int userId, UpdateUserRequest updateUserDto)
+        public async Task<ApplicationResponse<bool>> UpdateUserAsync(int userId, UpdateUserRequest updateUserDto)
         {
             try
             {
-                var user = await _userRepository.GetByIdAsync(userId);
+                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
                 if (user == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found"
+                    };
                 }
 
                 user.Email = updateUserDto.Email.Trim();
@@ -131,16 +208,25 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 user.EmailConfirmed = updateUserDto.EmailConfirmed;
                 user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-                return await _userRepository.UpdateAsync(user);
+                var result = _userRepository.UpdateAsync(user).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = result,
+                    SuccessMessage = "User updated successfully"
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating user with ID {UserId}", userId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error updating user"
+                };
             }
         }
 
-        public async Task<User> CreateUserAsync(CreateUser createUserDto)
+        public async Task<ApplicationResponse<User>> CreateUserAsync(CreateUser createUserDto)
         {
             try
             {
@@ -158,7 +244,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 };
                 user.PasswordHash = _passwordHasher.HashPassword(user, createUserDto.Password);
 
-                user = await _userRepository.CreateAsync(user);
+                user = _userRepository.CreateAsync(user).GetAwaiter().GetResult().Value;
 
                 var roles = createUserDto.Roles.Any() ? createUserDto.Roles : new List<string> { RoleConstants.User };
                 foreach (var role in roles)
@@ -172,29 +258,50 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 }
 
                 _logger.LogInformation("User {UserName} created successfully", user.UserName);
-                return user;
+                return new ApplicationResponse<User>
+                {
+                    IsSuccess = true,
+                    SuccessMessage = "User created successfully",
+                    Value = user
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating user {UserName}", createUserDto.UserName);
-                return null;
+                return new ApplicationResponse<User>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error creating user"
+                };
             }
         }
 
-        public Task<bool> DeleteUserAsync(int userId)
+        public async Task<ApplicationResponse<bool>> DeleteUserAsync(int userId)
         {
-            return _userRepository.DeleteAsync(userId);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = _userRepository.DeleteAsync(userId).GetAwaiter().GetResult().Value,
+                SuccessMessage = "User deleted successfully"
+            };
         }
 
-        public async Task<User> GetUserByEmail(string email)
+        public async Task<ApplicationResponse<User>> GetUserByEmail(string email)
         {
-            return await _userRepository.GetByNormalizedEmailAsync(EmailNormalizer.NormalizeEmail(email))
-                ?? await _userRepository.GetByEmailAsync(email);
+            return new ApplicationResponse<User>
+            {
+                IsSuccess = true,
+                Value = _userRepository.GetByNormalizedEmailAsync(EmailNormalizer.NormalizeEmail(email)).GetAwaiter().GetResult().Value
+                    ?? _userRepository.GetByEmailAsync(email).GetAwaiter().GetResult().Value
+            };
         }
 
-        public async Task<bool> IsUsernameTaken(string username)
+        public async Task<ApplicationResponse<bool>> IsUsernameTaken(string username)
         {
-            return await _userRepository.IsUsernameTakenAsync(username);
+            return new ApplicationResponse<bool>
+            {
+                IsSuccess = true,
+                Value = _userRepository.IsUsernameTakenAsync(username).GetAwaiter().GetResult().Value
+            };
         }
 
         private static string NormalizeName(string value)
