@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Berryfy.Application.Dtos.CouponDtos.Responses;
 using Berryfy.Application.Dtos.ShoppingCartDtos.Responses;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
+using Berryfy.Application.Dtos;
 
 namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 {
@@ -105,61 +106,99 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
         }
 
 
-        public async Task<CartResponse> GetCartByUserIdAsync(int userId, CartStatus? status = CartStatus.Active)
+        public async Task<ApplicationResponse<CartResponse>> GetCartByUserIdAsync(int userId, CartStatus? status = CartStatus.Active)
         {
             if (userId <= 0)
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    Value = null,
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid user ID"
+                };
             }
-            var dbCart = await _cartRepository.GetCartByUserIdAsync(userId, status);
+            var dbCart = _cartRepository.GetCartByUserIdAsync(userId, status).GetAwaiter().GetResult().Value;
 
             if (dbCart == null)
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    Value = null,
+                    IsSuccess = false,
+                    ErrorMessage = "Cart not found"
+                };
             }
 
             var mappedCart = CartResponse.MapFromCart(dbCart);
 
-            return mappedCart;
+            return new ApplicationResponse<CartResponse>
+            {
+                Value = mappedCart,
+                IsSuccess = true
+            };
         }
-        public async Task<CartResponse> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
+        public async Task<ApplicationResponse<CartResponse>> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
         {
             if (string.IsNullOrEmpty(sessionId))
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    Value = null,
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid session ID"
+                };
             }
 
-            var dbCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, status);
+            var dbCart = _cartRepository.GetCartBySessionIdAsync(sessionId, status).GetAwaiter().GetResult().Value;
 
             if (dbCart == null)
             {
                 await CreateCartAsync(null, sessionId);
-                dbCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, status);
+                dbCart = _cartRepository.GetCartBySessionIdAsync(sessionId, status).GetAwaiter().GetResult().Value;
             }
 
-            return CartResponse.MapFromCart(dbCart);
+            return new ApplicationResponse<CartResponse>
+            {
+                Value = CartResponse.MapFromCart(dbCart),
+                IsSuccess = true
+            };
         }
 
-        public async Task MergeCartAsync(int userId, string sessionId)
+        public async Task<ApplicationResponse<bool>> MergeCartAsync(int userId, string sessionId)
         {
             if (string.IsNullOrWhiteSpace(sessionId))
             {
-                return;
+                return new ApplicationResponse<bool>
+                {
+                    Value = false,
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid session ID"
+                };
             }
 
-            var sessionCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+            var sessionCart = _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (sessionCart == null || sessionCart.CartItems == null || sessionCart.CartItems.Count == 0)
             {
-                return;
+                return new ApplicationResponse<bool>
+                {
+                    Value = false,
+                    IsSuccess = false,
+                    ErrorMessage = "No items to merge"
+                };
             }
 
             var guestItems = sessionCart.CartItems.Where(i => i.ShoppingCartId == sessionCart.Id).ToList();
             if (guestItems.Count == 0)
             {
-                return;
+                return new ApplicationResponse<bool>
+                {
+                    Value = false,
+                    IsSuccess = false,
+                    ErrorMessage = "No items to merge"
+                };
             }
 
-            var userCart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+            var userCart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
 
             if (userCart == null)
             {
@@ -173,12 +212,16 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 await _cartRepository.UpdateCartAsync(sessionCart);
                 _logger.LogInformation("Merged guest cart {CartId} into user {UserId} (took over guest cart)", sessionCart.Id, userId);
-                return;
+                return new ApplicationResponse<bool>
+                {
+                    Value = true,
+                    IsSuccess = true
+                };
             }
 
             foreach (var guestItem in guestItems)
             {
-                var userCartFresh = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+                var userCartFresh = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (userCartFresh == null)
                 {
                     _logger.LogWarning("User {UserId} lost active cart during merge; stopping", userId);
@@ -190,14 +233,14 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 var unitPrice = guestItem.UnitPrice;
                 var userLine = userCartFresh.CartItems?.FirstOrDefault(i => i.ProductId == productId);
 
-                var released = await _inventoryService.ReleaseReservedStockAsync(productId, guestQty, sessionCart.Id, "CartItem");
+                var released = _inventoryService.ReleaseReservedStockAsync(productId, guestQty, sessionCart.Id, "CartItem").GetAwaiter().GetResult().Value;
                 if (!released)
                 {
                     _logger.LogWarning("Could not release guest reservation for product {ProductId} on cart {CartId}", productId, sessionCart.Id);
                     continue;
                 }
 
-                var reserved = await _inventoryService.ReserveStockAsync(productId, guestQty, userCartFresh.Id, "CartItem");
+                var reserved = _inventoryService.ReserveStockAsync(productId, guestQty, userCartFresh.Id, "CartItem").GetAwaiter().GetResult().Value;
                 if (!reserved)
                 {
                     _logger.LogWarning("Could not reserve product {ProductId} on user cart {CartId}; restoring guest reservation", productId, userCartFresh.Id);
@@ -218,48 +261,70 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 await _cartRepository.RemoveItemAsync(null, sessionId, productId);
             }
 
-            var leftover = await _cartRepository.GetCartByIdAsync(sessionCart.Id, CartStatus.Active);
+            var leftover = _cartRepository.GetCartByIdAsync(sessionCart.Id, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (leftover?.CartItems == null || leftover.CartItems.Count == 0)
             {
                 await _cartRepository.DeleteCartById(sessionCart.Id);
             }
 
+            return new ApplicationResponse<bool>
+            {
+                Value = true,
+                IsSuccess = true
+            };
+
             _logger.LogInformation("Merged guest session {SessionId} into user {UserId} cart {UserCartId}", sessionId, userId, userCart.Id);
         }
 
-        public async Task<CartResponse> GetCartByIdAsync(int cartId, CartStatus status)
+        public async Task<ApplicationResponse<CartResponse>> GetCartByIdAsync(int cartId, CartStatus status)
         {
 
-            var dbCart = await _cartRepository.GetCartByIdAsync(cartId, status);
+            var dbCart = _cartRepository.GetCartByIdAsync(cartId, status).GetAwaiter().GetResult().Value;
 
             if (dbCart == null)
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Cart not found"
+                };
             }
 
             var mappedCart = CartResponse.MapFromCart(dbCart);
 
-            return mappedCart;
+            return new ApplicationResponse<CartResponse>
+            {
+                IsSuccess = true,
+                Value = mappedCart
+            };
         }
 
 
-        public async Task<CartResponse> CreateCartAsync(int? userId, string? sessionId)
+        public async Task<ApplicationResponse<CartResponse>> CreateCartAsync(int? userId, string? sessionId)
         {
             CartResponse? cart = null;
 
             if (userId.HasValue)
             {
-                cart = CartResponse.MapFromCart(await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active));
+                cart = CartResponse.MapFromCart(_cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value);
 
                 if (cart != null)
                 {
-                    return cart;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = true,
+                        Value = cart
+                    };
                 }
 
                 else
                 {
-                    var createdCart = await _cartRepository.CreateCartAsync(userId, CartStatus.Active);
-                    return CartResponse.MapFromCart(createdCart);
+                    var createdCart = _cartRepository.CreateCartAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = true,
+                        Value = CartResponse.MapFromCart(createdCart)
+                    };
                 }
 
             }
@@ -267,25 +332,37 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             else if (!string.IsNullOrEmpty(sessionId))
             {
 
-                cart = CartResponse.MapFromCart(await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active));
+                cart = CartResponse.MapFromCart(_cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value);
 
                 if (cart != null)
                 {
-                    return cart;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = true,
+                        Value = cart
+                    };
                 }
                 else
                 {
-                    var createdCart = await _cartRepository.CreateCartAsync(sessionId, CartStatus.Active);
-                    return CartResponse.MapFromCart(createdCart);
+                    var createdCart = _cartRepository.CreateCartAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = true,
+                        Value = CartResponse.MapFromCart(createdCart)
+                    };
                 }
             }
 
             else
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Either userId or sessionId must be provided to create a cart."
+                };
             }
         }
-        public async Task<CartResponse?> AddItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
+        public async Task<ApplicationResponse<CartResponse>?> AddItemAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
         {
             try
             {
@@ -295,25 +372,37 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 if (quantity <= 0)
                 {
                     _logger.LogWarning("Invalid quantity {Quantity} for product {ProductId}", quantity, productId);
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid quantity provided."
+                    };
                 }
 
-                var product = await _productService.GetByIdAsync(productId);
+                var product = _productService.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
                 var mappedProduct = ProductResponse.MapToProduct(product);
 
                 if (mappedProduct == null)
                 {
                     _logger.LogWarning("Product not found: {ProductId}", productId);
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Product not found."
+                    };
                 }
 
                 if (!mappedProduct.IsActive)
                 {
                     _logger.LogWarning("Product {ProductId} is not active", productId);
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Product is not active."
+                    };
                 }
 
-                var existingItem = await GetItemAsync(cartId, productId);
+                var existingItem = GetItemAsync(cartId, productId).GetAwaiter().GetResult().Value;
                 int totalQuantityNeeded = quantity;
 
                 if (existingItem != null)
@@ -325,23 +414,31 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
 
                 // Existing units are already reserved and excluded from available stock.
-                if (!await _inventoryService.IsInStockAsync(productId, quantity))
+                if (!_inventoryService.IsInStockAsync(productId, quantity).GetAwaiter().GetResult().Value)
                 {
                     _logger.LogWarning("Insufficient stock for product {ProductId}. Requested: {Quantity}, Total needed: {TotalQuantity}",
                         productId, quantity, totalQuantityNeeded);
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Product is not in stock."
+                    };
                 }
 
-                var stockReserved = await _inventoryService.ReserveStockAsync(
+                var stockReserved = _inventoryService.ReserveStockAsync(
                     productId,
                     quantity,
                     cartId,
-                    "CartItem");
+                    "CartItem").GetAwaiter().GetResult().Value;
 
                 if (!stockReserved)
                 {
                     _logger.LogError("Failed to reserve stock for product {ProductId}, quantity {Quantity}", productId, quantity);
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to reserve stock."
+                    };
                 }
 
                 Cart updatedCart = null;
@@ -351,12 +448,12 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     if (existingItem != null)
                     {
                         _logger.LogDebug("Updating existing cart item quantity");
-                        updatedCart = await _cartRepository.UpdateItemQuantityAsync(userId, sessionId, productId, totalQuantityNeeded);
+                        updatedCart = _cartRepository.UpdateItemQuantityAsync(userId, sessionId, productId, totalQuantityNeeded).GetAwaiter().GetResult().Value;
                     }
                     else
                     {
                         _logger.LogDebug("Creating new cart item");
-                        var createdItem = await _cartRepository.CreateItemAsync(cartId, userId, sessionId, productId, quantity, product.Price);
+                        var createdItem = _cartRepository.CreateItemAsync(cartId, userId, sessionId, productId, quantity, product.Price).GetAwaiter().GetResult().Value;
 
                         if (createdItem == null)
                         {
@@ -365,18 +462,18 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                         if (userId.HasValue)
                         {
-                            updatedCart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+                            updatedCart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
                             if (updatedCart == null)
                             {
-                                updatedCart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment);
+                                updatedCart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                             }
                         }
                         else if (!string.IsNullOrEmpty(sessionId))
                         {
-                            updatedCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+                            updatedCart = _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
                             if (updatedCart == null)
                             {
-                                updatedCart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment);
+                                updatedCart = _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                             }
                         }
                     }
@@ -389,7 +486,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     _logger.LogInformation("Successfully added item to cart: CartId={CartId}, ProductId={ProductId}, Quantity={Quantity}",
                         cartId, productId, quantity);
 
-                    return CartResponse.MapFromCart(updatedCart);
+                    return new ApplicationResponse<CartResponse>()
+                    {
+                        IsSuccess = true,
+                        Value = CartResponse.MapFromCart(updatedCart)
+                    };
                 }
                 catch
                 {
@@ -411,77 +512,109 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return null;
             }
         }
-        public async Task<CartResponse> UpdateItemQuantityAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
+        public async Task<ApplicationResponse<CartResponse>> UpdateItemQuantityAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
         {
 
             if (quantity <= 0)
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Quantity must be greater than zero."
+                };
             }
 
             Cart? cart = null;
 
             if (userId.HasValue)
             {
-                cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+                cart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment);
+                    cart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
             }
 
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active);
+                cart = _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment);
+                    cart = _cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
             }
 
             else
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Invalid cart context."
+                };
             }
 
-            if (cart == null || cart.Id != cartId) return null;
+            if (cart == null || cart.Id != cartId) return new ApplicationResponse<CartResponse>
+            {
+                IsSuccess = false,
+                ErrorMessage = "Cart not found."
+            };
             var item = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
 
             if (item == null)
             {
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Item not found in cart."
+                };
             }
 
             int quantityDifference = quantity - item.Quantity;
 
             if (quantityDifference == 0)
             {
-                return CartResponse.MapFromCart(cart);
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = true,
+                    Value = CartResponse.MapFromCart(cart)
+                };
             }
 
             if (quantityDifference > 0)
             {
-                if (!await _inventoryService.IsInStockAsync(productId, quantityDifference))
+                if (! _inventoryService.IsInStockAsync(productId, quantityDifference).GetAwaiter().GetResult().Value)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Product is not in stock."
+                    };
                 }
 
-                if (!await _inventoryService.ReserveStockAsync(
+                if (! _inventoryService.ReserveStockAsync(
                     productId,
                     quantityDifference,
                     cartId,
-                    "CartItem")) return null;
+                    "CartItem").GetAwaiter().GetResult().Value) return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to reserve stock."
+                };
             }
             else
             {
-                if (!await _inventoryService.ReleaseReservedStockAsync(
+                if (! _inventoryService.ReleaseReservedStockAsync(
                     productId,
                     Math.Abs(quantityDifference),
                     cartId,
-                    "CartItem")) return null;
+                    "CartItem").GetAwaiter().GetResult().Value) return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to release reserved stock."
+                };
             }
 
-            var updatedQuantity = await _cartRepository.UpdateItemQuantityAsync(userId, sessionId, productId, quantity);
+            var updatedQuantity = _cartRepository.UpdateItemQuantityAsync(userId, sessionId, productId, quantity).GetAwaiter().GetResult().Value;
 
 
             if (updatedQuantity == null && quantityDifference > 0)
@@ -491,14 +624,22 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     quantityDifference,
                     cartId,
                     "CartItem");
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to update item quantity."
+                };
             }
 
-            return CartResponse.MapFromCart(updatedQuantity);
+            return new ApplicationResponse<CartResponse>
+            {
+                IsSuccess = true,
+                Value = CartResponse.MapFromCart(updatedQuantity)
+            };
         }
 
 
-        public async Task<bool> RemoveItemAsync(int cartId, int? userId, string? sessionId, int productId)
+        public async Task<ApplicationResponse<bool>> RemoveItemAsync(int cartId, int? userId, string? sessionId, int productId)
         {
             try
             {
@@ -508,30 +649,38 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 if (userId.HasValue)
                 {
-                    cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active);
+                    cart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
                     if (cart == null)
                     {
-                        cart = await _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment);
+                        cart = _cartRepository.GetCartByUserIdAsync(userId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                     }
                 }
                 else if (!string.IsNullOrEmpty(sessionId))
                 {
-                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
+                    cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                     if (cart == null)
                     {
-                        cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                        cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                     }
                 }
                 else
                 {
                     _logger.LogWarning("No userId or sessionId provided for cart item removal");
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "No userId or sessionId provided for cart item removal"
+                    };
                 }
 
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found for removal: CartId={CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found for removal"
+                    };
                 }
 
                 var item = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
@@ -539,7 +688,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 if (item == null)
                 {
                     _logger.LogWarning("Cart item not found: CartId={CartId}, ProductId={ProductId}", cartId, productId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart item not found"
+                    };
                 }
 
                 var quantityToRelease = item.Quantity;
@@ -551,7 +704,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     cartId,
                     "CartItem");
 
-                var removedItem = await _cartRepository.RemoveItemAsync(userId, sessionId, productId);
+                var removedItem = _cartRepository.RemoveItemAsync(userId, sessionId, productId).GetAwaiter().GetResult().Value;
 
                 if (removedItem)
                 {
@@ -569,17 +722,25 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                         "CartItem");
                 }
 
-                return removedItem;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    Value = removedItem
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing item from cart: CartId={CartId}, ProductId={ProductId}", cartId, productId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error occurred while removing item from cart"
+                };
             }
         }
 
 
-        public async Task<bool> ClearCartAsync(int cartId, int? userId, string? sessionId)
+        public async Task<ApplicationResponse<bool>> ClearCartAsync(int cartId, int? userId, string? sessionId)
         {
             try
             {
@@ -588,24 +749,32 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 if (cartId <= 0)
                 {
                     _logger.LogWarning("Invalid cart ID provided: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid cart ID provided"
+                    };
                 }
 
                 
-                Cart cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
+                Cart cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                    cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Converted);
+                    cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Converted).GetAwaiter().GetResult().Value;
                 }
 
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found for clearing: CartId={CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found"
+                    };
                 }
 
                 
@@ -614,7 +783,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 {
                     _logger.LogWarning("User {UserId} attempted to clear cart {CartId} owned by user {OwnerId}",
                         userId, cartId, cart.UserId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Unauthorized access to cart"
+                    };
                 }
 
                 bool isConverted = cart.Status == CartStatus.Converted;
@@ -627,12 +800,16 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     {
                         try
                         {
-                            var released = await _inventoryService.ReleaseReservedStockAsync(
+                            var released = _inventoryService.ReleaseReservedStockAsync(
                                 item.ProductId,
                                 item.Quantity,
                                 cartId,
-                                "CartItem");
-                            if (!released) return false;
+                                "CartItem").GetAwaiter().GetResult().Value;
+                            if (!released) return new ApplicationResponse<bool>
+                            {
+                                IsSuccess = false,
+                                ErrorMessage = $"Failed to release stock for product {item.ProductId}"
+                            };
 
                             _logger.LogDebug("Released stock for product {ProductId}, quantity {Quantity}",
                                 item.ProductId, item.Quantity);
@@ -641,7 +818,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                         {
                             _logger.LogError(ex, "Failed to release stock for product {ProductId} in cart {CartId}",
                                 item.ProductId, cartId);
-                            return false;
+                            return new ApplicationResponse<bool>
+                            {
+                                IsSuccess = false,
+                                ErrorMessage = $"Failed to release stock for product {item.ProductId}"
+                            };
                         }
                     }
                 }
@@ -666,238 +847,364 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     _logger.LogError("Failed to clear cart {CartId}", cartId);
                 }
 
-                return success;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = success
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error clearing cart: CartId={CartId}", cartId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error occurred while clearing the cart"
+                };
             }
         }
 
-        public async Task<bool> CompleteCartAsync(int cartId, int? userId)
+        public async Task<ApplicationResponse<bool>> CompleteCartAsync(int cartId, int? userId)
         {
-            var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
-            if (cart == null || !userId.HasValue || cart.UserId != userId) return false;
-            var order = await _orderRepository.GetOrderByCartIdAsync(cartId);
-            if (order == null || !order.isPaid) return false;
-            return await ConvertCartAsync(cartId);
+            var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
+            if (cart == null || !userId.HasValue || cart.UserId != userId) return new ApplicationResponse<bool>
+            {
+                IsSuccess = false,
+                ErrorMessage = "Unauthorized access to cart"
+            };
+            var order = _orderRepository.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
+            if (order == null || !order.isPaid) return new ApplicationResponse<bool>
+            {
+                IsSuccess = false,
+                ErrorMessage = "Order is not paid"
+            };
+            return ConvertCartAsync(cartId).GetAwaiter().GetResult();
         }
 
-        public async Task<bool> ConvertCartAsync(int cartId)
+        public async Task<ApplicationResponse<bool>> ConvertCartAsync(int cartId)
         {
             try
             {
                 _logger.LogInformation("Starting cart conversion for cart ID: {CartId}", cartId);
 
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found or not in PendingPayment status for conversion: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or not in PendingPayment status"
+                    };
                 }
 
                 if (cart.CartItems == null || !cart.CartItems.Any())
                 {
                     _logger.LogWarning("Cannot convert empty cart: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cannot convert empty cart"
+                    };
                 }
 
                 cart.Status = CartStatus.Converted;
                 cart.UpdatedAt = DateTime.UtcNow;
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 if (updatedCart == null)
                 {
                     _logger.LogError("Failed to update cart status to Converted for cart {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to update cart status"
+                    };
                 }
 
                 _logger.LogInformation("Successfully converted cart {CartId} status to Converted", cartId);
 
-                return true;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during cart conversion for cart {CartId}", cartId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Unexpected error occurred"
+                };
             }
         }
 
-        public async Task<bool> UpdateCartStatusAsync(int cartId, CartStatus status)
+        public async Task<ApplicationResponse<bool>> UpdateCartStatusAsync(int cartId, CartStatus status)
         {
             try
             {
                 _logger.LogInformation("Updating cart {CartId} status to {Status}", cartId, status);
 
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                    cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
 
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found"
+                    };
                 }
 
                 if (cart.Status == status)
                 {
-                    return true;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = true,
+                        Value = true
+                    };
                 }
 
                 cart.Status = status;
                 cart.UpdatedAt = DateTime.UtcNow;
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 if (updatedCart == null)
                 {
                     _logger.LogError("Failed to update cart status for cart {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to update cart status"
+                    };
                 }
 
                 _logger.LogInformation("Successfully updated cart {CartId} status to {Status}", cartId, status);
-                return true;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    Value = true
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating cart status for cart {CartId}", cartId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error updating cart status"
+                };
             }
         }
 
-        public async Task<bool> ReactivateCartAsync(int cartId, int orderId)
+        public async Task<ApplicationResponse<bool>> ReactivateCartAsync(int cartId, int orderId)
         {
             try
             {
                 _logger.LogInformation("Reactivating cart {CartId} from order {OrderId}", cartId, orderId);
 
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found or not in PendingPayment status: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or not in PendingPayment status"
+                    };
                 }
 
                 cart.Status = CartStatus.Active;
                 cart.UpdatedAt = DateTime.UtcNow;
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 if (updatedCart == null)
                 {
                     _logger.LogError("Failed to reactivate cart {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to reactivate cart"
+                    };
                 }
 
                 _logger.LogInformation("Successfully reactivated cart {CartId}", cartId);
-                return true;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    Value = true
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error reactivating cart {CartId}", cartId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error reactivating cart"
+                };
             }
         }
 
-        public async Task<CartResponse> RefreshCartAsync(int cartId)
+        public async Task<ApplicationResponse<CartResponse>> RefreshCartAsync(int cartId)
         {
-            return await GetCartByIdAsync(cartId, CartStatus.Active)
-                ?? await GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+            return new ApplicationResponse<CartResponse>()
+            {
+                IsSuccess = true,
+                Value = GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value
+                ?? GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value
+            };
         }
 
 
-        public async Task<CartItemResponse> GetItemAsync(int cartId, int productId)
+        public async Task<ApplicationResponse<CartItemResponse>> GetItemAsync(int cartId, int productId)
         {
             CartResponse? cart = null;
 
-            cart = await GetCartByIdAsync(cartId, CartStatus.Active);
+            cart = GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (cart == null)
             {
-                cart = await GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                cart = GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null)
             {
-                return null;
+                return new ApplicationResponse<CartItemResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Cart not found."
+                };
             }
 
             var item = cart.CartItems.Where(i => i.ProductId == productId).FirstOrDefault();
 
             if (item == null)
             {
-                return null;
+                return new ApplicationResponse<CartItemResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Item not found."
+                };
             }
 
-            return item;
+            return new ApplicationResponse<CartItemResponse>
+            {
+                IsSuccess = true,
+                Value = item
+            };
         }
 
 
-        public async Task<CartResponse> ApplyCouponAsync(int cartId, int? userId, string couponCode)
+        public async Task<ApplicationResponse<CartResponse>> ApplyCouponAsync(int cartId, int? userId, string couponCode)
         {
             try
             {
 
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                    cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
 
                 if (cart == null || !userId.HasValue || cart.UserId != userId)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or user is not the owner."
+                    };
                 }
 
                 if (string.IsNullOrWhiteSpace(couponCode))
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Coupon code is invalid."
+                    };
                 }
 
                 if (cart.CartCoupons.Any(cc => cc.Coupon.Code == couponCode))
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Coupon has already been applied."
+                    };
                 }
 
                 if (!userId.HasValue || userId.Value <= 0)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid user."
+                    };
                 }
 
-                var coupon = await _couponService.GetByCodeAsync(couponCode);
+                var coupon = _couponService.GetByCodeAsync(couponCode).GetAwaiter().GetResult().Value;
 
-                if (coupon == null || !coupon.IsActive || await _userCouponService.IsCouponUsedByUser(userId.Value, couponCode))
+                if (coupon == null || !coupon.IsActive || _userCouponService.IsCouponUsedByUser(userId.Value, couponCode).GetAwaiter().GetResult().Value)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid coupon."
+                    };
                 }
 
-                var assignedCoupons = await _userCouponService.GetCouponsByUserIdAsync(userId.Value);
+                var assignedCoupons = _userCouponService.GetCouponsByUserIdAsync(userId.Value).GetAwaiter().GetResult().Value;
                 if (assignedCoupons == null || !assignedCoupons.Any(c => c.Id == coupon.Id))
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Coupon is not assigned to the user."
+                    };
                 }
 
                 if (!cart.CartItems.Any())
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart is empty."
+                    };
                 }
 
-                if (coupon.IsForNewUsersOnly && await _orderRepository.UserHasPaidOrderAsync(userId.Value))
+                if (coupon.IsForNewUsersOnly && _orderRepository.UserHasPaidOrderAsync(userId.Value).GetAwaiter().GetResult().Value)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "This coupon is only for new users."
+                    };
                 }
 
                 decimal cartSubTotal = cart.SubTotal;
 
                 if (coupon.MinimumOrderAmount > 0 && cartSubTotal < coupon.MinimumOrderAmount)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Minimum order amount not met."
+                    };
                 }
 
                 var discountAmount = ComputeDiscountAmount(coupon, cartSubTotal);
                 if (discountAmount <= 0)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid discount amount."
+                    };
                 }
 
                 var cartCoupon = new CartCoupon
@@ -913,49 +1220,77 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 cart.CartCoupons.Add(cartCoupon);
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 if (updatedCart == null)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to update cart."
+                    };
                 }
 
-                return CartResponse.MapFromCart(updatedCart);
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = true,
+                    Value = CartResponse.MapFromCart(updatedCart)
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error applying coupon {CouponCode} to cart {CartId}", couponCode, cartId);
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "An error occurred while applying the coupon."
+                };
             }
         }
 
-        public async Task<CartResponse> RemoveCouponAsync(int cartId, int? userId, string? sessionId, int couponId)
+        public async Task<ApplicationResponse<CartResponse>> RemoveCouponAsync(int cartId, int? userId, string? sessionId, int couponId)
         {
             try
             {
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active)
-                    ?? await _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value
+                    ?? _cartRepository.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 if (cart == null || (userId.HasValue
                     ? cart.UserId != userId
                     : cart.UserId.HasValue || string.IsNullOrWhiteSpace(sessionId) || cart.SessionId != sessionId))
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or not active."
+                    };
                 }
 
                 var cartCoupon = cart.CartCoupons.FirstOrDefault(cc => cc.CouponId == couponId);
                 if (cartCoupon == null)
                 {
-                    return null;
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Coupon not found in cart."
+                    };
                 }
 
                 cart.CartCoupons.Remove(cartCoupon);
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 if (updatedCart == null)
                 {
-                    throw new InvalidOperationException("Failed to remove coupon from cart");
+                    return new ApplicationResponse<CartResponse>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to remove coupon from cart."
+                    };
                 }
 
-                return CartResponse.MapFromCart(updatedCart);
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = true,
+                    Value = CartResponse.MapFromCart(updatedCart)
+                };
             }
             catch (Exception ex)
             {
@@ -964,17 +1299,21 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             }
         }
 
-        public async Task<bool> HandleAbandonedCartAsync(int cartId)
+        public async Task<ApplicationResponse<bool>> HandleAbandonedCartAsync(int cartId)
         {
             try
             {
                 _logger.LogInformation("Handling abandoned cart: {CartId}", cartId);
 
-                var cart = await _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active);
+                var cart = _cartRepository.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
                     _logger.LogWarning("Cart not found or not active: {CartId}", cartId);
-                    return false;
+                    return new ApplicationResponse<bool>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or not active."
+                    };
                 }
 
                 if (cart.CartItems?.Any() == true)
@@ -1008,7 +1347,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 cart.Status = CartStatus.Abandoned;
                 cart.UpdatedAt = DateTime.UtcNow;
 
-                var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
                 var success = updatedCart != null;
 
                 if (success)
@@ -1020,22 +1359,30 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     _logger.LogError("Failed to update abandoned cart status: {CartId}", cartId);
                 }
 
-                return success;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = true,
+                    Value = success
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling abandoned cart: {CartId}", cartId);
-                return false;
+                return new ApplicationResponse<bool>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error handling abandoned cart."
+                };
             }
         }
 
-        public async Task<int> CleanupExpiredCartsAsync()
+        public async Task<ApplicationResponse<int>> CleanupExpiredCartsAsync()
         {
             try
             {
                 _logger.LogInformation("Starting cleanup of expired carts");
 
-                var allCarts = await _cartRepository.GetCartsAsync();
+                var allCarts = _cartRepository.GetCartsAsync().GetAwaiter().GetResult().Value;
                 var expiredCarts = allCarts.Where(c =>
                     c.Status == CartStatus.Active &&
                     c.UpdatedAt < DateTime.UtcNow.AddHours(-24))
@@ -1044,7 +1391,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 if (!expiredCarts.Any())
                 {
                     _logger.LogInformation("No expired carts found for cleanup");
-                    return 0;
+                    return new ApplicationResponse<int>
+                    {
+                        IsSuccess = true,
+                        Value = 0
+                    };
                 }
 
                 _logger.LogInformation("Found {ExpiredCartCount} expired carts for cleanup", expiredCarts.Count);
@@ -1054,7 +1405,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 {
                     try
                     {
-                        var success = await HandleAbandonedCartAsync(cart.Id);
+                        var success = HandleAbandonedCartAsync(cart.Id).GetAwaiter().GetResult().Value;
                         if (success)
                         {
                             Interlocked.Increment(ref cleanedUpCount);
@@ -1071,12 +1422,20 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 _logger.LogInformation("Completed cleanup of expired carts. Cleaned up: {CleanedUpCount}/{TotalExpired}",
                     cleanedUpCount, expiredCarts.Count);
 
-                return cleanedUpCount;
+                return new ApplicationResponse<int>
+                {
+                    IsSuccess = true,
+                    Value = cleanedUpCount
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during expired cart cleanup");
-                return 0;
+                return new ApplicationResponse<int>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Error during expired cart cleanup."
+                };
             }
         }
     }
