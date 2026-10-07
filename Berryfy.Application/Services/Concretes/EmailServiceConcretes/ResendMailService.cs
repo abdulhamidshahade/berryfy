@@ -1,5 +1,4 @@
 using Berryfy.Application.Config;
-using Berryfy.Application.Dtos.EmailDtos;
 using Berryfy.Application.Dtos.EmailDtos.Requests;
 using Berryfy.Application.Services.Interfaces.EmailServiceInterfaces;
 using Microsoft.Extensions.Logging;
