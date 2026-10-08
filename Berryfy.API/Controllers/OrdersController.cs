@@ -49,7 +49,7 @@ namespace Berryfy.API.Controllers
                 var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active)
                     ?? await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
                 if (cart == null) return NotFound();
-                if (cart.UserId != userId.Value) return Forbid();
+                if (cart.Value.UserId != userId.Value) return Forbid();
 
                 request.UserId = userId.Value;
                 var order = await _orderService.CreateOrderFromCartAsync(request.CartId, request);
@@ -63,9 +63,9 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, new ApiResponse<Order>
+                return CreatedAtAction(nameof(GetOrderById), new { id = order.Value.Id }, new ApiResponse<Order>
                 {
-                    Data = order,
+                    Data = order.Value,
                     IsSuccess = true,
                     StatusCode = 201,
                     StatusMessage = "Order created successfully"
@@ -101,14 +101,14 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                if (!CanAccessUserResource(order.UserId)) return Forbid();
+                if (!CanAccessUserResource(order.Value.UserId)) return Forbid();
 
                 return Ok(new ApiResponse<OrderResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order retrieved successfully",
-                    Data = order
+                    Data = order.Value
                 });
             }
             catch (Exception ex)
@@ -142,7 +142,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "User orders retrieved successfully",
-                    Data = orders
+                    Data = orders.Value
                 });
             }
             catch (Exception ex)
@@ -175,7 +175,7 @@ namespace Berryfy.API.Controllers
                 }
 
                 var result = await _orderService.CancelOrderAsync(orderId, request.Reason);
-                if (!result)
+                if (!result.Value)
                 {
                     return StatusCode(500, new ApiResponse<CancellationResult>
                     {
@@ -228,7 +228,7 @@ namespace Berryfy.API.Controllers
                 }
 
                 var result = await _orderService.RefundOrderAsync(orderId, request.Reason);
-                if (!result)
+                if (!result.Value)
                 {
                     return StatusCode(500, new ApiResponse<RefundResult>
                     {
@@ -274,7 +274,7 @@ namespace Berryfy.API.Controllers
                 var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
                     ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
                 if (cart == null) return NotFound();
-                if (!CanAccessUserResource(cart.UserId)) return Forbid();
+                if (!CanAccessUserResource(cart.Value.UserId)) return Forbid();
 
                 var totals = await _orderService.CalculateOrderTotalsAsync(cartId);
                 if (totals == null)
@@ -292,7 +292,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order totals calculated successfully",
-                    Data = totals
+                    Data = totals.Value
                 });
             }
             catch (Exception ex)
@@ -325,9 +325,9 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                var mappedOrder = OrderResponse.MapToOrder(order);
+                var mappedOrder = OrderResponse.MapToOrder(order.Value);
                 var result = await _orderService.UpdateOrderStatusAsync(mappedOrder, request.NewStatus);
-                if (!result)
+                if (!result.Value)
                 {
                     return Conflict(new ApiResponse<OrderResponse>
                     {
@@ -342,7 +342,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order status updated successfully",
-                    Data = await _orderService.GetOrderByIdAsync(orderId)
+                    Data = _orderService.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value
                 });
             }
             catch (Exception ex)
@@ -390,7 +390,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order retrieved successfully",
-                    Data = OrderResponse.MapFromOrder(order)
+                    Data = OrderResponse.MapFromOrder(order.Value)
                 });
             }
             catch (Exception ex)
@@ -419,7 +419,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Orders retrieved successfully",
-                    Data = OrderResponse.MapFromOrder(orders)
+                    Data = OrderResponse.MapFromOrder(orders.Value)
                 });
             }
             catch (Exception ex)
@@ -448,7 +448,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "All orders retrieved successfully",
-                    Data = orders
+                    Data = orders.Value
                 });
             }
             catch (Exception ex)
@@ -471,7 +471,7 @@ namespace Berryfy.API.Controllers
             try
             {
                 var result = await _orderService.ProcessOrderAsync(orderId);
-                if (!result)
+                if (!result.Value)
                 {
                     return StatusCode(500, new ApiResponse<bool>
                     {
@@ -521,12 +521,12 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                if (!CanAccessUserResource(order.UserId))
+                if (!CanAccessUserResource(order.Value.UserId))
                 {
                     return Forbid();
                 }
 
-                if (order.CartId <= 0)
+                if (order.Value.CartId <= 0)
                 {
                     return BadRequest(new ApiResponse<OrderResponse>
                     {
@@ -536,8 +536,8 @@ namespace Berryfy.API.Controllers
                     });
                 }
 
-                var result = await _orderService.SyncOrderWithCartAsync(orderId, order.CartId);
-                if (!result)
+                var result = await _orderService.SyncOrderWithCartAsync(orderId, order.Value.CartId);
+                if (!result.Value)
                 {
                     return StatusCode(500, new ApiResponse<OrderResponse>
                     {
@@ -553,7 +553,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Order synced with cart successfully",
-                    Data = updatedOrder
+                    Data = updatedOrder.Value
                 });
             }
             catch (Exception ex)
