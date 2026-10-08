@@ -39,7 +39,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
             {
                 _logger.LogInformation("Starting order cancellation for order {OrderId}", orderId);
 
-                var order = await _orderRepository.GetOrderByIdAsync(orderId);
+                var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
                 if (order == null)
                 {
                     result.ErrorMessage = "Order not found";
@@ -69,11 +69,11 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                         {
                             foreach (var item in order.OrderItems)
                             {
-                                var released = await _inventoryService.ReleaseReservedStockAsync(
+                                var released = _inventoryService.ReleaseReservedStockAsync(
                                     item.ProductId,
                                     item.Quantity,
                                     order.CartId,
-                                    "CartItem");
+                                    "CartItem").GetAwaiter().GetResult().Value;
 
                                 if (!released)
                                 {
@@ -90,11 +90,11 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         foreach (var item in order.OrderItems)
                         {
-                            var inventoryRestored = await _inventoryService.AddStockAsync(
+                            var inventoryRestored = _inventoryService.AddStockAsync(
                                 item.ProductId,
                                 item.Quantity,
                                 $"Stock returned from cancelled order {order.ReferenceNumber}: {reason}",
-                                performedByUserId);
+                                performedByUserId).GetAwaiter().GetResult().Value;
 
                             if (!inventoryRestored)
                             {
@@ -110,13 +110,13 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     _logger.LogDebug("Reverting coupon usage for cancelled order {OrderId}", orderId);
                     if (order.UserId > 0)
                     {
-                        var couponIds = await _userCouponService.GetCouponIdsUsedInOrderAsync(orderId);
+                        var couponIds = _userCouponService.GetCouponIdsUsedInOrderAsync(orderId).GetAwaiter().GetResult().Value;
                         foreach (var couponId in couponIds)
                         {
-                            var couponReverted = await _userCouponService.RevertCouponUsageAsync(
+                            var couponReverted = _userCouponService.RevertCouponUsageAsync(
                                 order.UserId,
                                 couponId,
-                                orderId);
+                                orderId).GetAwaiter().GetResult().Value;
 
                             if (!couponReverted)
                             {
@@ -134,7 +134,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     order.CancalledAt = DateTime.UtcNow;
                     order.UpdatedAt = DateTime.UtcNow;
 
-                    var orderUpdated = await _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status);
+                    var orderUpdated = _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status).GetAwaiter().GetResult().Value;
                     if (!orderUpdated)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
