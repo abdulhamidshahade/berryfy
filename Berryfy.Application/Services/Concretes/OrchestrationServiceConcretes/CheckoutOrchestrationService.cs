@@ -1,3 +1,4 @@
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.OrderDtos;
 using Berryfy.Application.Dtos.OrderDtos.Requests;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
@@ -37,7 +38,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<CheckoutResult> ProcessCheckoutAsync(int cartId, CreateOrder orderDto, int? userId)
+        public async Task<ApplicationResponse<CheckoutResult>> ProcessCheckoutAsync(int cartId, CreateOrder orderDto, int? userId)
         {
             var result = new CheckoutResult();
 
@@ -61,13 +62,23 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 if (cart.CartItems == null || cart.CartItems.Count == 0)
                 {
                     result.ErrorMessage = "Cart is empty";
-                    return result;
+                    return new ApplicationResponse<CheckoutResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Cart is empty"
+                    };
                 }
 
                 if (!userId.HasValue || cart.UserId != userId || orderDto.UserId != userId)
                 {
                     result.ErrorMessage = "You can only check out your own cart";
-                    return result;
+                    return new ApplicationResponse<CheckoutResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "You can only check out your own cart"
+                    };
                 }
 
                 // If cart is already PendingPayment, check if order exists
@@ -81,11 +92,20 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                         if (!_orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId).GetAwaiter().GetResult().Value)
                         {
                             result.ErrorMessage = "Could not update the pending order";
-                            return result;
+                            return new ApplicationResponse<CheckoutResult>
+                            {
+                                Value = result,
+                                IsSuccess = false,
+                                ErrorMessage = "Could not update the pending order"
+                            };
                         }
                         result.Order = _orderService.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
                         result.IsSuccess = true;
-                        return result;
+                        return new ApplicationResponse<CheckoutResult>
+                        {
+                            Value = result,
+                            IsSuccess = true
+                        };
                     }
                     _logger.LogInformation("No existing order found for PendingPayment cart {CartId}, will create new order", cartId);
                 }
@@ -105,7 +125,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                         {
                             await _unitOfWork.RollbackTransactionAsync();
                             result.ErrorMessage = $"Insufficient stock for product ID {item.ProductId}";
-                            return result;
+                            return new ApplicationResponse<CheckoutResult>
+                            {
+                                Value = result,
+                                IsSuccess = false,
+                                ErrorMessage = $"Insufficient stock for product ID {item.ProductId}"
+                            };
                         }
                     }
 
@@ -116,7 +141,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to create order";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<CheckoutResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to create order"
+                        };
                     }
 
                     result.Order = order;
@@ -126,27 +156,46 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to commit checkout transaction";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<CheckoutResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to commit checkout transaction"
+                        };
                     }
 
                     result.IsSuccess = true;
                     _logger.LogInformation("Successfully completed checkout for cart {CartId}, order {OrderId}", cartId, order.Id);
 
-                    return result; // Replaced 'return true'
+                    return new ApplicationResponse<CheckoutResult>
+                    {
+                        Value = result,
+                        IsSuccess = true
+                    };
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error during checkout transaction for cart {CartId}", cartId);
                     await _unitOfWork.RollbackTransactionAsync();
                     result.ErrorMessage = $"Checkout transaction failed: {ex.Message}";
-                    return result; // Replaced 'return false'
+                    return new ApplicationResponse<CheckoutResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = $"Checkout transaction failed: {ex.Message}"
+                    };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during checkout for cart {CartId}", cartId);
                 result.ErrorMessage = $"Unexpected error: {ex.Message}";
-                return result;
+                return new ApplicationResponse<CheckoutResult>
+                {
+                    Value = result,
+                    IsSuccess = false,
+                    ErrorMessage = $"Unexpected error: {ex.Message}"
+                };
             }
         }
     }
