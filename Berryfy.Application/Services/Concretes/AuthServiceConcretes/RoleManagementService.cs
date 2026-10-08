@@ -116,7 +116,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                if (!await _userRepository.ExistsByIdAsync(userId))
+                if (!_userRepository.ExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
                 {
                     return new ApplicationResponse<bool>()
                     {
@@ -209,7 +209,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                if (!await _userRepository.ExistsByIdAsync(userId))
+                if (!_userRepository.ExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
                 {
                     return new ApplicationResponse<List<string>>()
                     {
@@ -324,7 +324,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userRepository.GetByIdAsync(userId);
+                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
                 if (user == null)
                 {
                     return null;
