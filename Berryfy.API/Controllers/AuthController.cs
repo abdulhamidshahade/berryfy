@@ -440,7 +440,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _userService.IsUserExistsByIdAsync(id);
 
-            if (!exists)
+            if (!exists.Value)
             {
                 return NotFound(new ApiResponse<object>
                 {
@@ -466,7 +466,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _userService.IsUserExistsByEmailAsync(emailAddress);
 
-            if (!exists)
+            if (!exists.Value)
             {
                 return NotFound(new ApiResponse<object>
                 {
@@ -491,7 +491,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _userService.IsUsernameTaken(username);
 
-            if (!exists)
+            if (!exists.Value)
             {
                 return NotFound(new ApiResponse<object>
                 {
@@ -585,7 +585,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Users retrieved successfully.",
-                    Data = users
+                    Data = users.Value
                 });
             }
             catch (Exception ex)
@@ -622,7 +622,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "User retrieved successfully.",
-                    Data = user
+                    Data = user.Value
                 });
             }
             catch (Exception ex)
@@ -719,7 +719,7 @@ namespace Berryfy.API.Controllers
                 DateTime? lockoutEnd = requestDto?.LockoutEnd;
                 var result = await _userService.LockUserAccountAsync(userId, lockoutEnd);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -756,7 +756,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.UnlockUserAccountAsync(userId);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -803,7 +803,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.ResetUserPasswordAsync(userId, requestDto.NewPassword);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -840,7 +840,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.VerifyUserEmailAsync(userId);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -888,7 +888,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.UpdateUserAsync(userId, updateUserDto);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -943,7 +943,7 @@ namespace Berryfy.API.Controllers
                         IsSuccess = true,
                         StatusCode = 201,
                         StatusMessage = "User created successfully.",
-                        Data = user
+                        Data = user.Value
                     });
                 }
 
@@ -974,7 +974,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.DeleteUserAsync(userId);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<bool>
                     {
