@@ -32,7 +32,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = $"Stock check completed for product {productId}",
-                    Data = isInStock
+                    Data = isInStock.Value
                 });
             }
             catch (Exception ex)
@@ -90,7 +90,7 @@ namespace Berryfy.API.Controllers
                     request.ReferenceId,
                     request.ReferenceType);
 
-                if (!success)
+                if (!success.Value)
                 {
                     return BadRequest(new ApiResponse<bool>
                     {
@@ -137,10 +137,10 @@ namespace Berryfy.API.Controllers
 
                 return Ok(new ApiResponse<bool>
                 {
-                    IsSuccess = success,
-                    StatusCode = success ? 200 : 400,
-                    StatusMessage = success ? "Reserved stock released successfully" : "Failed to release reserved stock",
-                    Data = success
+                    IsSuccess = success.Value,
+                    StatusCode = success.Value ? 200 : 400,
+                    StatusMessage = success.Value ? "Reserved stock released successfully" : "Failed to release reserved stock",
+                    Data = success.Value
                 });
             }
             catch (Exception ex)
@@ -171,10 +171,10 @@ namespace Berryfy.API.Controllers
 
                 return Ok(new ApiResponse<bool>
                 {
-                    IsSuccess = success,
-                    StatusCode = success ? 200 : 400,
-                    StatusMessage = success ? "Stock deduction confirmed successfully" : "Failed to confirm stock deduction",
-                    Data = success
+                    IsSuccess = success.Value,
+                    StatusCode = success.Value ? 200 : 400,
+                    StatusMessage = success.Value ? "Stock deduction confirmed successfully" : "Failed to confirm stock deduction",
+                    Data = success.Value
                 });
             }
             catch (Exception ex)
@@ -204,10 +204,10 @@ namespace Berryfy.API.Controllers
 
                 return Ok(new ApiResponse<bool>
                 {
-                    IsSuccess = success,
-                    StatusCode = success ? 200 : 400,
-                    StatusMessage = success ? "Stock added successfully" : "Failed to add stock",
-                    Data = success
+                    IsSuccess = success.Value,
+                    StatusCode = success.Value ? 200 : 400,
+                    StatusMessage = success.Value ? "Stock added successfully" : "Failed to add stock",
+                    Data = success.Value
                 });
             }
             catch (Exception ex)
@@ -238,10 +238,10 @@ namespace Berryfy.API.Controllers
 
                 return Ok(new ApiResponse<bool>
                 {
-                    IsSuccess = success,
-                    StatusCode = success ? 200 : 400,
-                    StatusMessage = success ? "Stock adjusted successfully" : "Failed to adjust stock",
-                    Data = success
+                    IsSuccess = success.Value,
+                    StatusCode = success.Value ? 200 : 400,
+                    StatusMessage = success.Value ? "Stock adjusted successfully" : "Failed to adjust stock",
+                    Data = success.Value
                 });
             }
             catch (Exception ex)
@@ -280,7 +280,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Product retrieved successfully",
-                    Data = product
+                    Data = product.Value
                 });
             }
             catch (Exception ex)
@@ -309,7 +309,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Low stock products retrieved successfully",
-                    Data = products
+                    Data = products.Value
                 });
             }
             catch (Exception ex)
@@ -338,7 +338,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "Inventory history retrieved successfully",
-                    Data = history
+                    Data = history.Value
                 });
             }
             catch (Exception ex)
