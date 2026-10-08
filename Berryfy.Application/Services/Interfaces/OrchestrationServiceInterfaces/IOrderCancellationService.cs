@@ -1,8 +1,10 @@
+using Berryfy.Application.Dtos;
+
 namespace Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces
 {
     public interface IOrderCancellationService
     {
-        Task<CancellationResult> CancelOrderAsync(int orderId, string reason, int? performedByUserId = null);
+        Task<ApplicationResponse<CancellationResult>> CancelOrderAsync(int orderId, string reason, int? performedByUserId = null);
     }
 
     public class CancellationResult
