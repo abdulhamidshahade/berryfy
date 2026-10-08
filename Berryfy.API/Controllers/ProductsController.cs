@@ -59,20 +59,20 @@ namespace Berryfy.API.Controllers
 
             var result = await _productService.GetPaginatedAsync(filter);
 
-            if (!result.Data.Any())
+            if (!result.Value.Data.Any())
             {
                 return NotFound(new ApiResponse<PaginationResponse<ProductResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
                     StatusMessage = "No products found",
-                    Data = result
+                    Data = result.Value
                 });
             }
 
             return Ok(new ApiResponse<PaginationResponse<ProductResponse>>
             {
-                Data = result,
+                Data = result.Value,
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "Products retrieved successfully!"
@@ -88,7 +88,7 @@ namespace Berryfy.API.Controllers
 
             var products = await _productService.GetAllAsync();
 
-            if (!products.Any())
+            if (!products.Value.Any())
             {
                 return NotFound(new ApiResponse<IEnumerable<ProductResponse>>
                 {
@@ -102,7 +102,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Products retrieved successfully",
-                Data = products
+                Data = products.Value
             };
 
             return Ok(response);
@@ -132,7 +132,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Product retrieved successfully",
-                Data = product
+                Data = product.Value
             };
             return Ok(response);
         }
@@ -161,7 +161,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Product retrieved successfully",
-                Data = product
+                Data = product.Value
             };
             return Ok(response);
         }
@@ -191,7 +191,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
                 StatusMessage = "Product created successfully",
-                Data = createdProduct
+                Data = createdProduct.Value
             };
 
             return response;
@@ -224,7 +224,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Product updated successfully",
-                Data = updatedProduct
+                Data = updatedProduct.Value
             };
             return Ok(response);
         }
@@ -237,7 +237,7 @@ namespace Berryfy.API.Controllers
         {
             var deleted = await _productService.DeleteAsync(id);
 
-            if (!deleted)
+            if (!deleted.Value)
             {
                 var notFoundResponse = new ApiResponse<bool>
                 {
@@ -269,7 +269,7 @@ namespace Berryfy.API.Controllers
 
             var exists = await _productService.ExistsByIdAsync(id);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
@@ -299,7 +299,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _productService.ExistsByNameAsync(name);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
