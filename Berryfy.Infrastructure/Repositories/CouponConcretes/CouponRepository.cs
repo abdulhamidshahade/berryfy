@@ -158,7 +158,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsAsync(Expression<Func<Coupon, bool>> expression)
         {
-            var coupons = await GetAllAsync();
+            var coupons = GetAllAsync().GetAwaiter().GetResult().Value;
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
