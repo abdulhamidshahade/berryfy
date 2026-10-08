@@ -46,10 +46,10 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 _logger.LogInformation("Starting checkout process for cart {CartId}", cartId);
 
                 // Try Active status first, then PendingPayment
-                var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
+                var cart = _cartService.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
                 if (cart == null)
                 {
-                    cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                    cart = _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
                 }
 
                 if (cart == null)
@@ -74,16 +74,16 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 if (cart.Status == CartStatus.PendingPayment)
                 {
                     _logger.LogInformation("Cart {CartId} is already in PendingPayment status, checking for existing order", cartId);
-                    var existingOrder = await _orderService.GetOrderByCartIdAsync(cartId);
+                    var existingOrder = _orderService.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
                     if (existingOrder != null)
                     {
                         _logger.LogInformation("Found existing order {OrderId} for cart {CartId}, syncing and returning it", existingOrder.Id, cartId);
-                        if (!await _orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId))
+                        if (!_orderService.SyncOrderWithCartAsync(existingOrder.Id, cartId).GetAwaiter().GetResult().Value)
                         {
                             result.ErrorMessage = "Could not update the pending order";
                             return result;
                         }
-                        result.Order = await _orderService.GetOrderByCartIdAsync(cartId);
+                        result.Order = _orderService.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
                         result.IsSuccess = true;
                         return result;
                     }
@@ -99,7 +99,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 {
                     foreach (var item in cart.CartItems)
                     {
-                        var product = await _inventoryService.GetProductWithStockInfoAsync(item.ProductId);
+                        var product = _inventoryService.GetProductWithStockInfoAsync(item.ProductId).GetAwaiter().GetResult().Value;
                         if (item.Quantity <= 0 || product == null || product.ReservedStock < item.Quantity ||
                             product.StockQuantity < product.ReservedStock)
                         {
@@ -110,7 +110,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     }
 
                     _logger.LogDebug("Creating order from cart {CartId}", cartId);
-                    var order = await _orderService.CreateOrderFromCartAsync(cartId, orderDto);
+                    var order = _orderService.CreateOrderFromCartAsync(cartId, orderDto).GetAwaiter().GetResult().Value;
 
                     if (order == null)
                     {
