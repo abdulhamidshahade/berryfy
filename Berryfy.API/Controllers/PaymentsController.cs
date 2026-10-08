@@ -49,16 +49,16 @@ namespace Berryfy.API.Controllers
                 if (!createPaymentDto.OrderId.HasValue) return BadRequest(new { StatusMessage = "An order is required" });
                 var payableOrder = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
                 if (payableOrder == null) return NotFound();
-                if (payableOrder.UserId != userId.Value) return Forbid();
-                if (payableOrder.Status != OrderStatus.Pending || payableOrder.IsPaid)
+                if (payableOrder.Value.UserId != userId.Value) return Forbid();
+                if (payableOrder.Value.Status != OrderStatus.Pending || payableOrder.Value.IsPaid)
                     return Conflict(new { StatusMessage = "This order is not awaiting payment" });
-                if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Total)
+                if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Value.Total)
                     return BadRequest(new { StatusMessage = "Payment amount must match the order total" });
                 if (!string.Equals(createPaymentDto.Currency, "USD", StringComparison.OrdinalIgnoreCase))
                     return BadRequest(new { StatusMessage = "Orders must be paid in USD" });
 
-                var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Id);
-                if (previousPayment.IsSuccess && previousPayment.Data?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
+                var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Value.Id);
+                if (previousPayment.IsSuccess && previousPayment.Value?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
                     return Conflict(new { StatusMessage = "Payment has already been submitted for this order" });
 
                 var result = await _paymentService.ProcessPaymentAsync(createPaymentDto, userId, sessionId);
@@ -72,45 +72,45 @@ namespace Berryfy.API.Controllers
                     var order = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
                     if (order != null)
                     {
-                        var mappedOrder = OrderResponse.MapToOrder(order);
+                        var mappedOrder = OrderResponse.MapToOrder(order.Value);
                         
-                        if (result.Data?.Success == true)
+                        if (result.Value?.Success == true)
                         {
-                            if (order.Status == OrderStatus.Pending)
+                            if (order.Value.Status == OrderStatus.Pending)
                             {
-                                var inventoryOk = await _orderService.DeductInventoryForPaidOrderAsync(order.Id);
-                                if (!inventoryOk)
+                                var inventoryOk = await _orderService.DeductInventoryForPaidOrderAsync(order.Value.Id);
+                                if (!inventoryOk.Value)
                                 {
                                     _logger.LogCritical(
                                         "Payment succeeded for order {OrderId} but inventory deduction failed. Manual reconciliation required.",
-                                        order.Id);
+                                        order.Value.Id);
                                     return StatusCode(StatusCodes.Status500InternalServerError, new
                                     {
                                         IsSuccess = false,
                                         StatusCode = 500,
                                         StatusMessage =
                                             "Payment was captured but inventory could not be finalized. Contact support with your order ID.",
-                                        OrderId = order.Id,
-                                        Data = result.Data
+                                        OrderId = order.Value.Id,
+                                        Data = result.Value
                                     });
                                 }
                             }
 
-                            if (!await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed))
+                            if (!_orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed).GetAwaiter().GetResult().Value)
                                 throw new InvalidOperationException("Could not finalize the order payment state");
                             mappedOrder.isPaid = true;
-                            if (!await _orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing))
+                            if (!_orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing).GetAwaiter().GetResult().Value)
                                 throw new InvalidOperationException("Could not finalize the order status");
 
-                            if (order.CartId > 0)
+                            if (order.Value.CartId > 0)
                             {
-                                var cart = await _cartService.GetCartByIdAsync(order.CartId, CartStatus.PendingPayment);
+                                var cart = await _cartService.GetCartByIdAsync(order.Value.CartId, CartStatus.PendingPayment);
                                 if (cart != null)
                                 {
-                                    var cartConverted = await _cartService.ConvertCartAsync(order.CartId);
-                                    if (cartConverted)
+                                    var cartConverted = await _cartService.ConvertCartAsync(order.Value.CartId);
+                                    if (cartConverted.Value)
                                     {
-                                        await _cartService.ClearCartAsync(order.CartId, userId, null);
+                                        await _cartService.ClearCartAsync(order.Value.CartId, userId, null);
                                     }
                                 }
                             }
@@ -143,7 +143,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
-                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
+                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -165,7 +165,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
-                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
+                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -187,7 +187,7 @@ namespace Berryfy.API.Controllers
                     return NotFound(result);
                 }
 
-                if (!CanAccessUserResource(result.Data?.UserId)) return Forbid();
+                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
                 return Ok(result);
             }
             catch (Exception ex)
