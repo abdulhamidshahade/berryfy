@@ -40,8 +40,8 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
         public async Task<ApplicationResponse<OrderTotal>> CalculateOrderTotalsAsync(int cartId)
         {
-            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
-                ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+            var cart = _cartService.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value
+                ?? _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
 
             if (cart == null)
             {
@@ -78,7 +78,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             var cart = _cartService.GetCartByIdAsync(cartId, CartStatus.Active).GetAwaiter().GetResult().Value;
             if (cart == null)
             {
-                cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+                cart = _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
             }
 
             if (cart == null || orderDto.UserId <= 0 || cart.UserId != orderDto.UserId)
@@ -103,7 +103,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             decimal shippingAmount = PricingPolicy.Shipping(subTotal);
             decimal total = subTotal - discountTotal + taxAmount + shippingAmount;
 
-            var referenceNumber = await GenerateUniqueReferenceNumberAsync();
+            var referenceNumber = GenerateUniqueReferenceNumberAsync().GetAwaiter().GetResult().Value;
 
             var order = new Order
             {
@@ -152,7 +152,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 await _orderRepository.CreateOrderItemAsync(orderItem);
             }
 
-            var cartStatusUpdated = await _cartService.UpdateCartStatusAsync(cartId, CartStatus.PendingPayment);
+            var cartStatusUpdated = _cartService.UpdateCartStatusAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
             if (!cartStatusUpdated)
             {
                 throw new InvalidOperationException($"Failed to update cart {cartId} status to PendingPayment. Order creation aborted.");
@@ -249,23 +249,33 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
         }
 
 
-        public async Task<bool> ProcessOrderAsync(int orderId)
+        public async Task<ApplicationResponse<bool>> ProcessOrderAsync(int orderId)
         {
             var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
 
             if (order == null)
             {
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                };
             }
 
             if (order.Status != OrderStatus.Pending)
             {
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                };
             }
 
             var orderStatusUpdated = UpdateOrderStatusAsync(order, OrderStatus.Processing).GetAwaiter().GetResult().Value;
 
-            return orderStatusUpdated;
+            return new ApplicationResponse<bool>()
+            {
+                IsSuccess = orderStatusUpdated,
+                Value = orderStatusUpdated
+            };
         }
 
         public Task<ApplicationResponse<bool>> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus)
@@ -331,7 +341,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 await _orderRepository.CreateOrderItemAsync(orderItem);
             }
 
-            return new ApplicationResponse<bool> { IsSuccess = true, Value = await _orderRepository.UpdateOrderAsync(order) };
+            return new ApplicationResponse<bool> { IsSuccess = true, Value = _orderRepository.UpdateOrderAsync(order).GetAwaiter().GetResult().Value };
         }
 
         public async Task<ApplicationResponse<bool>> DeductInventoryForPaidOrderAsync(int orderId)
