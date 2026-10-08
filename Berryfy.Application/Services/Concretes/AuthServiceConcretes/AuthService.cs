@@ -54,7 +54,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 };
             }
 
-            if (await _userService.IsUsernameTaken(request.UserName))
+            if (_userService.IsUsernameTaken(request.UserName).GetAwaiter().GetResult().Value)
             {
                 return new ApplicationResponse<RegisterResponse>()
                 {
@@ -62,7 +62,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 };
             }
 
-            if (await _userService.IsUserExistsByEmailAsync(request.Email))
+            if (_userService.IsUserExistsByEmailAsync(request.Email).GetAwaiter().GetResult().Value)
             {
                 return new ApplicationResponse<RegisterResponse>()
                 {
@@ -132,8 +132,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         public async Task<LoginResponse> Login(LoginRequest requestDto)
         {
             var normalizedEmail = EmailNormalizer.NormalizeEmail(requestDto.Email);
-            var user = await _userRepository.GetByNormalizedEmailAsync(normalizedEmail)
-                ?? await _userRepository.GetByEmailAsync(requestDto.Email);
+            var user = _userRepository.GetByNormalizedEmailAsync(normalizedEmail).GetAwaiter().GetResult().Value
+                ?? _userRepository.GetByEmailAsync(requestDto.Email).GetAwaiter().GetResult().Value;
 
             if (user == null)
             {
@@ -186,7 +186,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
 
             var hashedToken = TokenService.HashToken(refreshToken);
-            var user = await _userRepository.GetByRefreshTokenAsync(hashedToken);
+            var user = _userRepository.GetByRefreshTokenAsync(hashedToken).GetAwaiter().GetResult().Value;
 
             if (user == null ||
                 user.RefreshTokenExpiry == null ||
@@ -302,7 +302,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 }
 
                 var passwordHash = _passwordHasher.HashPassword(user, requestDto.NewPassword);
-                var result = await _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash);
+                var result = _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash).GetAwaiter().GetResult().Value;
 
                 if (result)
                 {
@@ -341,7 +341,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     return false;
                 }
 
-                return await _userRepository.ConfirmEmailAsync(user.Id);
+                return _userRepository.ConfirmEmailAsync(user.Id).GetAwaiter().GetResult().Value;
             }
             catch (Exception ex)
             {
@@ -379,14 +379,14 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = await _userRepository.GetByIdAsync(userId);
+                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
                 if (user == null)
                 {
                     return false;
                 }
 
                 if (!string.Equals(user.UserName, dto.UserName, StringComparison.OrdinalIgnoreCase) &&
-                    await _userRepository.IsUsernameTakenAsync(dto.UserName))
+                    _userRepository.IsUsernameTakenAsync(dto.UserName).GetAwaiter().GetResult().Value)
                 {
                     return false;
                 }
@@ -396,7 +396,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 user.UserName = dto.UserName;
                 user.NormalizedUserName = NormalizeName(dto.UserName);
                 user.ConcurrencyStamp = Guid.NewGuid().ToString();
-                return await _userRepository.UpdateAsync(user);
+                return  _userRepository.UpdateAsync(user).GetAwaiter().GetResult().Value;
             }
             catch (Exception ex)
             {
@@ -414,7 +414,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     return false;
                 }
 
-                var user = await _userRepository.GetByIdAsync(userId);
+                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
                 if (user == null)
                 {
                     return false;
@@ -427,7 +427,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 }
 
                 var passwordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
-                return await _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash);
+                return _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash).GetAwaiter().GetResult().Value;
             }
             catch (Exception ex)
             {
@@ -439,8 +439,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         private async Task<User?> FindUserByEmailAsync(string email)
         {
             var normalizedEmail = EmailNormalizer.NormalizeEmail(email);
-            return await _userRepository.GetByNormalizedEmailAsync(normalizedEmail)
-                ?? await _userRepository.GetByEmailAsync(email);
+            return _userRepository.GetByNormalizedEmailAsync(normalizedEmail).GetAwaiter().GetResult().Value
+                ?? _userRepository.GetByEmailAsync(email).GetAwaiter().GetResult().Value;
         }
 
         private async Task SetPasswordResetCodeAsync(User user)
