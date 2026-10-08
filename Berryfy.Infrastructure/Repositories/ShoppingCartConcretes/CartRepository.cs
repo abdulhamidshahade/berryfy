@@ -22,34 +22,27 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<InfrastructureResponse<Cart>> CreateCartAsync(int? userId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
+                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version)
                 VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
-                RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", (object?)userId ?? DBNull.Value);
-            command.Parameters.AddWithValue("SessionId", (object?)null ?? DBNull.Value);
-            command.Parameters.AddWithValue("Status", status.ToString());
-            command.Parameters.AddWithValue("CreatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("Version", 1);
+            command.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@SessionId", (object?)null ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Status", status.ToString());
+            command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@Version", 1);
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
-                var cart = new Cart
-                {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                    SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                    Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                    Version = reader.GetInt32(reader.GetOrdinal("Version"))
-                };
+                var cart = MapCart(reader);
+
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = true,
@@ -69,34 +62,27 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<InfrastructureResponse<Cart>> CreateCartAsync(string? sessionId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO shopping_carts (UserId, SessionId, Status, CreatedAt, UpdatedAt, Version)
+                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version)
                 VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
-                RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", (object?)null ?? DBNull.Value);
-            command.Parameters.AddWithValue("SessionId", (object?)sessionId ?? DBNull.Value);
-            command.Parameters.AddWithValue("Status", status.ToString());
-            command.Parameters.AddWithValue("CreatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("Version", 1);
+            command.Parameters.AddWithValue(@"UserId", (object?)null ?? DBNull.Value);
+            command.Parameters.AddWithValue("@SessionId", (object?)sessionId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Status", status.ToString());
+            command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@Version", 1);
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
-                var cart = new Cart
-                {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                    SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                    Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                    Version = reader.GetInt32(reader.GetOrdinal("Version"))
-                };
+                var cart = MapCart(reader);
+
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = true,
@@ -117,16 +103,17 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             if (userId.HasValue)
             {
-                const string sql = "DELETE FROM shopping_carts WHERE UserId = @UserId AND Status = @Status";
+                const string sql = "DELETE FROM shopping_carts WHERE user_id = @UserId AND status = @Status";
 
                 await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync();
 
                 await using var command = new NpgsqlCommand(sql, connection);
-                command.Parameters.AddWithValue("UserId", userId.Value);
-                command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
+                command.Parameters.AddWithValue("@UserId", userId.Value);
+                command.Parameters.AddWithValue("@Status", CartStatus.Active.ToString());
 
                 var affected = await command.ExecuteNonQueryAsync();
+
                 return new InfrastructureResponse<bool>()
                 {
                     IsSuccess = true,
@@ -136,16 +123,17 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                const string sql = "DELETE FROM shopping_carts WHERE SessionId = @SessionId AND Status = @Status";
+                const string sql = "DELETE FROM shopping_carts WHERE session_id = @SessionId AND status = @Status";
 
                 await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync();
 
                 await using var command = new NpgsqlCommand(sql, connection);
-                command.Parameters.AddWithValue("SessionId", sessionId);
-                command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
+                command.Parameters.AddWithValue("@SessionId", sessionId);
+                command.Parameters.AddWithValue("@Status", CartStatus.Active.ToString());
 
                 var affected = await command.ExecuteNonQueryAsync();
+
                 return new InfrastructureResponse<bool>()
                 {
                     IsSuccess = true,
@@ -476,9 +464,9 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             const string sql = @"
                 SELECT
-                    c.Id, c.UserId, c.SessionId, c.Status, c.CreatedAt, c.UpdatedAt, c.Version
+                    c.id, c.user_id, c.session_id, c.status, c.created_at, c.updated_at, c.version
                 FROM shopping_carts c
-                ORDER BY c.Id";
+                ORDER BY c.id";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -491,18 +479,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             while (await reader.ReadAsync())
             {
-                var cart = new Cart
-                {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                    SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                    Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                    Version = reader.GetInt32(reader.GetOrdinal("Version")),
-                    CartItems = new List<CartItem>(),
-                    CartCoupons = new List<CartCoupon>()
-                };
+                var cart = MapCart(reader);
 
                 carts.Add(cart);
             }
@@ -603,35 +580,26 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             const string sql = @"
                 UPDATE shopping_carts
-                SET Status = @Status,
-                    UpdatedAt = @UpdatedAt,
-                    Version = Version + 1
-                WHERE UserId = @UserId
-                RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
+                SET status = @Status,
+                    updated_at = @UpdatedAt,
+                    version = version + 1
+                WHERE user_id = @UserId
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Status", status.ToString());
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("UserId", userId.Value);
+            command.Parameters.AddWithValue("@Status", status.ToString());
+            command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@UserId", userId.Value);
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
-                var cart = new Cart
-                {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                    SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                    Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                    Version = reader.GetInt32(reader.GetOrdinal("Version")),
-                    CartItems = new List<CartItem>(),
-                    CartCoupons = new List<CartCoupon>()
-                };
+                var cart = MapCart(reader);
+
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = true,
@@ -837,24 +805,26 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             const string updateItemSql = @"
                 UPDATE cart_items
-                SET Quantity = @Quantity,
-                    UpdatedAt = @UpdatedAt
-                WHERE Id = @Id
-                RETURNING Id, Quantity, UpdatedAt";
+                SET quantity = @Quantity,
+                    updated_at = @UpdatedAt
+                WHERE id = @Id
+                RETURNING id, quantity, updated_at";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(updateItemSql, connection);
-            command.Parameters.AddWithValue("Quantity", cartItem.Quantity);
-            command.Parameters.AddWithValue("UpdatedAt", cartItem.UpdatedAt);
-            command.Parameters.AddWithValue("Id", cartItem.Id);
+            command.Parameters.AddWithValue("@Quantity", cartItem.Quantity);
+            command.Parameters.AddWithValue("@UpdatedAt", cartItem.UpdatedAt);
+            command.Parameters.AddWithValue("@Id", cartItem.Id);
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
-                cartItem.Quantity = reader.GetInt32(reader.GetOrdinal("Quantity"));
-                cartItem.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
+                cartItem.Quantity = reader.GetInt32(reader.GetOrdinal("quantity"));
+                cartItem.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"));
+
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = true,
@@ -892,37 +862,38 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 };
 
             const string sql = @"
-                INSERT INTO cart_items (ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt)
+                INSERT INTO cart_items (cart_id, product_id, user_id, session_id, quantity, unit_price, created_at, updated_at)
                 VALUES (@ShoppingCartId, @ProductId, @UserId, @SessionId, @Quantity, @UnitPrice, @CreatedAt, @UpdatedAt)
-                RETURNING Id, ShoppingCartId, ProductId, UserId, SessionId, Quantity, UnitPrice, CreatedAt, UpdatedAt";
+                RETURNING id, cart_id, product_id, user_id, session_id, quantity, unit_price, created_at, updated_at";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("ShoppingCartId", cartId);
-            command.Parameters.AddWithValue("ProductId", productId);
-            command.Parameters.AddWithValue("UserId", (object?)userId ?? DBNull.Value);
-            command.Parameters.AddWithValue("SessionId", (object?)sessionId ?? DBNull.Value);
-            command.Parameters.AddWithValue("Quantity", quantity);
-            command.Parameters.AddWithValue("UnitPrice", unitPrice);
-            command.Parameters.AddWithValue("CreatedAt", DateTime.UtcNow);
-            command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@ShoppingCartId", cartId);
+            command.Parameters.AddWithValue("@ProductId", productId);
+            command.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@SessionId", (object?)sessionId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Quantity", quantity);
+            command.Parameters.AddWithValue("@UnitPrice", unitPrice);
+            command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
                 var cartItem = new CartItem
                 {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    ShoppingCartId = reader.GetInt32(reader.GetOrdinal("ShoppingCartId")),
-                    ProductId = reader.GetInt32(reader.GetOrdinal("ProductId")),
-                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                    SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                    Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
-                    UnitPrice = reader.GetDecimal(reader.GetOrdinal("UnitPrice")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
+                    Id = reader.GetInt32(reader.GetOrdinal("id")),
+                    ShoppingCartId = reader.GetInt32(reader.GetOrdinal("cart_id")),
+                    ProductId = reader.GetInt32(reader.GetOrdinal("product_id")),
+                    UserId = reader.IsDBNull(reader.GetOrdinal("user_id")) ? null : reader.GetInt32(reader.GetOrdinal("user_id")),
+                    SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id")),
+                    Quantity = reader.GetInt32(reader.GetOrdinal("quantity")),
+                    UnitPrice = reader.GetDecimal(reader.GetOrdinal("unit_price")),
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
                 };
                 return new InfrastructureResponse<CartItem>()
                 {
@@ -961,6 +932,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 };
 
             var cartItem = cart.CartItems.FirstOrDefault(i => i.ProductId == productId);
+
             if (cartItem == null)
                 return new InfrastructureResponse<bool>()
                 {
@@ -969,13 +941,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     Value = false
                 };
 
-            const string sql = "DELETE FROM cart_items WHERE Id = @Id";
+            const string sql = "DELETE FROM cart_items WHERE id = @Id";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", cartItem.Id);
+            command.Parameters.AddWithValue("@Id", cartItem.Id);
 
             var affected = await command.ExecuteNonQueryAsync();
             return new InfrastructureResponse<bool>()
@@ -1000,21 +972,22 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             {
                 const string sql = @"
                     UPDATE cart_items
-                    SET Quantity = @Quantity,
-                        UnitPrice = @UnitPrice,
-                        UpdatedAt = @UpdatedAt
-                    WHERE Id = @Id";
+                    SET quantity = @Quantity,
+                        unit_price = @UnitPrice,
+                        updated_at = @UpdatedAt
+                    WHERE id = @Id";
 
                 await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync();
 
                 await using var command = new NpgsqlCommand(sql, connection);
-                command.Parameters.AddWithValue("Quantity", item.Quantity);
-                command.Parameters.AddWithValue("UnitPrice", item.UnitPrice);
-                command.Parameters.AddWithValue("UpdatedAt", DateTime.UtcNow);
-                command.Parameters.AddWithValue("Id", item.Id);
+                command.Parameters.AddWithValue("@Quantity", item.Quantity);
+                command.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
+                command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+                command.Parameters.AddWithValue("@Id", item.Id);
 
                 var affected = await command.ExecuteNonQueryAsync();
+
                 if (affected <= 0)
                     return new InfrastructureResponse<bool>()
                     {
@@ -1037,20 +1010,21 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             const string sql = @"
                 SELECT COUNT(1)
                 FROM cart_items ci
-                JOIN shopping_carts c ON ci.ShoppingCartId = c.Id
-                WHERE ci.ShoppingCartId != @CartId
-                  AND ci.ProductId = @ProductId
-                  AND ci.UserId = @UserId";
+                JOIN shopping_carts c ON ci.cart_id = c.id
+                WHERE ci.cart_id != @CartId
+                  AND ci.product_id = @ProductId
+                  AND ci.user_id = @UserId";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("CartId", cartId);
-            command.Parameters.AddWithValue("ProductId", productId);
-            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("@CartId", cartId);
+            command.Parameters.AddWithValue("@ProductId", productId);
+            command.Parameters.AddWithValue("@UserId", userId);
 
             var count = await command.ExecuteScalarAsync();
+
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
@@ -1062,9 +1036,9 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<InfrastructureResponse<bool>> RemoveItemAsync(int cartId, int userId, int productId)
         {
             const string getCartSql = @"
-                SELECT Id
+                SELECT id
                 FROM shopping_carts
-                WHERE UserId = @UserId AND Status = @Status";
+                WHERE user_id = @UserId AND status = @Status";
 
             Cart? cart = null;
             await using var connection = new NpgsqlConnection(_connectionString);
@@ -1075,11 +1049,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("Status", CartStatus.Active.ToString());
 
             await using var reader = await command.ExecuteReaderAsync();
+
             if (await reader.ReadAsync())
             {
                 cart = new Cart
                 {
-                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                    Id = reader.GetInt32(reader.GetOrdinal("id")),
                     UserId = userId,
                     CartItems = new List<CartItem>()
                 };
@@ -1094,16 +1069,17 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 };
 
             const string getItemSql = @"
-                SELECT Id
+                SELECT id
                 FROM cart_items
-                WHERE ShoppingCartId = @CartId AND ProductId = @ProductId AND UserId = @UserId";
+                WHERE cart_id = @CartId AND product_id = @ProductId AND user_id = @UserId";
 
             await using var command2 = new NpgsqlCommand(getItemSql, connection);
-            command2.Parameters.AddWithValue("CartId", cartId);
-            command2.Parameters.AddWithValue("ProductId", productId);
-            command2.Parameters.AddWithValue("UserId", userId);
+            command2.Parameters.AddWithValue("@CartId", cartId);
+            command2.Parameters.AddWithValue("@ProductId", productId);
+            command2.Parameters.AddWithValue("@UserId", userId);
 
             var itemIdObj = await command2.ExecuteScalarAsync();
+
             if (itemIdObj == null)
                 return new InfrastructureResponse<bool>()
                 {
@@ -1114,10 +1090,10 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             int itemId = Convert.ToInt32(itemIdObj);
 
-            const string deleteSql = "DELETE FROM cart_items WHERE Id = @Id";
+            const string deleteSql = "DELETE FROM cart_items WHERE id = @Id";
 
             await using var command3 = new NpgsqlCommand(deleteSql, connection);
-            command3.Parameters.AddWithValue("Id", itemId);
+            command3.Parameters.AddWithValue("@Id", itemId);
 
             var affected = await command3.ExecuteNonQueryAsync();
             return new InfrastructureResponse<bool>()
@@ -1130,14 +1106,14 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         public async Task<InfrastructureResponse<bool>> IsConverted(int cartId)
         {
-            const string sql = "SELECT COUNT(1) FROM shopping_carts WHERE Id = @Id AND Status = @Status";
+            const string sql = "SELECT COUNT(1) FROM shopping_carts WHERE id = @Id AND status = @Status";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", cartId);
-            command.Parameters.AddWithValue("Status", CartStatus.Converted.ToString());
+            command.Parameters.AddWithValue("@Id", cartId);
+            command.Parameters.AddWithValue("@Status", CartStatus.Converted.ToString());
 
             var count = await command.ExecuteScalarAsync();
             return new InfrastructureResponse<bool>()
@@ -1145,6 +1121,21 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 IsSuccess = true,
                 Message = "Conversion status check completed",
                 Value = count != null && Convert.ToInt32(count) > 0
+            };
+        }
+
+
+        private Cart MapCart(NpgsqlDataReader reader)
+        {
+            return new Cart()
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("id")),
+                UserId = reader.IsDBNull(reader.GetOrdinal("user_id")) ? null : reader.GetInt32(reader.GetOrdinal("user_id")),
+                SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id")),
+                Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("status"))),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+                Version = reader.GetInt32(reader.GetOrdinal("version"))
             };
         }
     }
