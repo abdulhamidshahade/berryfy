@@ -43,7 +43,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Categories retrieved successfully",
-                Data = categories
+                Data = categories.Value
             };
 
             return Ok(response);
@@ -74,7 +74,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Category retrieved successfully",
-                Data = category
+                Data = category.Value
             };
 
             return Ok(response);
@@ -104,7 +104,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Category retrieved successfully",
-                Data = category
+                Data = category.Value
             };
             return Ok(response);
         }
@@ -133,7 +133,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
                 StatusMessage = "Category created successfully",
-                Data = createdCategory
+                Data = createdCategory.Value
             };
             return response;
         }
@@ -163,7 +163,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Category updated successfully",
-                Data = updatedCategory
+                Data = updatedCategory.Value
             };
             return Ok(response);
         }
@@ -176,7 +176,7 @@ namespace Berryfy.API.Controllers
         {
             var deleted = await _categoryService.DeleteAsync(id);
 
-            if (!deleted)
+            if (!deleted.Value)
             {
                 var notFoundResponse = new ApiResponse<bool>
                 {
@@ -208,7 +208,7 @@ namespace Berryfy.API.Controllers
 
             var exists = await _categoryService.ExistsAsync(id);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
@@ -239,7 +239,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _categoryService.ExistsByNameAsync(name);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
