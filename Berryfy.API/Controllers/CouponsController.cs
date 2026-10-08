@@ -43,7 +43,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Coupons retrieved successfully",
-                Data = coupons
+                Data = coupons.Value
             };
             return Ok(response);
         }
@@ -72,7 +72,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Coupon retrieved successfully",
-                Data = coupon
+                Data = coupon.Value
             };
             return Ok(response);
         }
@@ -101,7 +101,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Coupon retrieved successfully",
-                Data = coupon
+                Data = coupon.Value
             };
             return Ok(response);
         }
@@ -129,7 +129,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status201Created,
                 StatusMessage = "Coupon created successfully",
-                Data = createdCoupon
+                Data = createdCoupon.Value
             };
             return response;
 
@@ -160,7 +160,7 @@ namespace Berryfy.API.Controllers
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
                 StatusMessage = "Coupon updated successfully",
-                Data = updatedCoupon
+                Data = updatedCoupon.Value
             };
             return Ok(response);
         }
@@ -173,7 +173,7 @@ namespace Berryfy.API.Controllers
         {
             var deleted = await _couponService.DeleteAsync(id);
 
-            if (!deleted)
+            if (!deleted.Value)
             {
                 var notFoundResponse = new ApiResponse<bool>
                 {
@@ -204,7 +204,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _couponService.ExistsByIdAsync(id);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
@@ -234,7 +234,7 @@ namespace Berryfy.API.Controllers
         {
             var exists = await _couponService.ExistsByCodeAsync(code);
 
-            if (exists)
+            if (exists.Value)
             {
                 var response = new ApiResponse<bool>
                 {
@@ -268,7 +268,7 @@ namespace Berryfy.API.Controllers
             {
                 return Ok(new ApiResponse<UserCouponResponse>
                 {
-                    Data = entity,
+                    Data = entity.Value,
                     IsSuccess = true,
                     StatusCode = 201
                 });
@@ -289,7 +289,7 @@ namespace Berryfy.API.Controllers
         {
             var isDisabled = await _userCouponService.DisableCouponToUser(userId, couponId);
 
-            if (isDisabled)
+            if (isDisabled.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
@@ -317,11 +317,11 @@ namespace Berryfy.API.Controllers
         {
             var coupons = await _userCouponService.GetCouponsByUserIdAsync(userId);
 
-            if (coupons.Count != 0)
+            if (coupons.Value.Count != 0)
             {
                 return Ok(new ApiResponse<List<CouponResponse>>
                 {
-                    Data = coupons,
+                    Data = coupons.Value,
                     IsSuccess = true,
                     StatusCode = 200
                 });
@@ -343,11 +343,11 @@ namespace Berryfy.API.Controllers
         {
             var users = await _userCouponService.GetUsersByCouponIdAsync(couponId);
 
-            if (users.Count != 0)
+            if (users.Value.Count != 0)
             {
                 return Ok(new ApiResponse<List<UserResponse>>
                 {
-                    Data = users,
+                    Data = users.Value,
                     IsSuccess = true,
                     StatusCode = 200
                 });
@@ -370,7 +370,7 @@ namespace Berryfy.API.Controllers
 
             var hasUsed = await _userCouponService.IsCouponUsedByUser(userId, couponCode);
 
-            if (hasUsed)
+            if (hasUsed.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
@@ -380,7 +380,7 @@ namespace Berryfy.API.Controllers
                     Data = true,
                 });
             }
-            else if (!hasUsed)
+            else if (!hasUsed.Value)
             {
                 return Ok(new ApiResponse<bool>
                 {
@@ -411,7 +411,7 @@ namespace Berryfy.API.Controllers
         {
             var addedCoupon = await _userCouponService.AddCouponToUsersAsync(UserIds, couponId);
 
-            if (!addedCoupon)
+            if (!addedCoupon.Value)
             {
                 return BadRequest(new ApiResponse<bool>
                 {
@@ -438,7 +438,7 @@ namespace Berryfy.API.Controllers
         {
             var addedCoupon = await _userCouponService.AddCouponToAllUsersAsync(couponId);
 
-            if (!addedCoupon)
+            if (!addedCoupon.Value)
             {
                 return BadRequest(new ApiResponse<bool>
                 {
@@ -465,7 +465,7 @@ namespace Berryfy.API.Controllers
         {
             var addedCoupon = await _userCouponService.AddCouponToNewUsersAsync(couponId);
 
-            if (!addedCoupon)
+            if (!addedCoupon.Value)
             {
                 return BadRequest(new ApiResponse<bool>
                 {
