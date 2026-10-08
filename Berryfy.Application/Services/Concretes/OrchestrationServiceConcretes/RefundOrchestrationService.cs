@@ -47,7 +47,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
             {
                 _logger.LogInformation("Starting refund process for order {OrderId}", orderId);
 
-                var order = await _orderRepository.GetOrderByIdAsync(orderId);
+                var order =  _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
                 if (order == null)
                 {
                     result.ErrorMessage = "Order not found";
@@ -60,7 +60,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     return result;
                 }
 
-                var payment = await _paymentRepository.GetByOrderIdAsync(orderId);
+                var payment = _paymentRepository.GetByOrderIdAsync(orderId).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
                     result.ErrorMessage = "Payment not found for this order";
@@ -88,9 +88,9 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 try
                 {
                     _logger.LogDebug("Processing payment refund for order {OrderId}", orderId);
-                    var paymentRefundResult = await _paymentService.RefundPaymentAsync(payment.Id, amountToRefund, reason);
+                    var paymentRefundResult = _paymentService.RefundPaymentAsync(payment.Id, amountToRefund, reason).GetAwaiter().GetResult();
 
-                    if (!paymentRefundResult.IsSuccess || paymentRefundResult.Data?.Success != true)
+                    if (!paymentRefundResult.IsSuccess || paymentRefundResult.Value?.Success != true)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Payment refund failed";
@@ -116,11 +116,11 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     _logger.LogDebug("Restoring inventory for refunded order {OrderId}", orderId);
                     foreach (var item in order.OrderItems)
                     {
-                        var inventoryRestored = await _inventoryService.AddStockAsync(
+                        var inventoryRestored = _inventoryService.AddStockAsync(
                             item.ProductId,
                             item.Quantity,
                             $"Stock returned from refunded order {order.ReferenceNumber}: {reason}",
-                            performedByUserId);
+                            performedByUserId).GetAwaiter().GetResult().Value;
 
                         if (!inventoryRestored)
                         {
@@ -132,13 +132,13 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     var couponsReverted = false;
                     if (order.UserId > 0)
                     {
-                        var couponIds = await _userCouponService.GetCouponIdsUsedInOrderAsync(orderId);
+                        var couponIds = _userCouponService.GetCouponIdsUsedInOrderAsync(orderId).GetAwaiter().GetResult().Value;
                         foreach (var couponId in couponIds)
                         {
-                            var couponReverted = await _userCouponService.RevertCouponUsageAsync(
+                            var couponReverted = _userCouponService.RevertCouponUsageAsync(
                                 order.UserId,
                                 couponId,
-                                orderId);
+                                orderId).GetAwaiter().GetResult().Value;
 
                             if (!couponReverted)
                             {
@@ -155,7 +155,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     order.Status = OrderStatus.Refunded;
                     order.UpdatedAt = DateTime.UtcNow;
 
-                    var orderUpdated = await _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status);
+                    var orderUpdated = _orderRepository.UpdateOrderStatusAsync(order.Id, order.Status).GetAwaiter().GetResult().Value;
                     if (!orderUpdated)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
