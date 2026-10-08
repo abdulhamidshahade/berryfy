@@ -68,7 +68,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             user.RefreshToken = HashToken(refreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
 
-            if (!await _userRepository.UpdateAsync(user))
+            if (!_userRepository.UpdateAsync(user).GetAwaiter().GetResult().Value)
             {
                 throw new InvalidOperationException("Could not persist the refresh token. Please sign in again.");
             }
