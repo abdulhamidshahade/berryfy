@@ -40,7 +40,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 };
             }
 
-            var users = await _userService.GetAllUsers();
+            var users = _userService.GetAllUsers().GetAwaiter().GetResult().Value;
             List<int> allUserIds = users.Select(i => i.Id).ToList();
 
             foreach (var userId in allUserIds)
@@ -71,7 +71,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 IsSuccess = false,
                 ErrorMessage = "Invalid coupon ID"
             };
-            var users = await _userService.GetAllUsers();
+            var users = _userService.GetAllUsers().GetAwaiter().GetResult().Value;
             foreach (var userId in users.Select(u => u.Id).Distinct())
             {
                 if (_orderRepository.UserHasPaidOrderAsync(userId).GetAwaiter().GetResult().Value) continue;
@@ -187,7 +187,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
         public async Task<ApplicationResponse<List<CouponResponse>>> GetCouponsByUserIdAsync(int userId)
         {
-            if (!await _userService.IsUserExistsByIdAsync(userId))
+            if (_userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
             {
                 return new ApplicationResponse<List<CouponResponse>>
                 {
