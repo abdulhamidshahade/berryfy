@@ -257,19 +257,23 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
             return new ApplicationResponse<bool> { IsSuccess = true, Value = true };
         }
 
-        public async Task<WishlistSummary> GetUserSummaryAsync(int userId)
+        public async Task<ApplicationResponse<WishlistSummary>> GetUserSummaryAsync(int userId)
         {
             var totalWishlists =  _wishlistRepository.GetUserWishlistCountAsync(userId).GetAwaiter().GetResult().Value;
             var totalItems =  _wishlistRepository.GetUserTotalItemsAsync(userId).GetAwaiter().GetResult().Value;
             var totalValue =  _wishlistRepository.GetUserTotalValueAsync(userId).GetAwaiter().GetResult().Value;
             var recentWishlists = GetUserWishlistsAsync(userId).GetAwaiter().GetResult().Value.Take(3).ToList();
 
-            return new WishlistSummary
+            return new ApplicationResponse<WishlistSummary>()
             {
-                TotalWishlists = totalWishlists,
-                TotalItems = totalItems,
-                TotalValue = totalValue,
-                RecentWishlists = recentWishlists
+                IsSuccess = true,
+                Value = new WishlistSummary
+                {
+                    TotalWishlists = totalWishlists,
+                    TotalItems = totalItems,
+                    TotalValue = totalValue,
+                    RecentWishlists = recentWishlists
+                }
             };
         }
 
