@@ -56,7 +56,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 if (cart == null)
                 {
                     result.ErrorMessage = "Cart not found or already completed";
-                    return result;
+                    return new ApplicationResponse<CheckoutResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Cart not found or already completed"
+                    };
                 }
 
                 if (cart.CartItems == null || cart.CartItems.Count == 0)
