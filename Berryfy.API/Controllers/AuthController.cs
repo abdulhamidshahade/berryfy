@@ -30,62 +30,33 @@ namespace Berryfy.API.Controllers
             _logger = logger;
         }
 
-
         [HttpPost]
         [Route("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (request == null || !ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<RegisterResponse>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid registration data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             var registerResult = await _authService.Register(request);
 
             if (registerResult.IsSuccess)
             {
-                var newUserId = registerResult.Value?.User?.Id ?? 0;
-
-                if (newUserId > 0)
+                return StatusCode(201, new ApiResponse<RegisterResponse>
                 {
-                    var sessionId = GetSessionId();
-                    if (!string.IsNullOrWhiteSpace(sessionId))
-                    {
-                        await _cartService.MergeCartAsync(newUserId, sessionId);
-
-                        return StatusCode(201, new ApiResponse<RegisterResponse>
-                        {
-                            IsSuccess = true,
-                            StatusCode = 201,
-                            StatusMessage = "User registered successfully. Please check your email to confirm your account.",
-                            Data = registerResult.Value
-                        });
-                    }
-                }
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    StatusMessage = "User registered successfully. Please check your email to confirm your account.",
+                    Data = registerResult.Value
+                });
             }
             else
             {
                 return StatusCode(400, new ApiResponse<RegisterResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 400
+                    StatusCode = 400,
+                    StatusMessage = registerResult.ErrorMessage
                 });
             }
-
-            return StatusCode(500, new ApiResponse<RegisterResponse>
-            {
-                IsSuccess = false,
-                StatusCode = 500
-            });
         }
-
 
         [HttpPost]
         [Route("login")]
