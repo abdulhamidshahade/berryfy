@@ -1,8 +1,11 @@
+using Berryfy.Application.Dtos;
+using Microsoft.AspNetCore.Builder;
+
 namespace Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces
 {
     public interface IRefundOrchestrationService
     {
-        Task<RefundResult> ProcessRefundAsync(int orderId, string reason, decimal? refundAmount = null, int? performedByUserId = null);
+        Task<ApplicationResponse<RefundResult>> ProcessRefundAsync(int orderId, string reason, decimal? refundAmount = null, int? performedByUserId = null);
     }
 
     public class RefundResult

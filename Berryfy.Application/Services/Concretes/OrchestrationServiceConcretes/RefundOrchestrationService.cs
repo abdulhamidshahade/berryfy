@@ -1,3 +1,4 @@
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Services.Interfaces.CouponServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.OrchestrationServiceInterfaces;
@@ -39,7 +40,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
             _logger = logger;
         }
 
-        public async Task<RefundResult> ProcessRefundAsync(int orderId, string reason, decimal? refundAmount = null, int? performedByUserId = null)
+        public async Task<ApplicationResponse<RefundResult>> ProcessRefundAsync(int orderId, string reason, decimal? refundAmount = null, int? performedByUserId = null)
         {
             var result = new RefundResult();
 
@@ -51,33 +52,58 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 if (order == null)
                 {
                     result.ErrorMessage = "Order not found";
-                    return result;
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Order not found"
+                    };
                 }
 
                 if (order.Status != OrderStatus.Completed && order.Status != OrderStatus.Delivered)
                 {
                     result.ErrorMessage = $"Cannot refund order with status {order.Status}. Only Completed or Delivered orders can be refunded.";
-                    return result;
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = $"Cannot refund order with status {order.Status}. Only Completed or Delivered orders can be refunded."
+                    };
                 }
 
                 var payment = _paymentRepository.GetByOrderIdAsync(orderId).GetAwaiter().GetResult().Value;
                 if (payment == null)
                 {
                     result.ErrorMessage = "Payment not found for this order";
-                    return result;
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Payment not found for this order"
+                    };
                 }
 
                 if (payment.Status != PaymentStatus.Completed)
                 {
                     result.ErrorMessage = $"Cannot refund payment with status {payment.Status}. Only completed payments can be refunded.";
-                    return result;
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = $"Cannot refund payment with status {payment.Status}. Only completed payments can be refunded."
+                    };
                 }
 
                 var amountToRefund = refundAmount ?? order.Total;
                 if (amountToRefund <= 0 || amountToRefund > order.Total || amountToRefund > payment.Amount)
                 {
                     result.ErrorMessage = "Refund amount must be positive and cannot exceed the order total or payment amount";
-                    return result;
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Refund amount must be positive and cannot exceed the order total or payment amount"
+                    };
                 }
 
                 var isFullRefund = amountToRefund == order.Total && amountToRefund == payment.Amount;
@@ -94,7 +120,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Payment refund failed";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<RefundResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Payment refund failed"
+                        };
                     }
 
                     // A partial monetary refund does not imply that any items were returned.
@@ -104,13 +135,22 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                         {
                             await _unitOfWork.RollbackTransactionAsync();
                             result.ErrorMessage = "Failed to commit refund transaction";
-                            return result; // Replaced 'return false'
+                            return new ApplicationResponse<RefundResult>
+                            {
+                                Value = result,
+                                IsSuccess = false,
+                                ErrorMessage = "Failed to commit refund transaction"
+                            };
                         }
 
                         result.PaymentRefunded = true;
                         result.RefundedAmount = amountToRefund;
                         result.IsSuccess = true;
-                        return result; // Replaced 'return true'
+                        return new ApplicationResponse<RefundResult>
+                        {
+                            Value = result,
+                            IsSuccess = true
+                        };
                     }
 
                     _logger.LogDebug("Restoring inventory for refunded order {OrderId}", orderId);
@@ -160,7 +200,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to update order status to Refunded";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<RefundResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to update order status to Refunded"
+                        };
                     }
 
                     var committed = await _unitOfWork.CommitTransactionAsync();
@@ -168,7 +213,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to commit refund transaction";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<RefundResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to commit refund transaction"
+                        };
                     }
 
                     result.IsSuccess = true;
@@ -179,7 +229,11 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     _logger.LogInformation("Successfully processed refund for order {OrderId}, amount {RefundAmount}",
                         orderId, amountToRefund);
 
-                    return result; // Replaced 'return true'
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = true
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -188,14 +242,24 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     result.CouponsReverted = false;
                     result.ErrorMessage = $"Refund transaction failed: {ex.Message}";
 
-                    return result; // Replaced 'return false'
+                    return new ApplicationResponse<RefundResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Failed to update order status to Refunded"
+                    };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during refund for order {OrderId}", orderId);
                 result.ErrorMessage = $"Unexpected error: {ex.Message}";
-                return result;
+                return new ApplicationResponse<RefundResult>
+                {
+                    Value = result,
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to update order status to Refunded"
+                };
             }
         }
     }

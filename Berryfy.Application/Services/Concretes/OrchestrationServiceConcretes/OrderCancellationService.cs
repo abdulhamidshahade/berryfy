@@ -6,6 +6,7 @@ using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.OrderInterfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Berryfy.Application.Dtos;
 
 namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
 {
@@ -31,7 +32,7 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<CancellationResult> CancelOrderAsync(int orderId, string reason, int? performedByUserId = null)
+        public async Task<ApplicationResponse<CancellationResult>> CancelOrderAsync(int orderId, string reason, int? performedByUserId = null)
         {
             var result = new CancellationResult();
 
@@ -43,13 +44,23 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                 if (order == null)
                 {
                     result.ErrorMessage = "Order not found";
-                    return result;
+                    return new ApplicationResponse<CancellationResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = "Order not found"
+                    };
                 }
 
                 if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Processing)
                 {
                     result.ErrorMessage = $"Cannot cancel order with status {order.Status}. Only Pending or Processing orders can be cancelled.";
-                    return result;
+                    return new ApplicationResponse<CancellationResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = $"Cannot cancel order with status {order.Status}. Only Pending or Processing orders can be cancelled."
+                    };
                 }
 
                 // Start the raw ADO.NET transaction
@@ -139,7 +150,12 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to update order status to Cancelled";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<CancellationResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to update order status to Cancelled"
+                        };
                     }
 
                     var committed = await _unitOfWork.CommitTransactionAsync();
@@ -147,13 +163,22 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         result.ErrorMessage = "Failed to commit cancellation transaction";
-                        return result; // Replaced 'return false'
+                        return new ApplicationResponse<CancellationResult>
+                        {
+                            Value = result,
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to commit cancellation transaction"
+                        };
                     }
 
                     result.IsSuccess = true;
                     _logger.LogInformation("Successfully cancelled order {OrderId}", orderId);
 
-                    return result; // Replaced 'return true'
+                    return new ApplicationResponse<CancellationResult>
+                    {
+                        Value = result,
+                        IsSuccess = true
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -161,14 +186,24 @@ namespace Berryfy.Application.Services.Concretes.OrchestrationServiceConcretes
                     await _unitOfWork.RollbackTransactionAsync();
                     result.ErrorMessage = $"Cancellation transaction failed: {ex.Message}";
 
-                    return result; // Replaced 'return false'
+                    return new ApplicationResponse<CancellationResult>
+                    {
+                        Value = result,
+                        IsSuccess = false,
+                        ErrorMessage = $"Cancellation transaction failed: {ex.Message}"
+                    };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during order cancellation for order {OrderId}", orderId);
                 result.ErrorMessage = $"Unexpected error: {ex.Message}";
-                return result;
+                return new ApplicationResponse<CancellationResult>
+                {
+                    Value = result,
+                    IsSuccess = false,
+                    ErrorMessage = $"Unexpected error: {ex.Message}"
+                };
             }
         }
     }
