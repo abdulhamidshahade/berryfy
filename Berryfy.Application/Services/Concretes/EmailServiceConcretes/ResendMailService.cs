@@ -23,7 +23,7 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
             _logger = logger;
         }
 
-        public async Task SendEmailAsync(SendEmailRequest request)
+        public async Task SendEmailAsync(SendEmailRequestDto request)
         {
             try
             {
@@ -113,7 +113,7 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
                 </body>
                 </html>";
 
-            var sendRequest = new SendEmailRequest
+            var sendRequest = new SendEmailRequestDto
             {
                 Recipient = email,
                 Subject = "Reset Your Berryfy account Password.",
@@ -181,7 +181,7 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
                 </body>
                 </html>";
 
-            var sendRequest = new SendEmailRequest
+            var sendRequest = new SendEmailRequestDto
             {
                 Recipient = email,
                 Subject = "Your Berryfy password reset code",
@@ -266,7 +266,7 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
                 </body>
                 </html>";
 
-            var sendRequest = new SendEmailRequest
+            var sendRequest = new SendEmailRequestDto
             {
                 Recipient = email,
                 Subject = "Your Berryfy verification code",
