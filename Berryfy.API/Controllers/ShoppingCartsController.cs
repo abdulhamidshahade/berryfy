@@ -785,22 +785,22 @@ namespace Berryfy.API.Controllers
                         IsSuccess = false,
                         StatusCode = 500,
                         StatusMessage = checkoutResult.ErrorMessage ?? "Failed to process checkout",
-                        Errors = checkoutResult.Warnings
+                        Errors = checkoutResult.Value.Warnings
                     });
                 }
 
-                return CreatedAtAction("GetOrderById", "Orders", new { id = checkoutResult.Order.Id }, new ApiResponse<object>
+                return CreatedAtAction("GetOrderById", "Orders", new { id = checkoutResult.Value.Order.Id }, new ApiResponse<object>
                 {
                     IsSuccess = true,
                     StatusCode = 201,
                     StatusMessage = "Order created successfully",
                     Data = new
                     {
-                        id = checkoutResult.Order.Id,
-                        orderNumber = checkoutResult.Order.ReferenceNumber,
-                        total = checkoutResult.Order.Total,
-                        status = checkoutResult.Order.Status.ToString(),
-                        warnings = checkoutResult.Warnings
+                        id = checkoutResult.Value.Order.Id,
+                        orderNumber = checkoutResult.Value.Order.ReferenceNumber,
+                        total = checkoutResult.Value.Order.Total,
+                        status = checkoutResult.Value.Order.Status.ToString(),
+                        warnings = checkoutResult.Value.Warnings
                     }
                 });
             }
