@@ -50,7 +50,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             {
                 return new ApplicationResponse<RegisterResponse>()
                 {
-                    ErrorMessage = "The request is empty or null."
+                    ErrorMessage = "The request is empty or null.",
+                    IsSuccess = false
                 };
             }
 
@@ -58,7 +59,8 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             {
                 return new ApplicationResponse<RegisterResponse>()
                 {
-                    ErrorMessage = "Username is taken."
+                    ErrorMessage = "Username is taken.",
+                    IsSuccess = false
                 };
             }
 
@@ -66,13 +68,15 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             {
                 return new ApplicationResponse<RegisterResponse>()
                 {
-                    ErrorMessage = "Email is already registered."
+                    ErrorMessage = "Email is taken.",
+                    IsSuccess = false
                 };
             }
 
             try
             {
                 var normalizedEmail = EmailNormalizer.NormalizeEmail(request.Email);
+
                 var user = new User
                 {
                     FirstName = request.FirstName,
@@ -113,10 +117,11 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 }
 
                 var roles = await _roleRepository.GetUserRolesAsync(user.Id);
+
                 return new ApplicationResponse<RegisterResponse>()
                 {
                     IsSuccess = true,
-                    Value = new() { User = UserResponse.MapFromUser(user, roles.Value) }
+                    Value = new() { User = UserResponse.MapFromUser(user, roles.Value), IsSuccess = true }
                 };
             }
             catch (Exception ex)
