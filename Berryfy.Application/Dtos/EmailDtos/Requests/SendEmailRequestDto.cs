@@ -1,6 +1,6 @@
 ﻿namespace Berryfy.Application.Dtos.EmailDtos.Requests
 {
-    public class SendEmailRequest
+    public class SendEmailRequestDto
     {
         public string Recipient { get; set; }
         public string Subject { get; set; } 
