@@ -51,23 +51,23 @@ builder.Services.AddHealthChecks()
 
 
 
-builder.Services.Configure<ResendSettings>(builder.Configuration.GetSection(ResendSettings.Name));
-builder.Services.AddHttpClient<Resend.ResendClient>();
-builder.Services.AddOptions<Resend.ResendClientOptions>()
-    .Configure<IOptions<ResendSettings>>((options, resend) =>
-    {
-        var key = resend.Value.ApiKey;
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            key = Environment.GetEnvironmentVariable("ResendSettings__ApiKey")
-                ?? Environment.GetEnvironmentVariable("RESEND_APITOKEN")
-                ?? builder.Configuration.GetSection("Resend:ApiKey").ToString()
-                ?? string.Empty;
-        }
+//builder.Services.Configure<ResendSettings>(builder.Configuration.GetSection(ResendSettings.Name));
+//builder.Services.AddHttpClient<Resend.ResendClient>();
+//builder.Services.AddOptions<Resend.ResendClientOptions>()
+//    .Configure<IOptions<ResendSettings>>((options, resend) =>
+//    {
+//        var key = resend.Value.ApiKey;
+//        if (string.IsNullOrWhiteSpace(key))
+//        {
+//            key = Environment.GetEnvironmentVariable("ResendSettings__ApiKey")
+//                ?? Environment.GetEnvironmentVariable("RESEND_APITOKEN")
+//                ?? builder.Configuration.GetSection("Resend:ApiKey").ToString()
+//                ?? string.Empty;
+//        }
 
-        options.ApiToken = key;
-    });
-builder.Services.AddTransient<Resend.IResend, Resend.ResendClient>();
+//        options.ApiToken = key;
+//    });
+//builder.Services.AddTransient<Resend.IResend, Resend.ResendClient>();
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("App"));
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("ApiSettings:JwtOptions"));
 
