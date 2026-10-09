@@ -197,7 +197,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "SELECT COUNT(1) FROM users WHERE normalized_email = @NormalizedEmail";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("NormalizedEmail", email);
+            command.Parameters.AddWithValue("@NormalizedEmail", email);
             return new InfrastructureResponse<bool>()
             {
                 Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0,
@@ -211,7 +211,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "SELECT COUNT(1) FROM users WHERE normalized_user_name = @NormalizedUserName";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("NormalizedUserName", Normalize(userName));
+            command.Parameters.AddWithValue("@NormalizedUserName", Normalize(userName));
             return new InfrastructureResponse<bool>()
             {
                 Value = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0,
@@ -359,7 +359,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         private static string Normalize(string value)
         {
-            return value.Trim().ToUpperInvariant();
+            return value.Trim().ToLowerInvariant();
         }
 
         private static string GetString(NpgsqlDataReader reader, string column)
