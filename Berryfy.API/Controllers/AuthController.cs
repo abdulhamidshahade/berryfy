@@ -6,7 +6,6 @@ using Berryfy.Application.Services.Interfaces.AuthServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Entities.AuthEntities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 namespace Berryfy.API.Controllers
 {
@@ -609,11 +608,11 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [AdminAndAbove]
         [Route("users/{userId}/lock")]
-        public async Task<IActionResult> LockUserAccount(int userId, [FromBody] LockUser requestDto = null)
+        public async Task<IActionResult> LockUserAccount(int userId, [FromBody] LockUser requestDto)
         {
             try
             {
-                DateTime? lockoutEnd = requestDto?.LockoutEnd;
+                DateTime? lockoutEnd = requestDto.LockoutEnd;
                 var result = await _userService.LockUserAccountAsync(userId, lockoutEnd);
 
                 if (result.Value)
@@ -653,7 +652,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.UnlockUserAccountAsync(userId);
 
-                if (result.Value)
+                if (result.IsSuccess)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -737,7 +736,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.VerifyUserEmailAsync(userId);
 
-                if (result.Value)
+                if (result.IsSuccess)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -785,7 +784,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.UpdateUserAsync(userId, updateUserDto);
 
-                if (result.Value)
+                if (result.IsSuccess)
                 {
                     return Ok(new ApiResponse<bool>
                     {
@@ -818,28 +817,17 @@ namespace Berryfy.API.Controllers
         [Route("users")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUser createUserDto)
         {
-            if (createUserDto == null || !ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<User>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var user = await _userService.CreateUserAsync(createUserDto);
 
-                if (user != null)
+                if (user.IsSuccess)
                 {
                     return StatusCode(201, new ApiResponse<User>
                     {
                         IsSuccess = true,
                         StatusCode = 201,
-                        StatusMessage = "User created successfully.",
+                        StatusMessage = user.SuccessMessage,
                         Data = user.Value
                     });
                 }
@@ -848,7 +836,7 @@ namespace Berryfy.API.Controllers
                 {
                     IsSuccess = false,
                     StatusCode = 400,
-                    StatusMessage = "Failed to create user."
+                    StatusMessage = user.ErrorMessage
                 });
             }
             catch (Exception ex)
@@ -871,7 +859,7 @@ namespace Berryfy.API.Controllers
             {
                 var result = await _userService.DeleteUserAsync(userId);
 
-                if (result.Value)
+                if (result.IsSuccess)
                 {
                     return Ok(new ApiResponse<bool>
                     {
