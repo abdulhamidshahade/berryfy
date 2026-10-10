@@ -2,6 +2,6 @@
 {
     public class LockUser
     {
-        public DateTime? LockoutEnd { get; set; }
+        public DateTime LockoutEnd { get; set; }
     }
 }
