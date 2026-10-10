@@ -63,20 +63,10 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login(LoginRequest requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<LoginResponse>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
 
             var loginResult = await _authService.Login(requestDto);
 
-            if (loginResult.Token != string.Empty)
+            if (loginResult.Value.Token != string.Empty)
             {
                 var user = _userService.GetUserByEmail(requestDto.Email).GetAwaiter().GetResult().Value;
                 if (user != null)
@@ -93,7 +83,7 @@ namespace Berryfy.API.Controllers
                     IsSuccess = true,
                     StatusCode = 200,
                     StatusMessage = "User logged in successfully.",
-                    Data = loginResult
+                    Data = loginResult.Value
                 });
             }
 
@@ -111,7 +101,7 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 401,
-                StatusMessage = "Invalid email or password",
+                StatusMessage = loginResult.Value.ErrorMessage,
             });
         }
 
