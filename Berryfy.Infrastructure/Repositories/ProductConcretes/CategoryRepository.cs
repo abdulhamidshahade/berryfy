@@ -98,7 +98,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<InfrastructureResponse<IEnumerable<Category>>> GetAllAsync()
         {
             const string sql = @"SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
-                                FROM Categories order by id";
+                                FROM Categories c order by c.id";
 
             var connection = await OpenConnectionAsync();
 
