@@ -134,7 +134,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<LoginResponse> Login(LoginRequest requestDto)
+        public async Task<ApplicationResponse<LoginResponse>> Login(LoginRequest requestDto)
         {
             var normalizedEmail = EmailNormalizer.NormalizeEmail(requestDto.Email);
             var user = _userRepository.GetByNormalizedEmailAsync(normalizedEmail).GetAwaiter().GetResult().Value
@@ -143,30 +143,48 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             if (user == null)
             {
                 _logger.LogWarning("User not found for email: {Email}", normalizedEmail);
-                return new LoginResponse { User = null, Token = string.Empty };
+                return new ApplicationResponse<LoginResponse>()
+                {
+                    Value = new LoginResponse { User = null, Token = string.Empty },
+                    IsSuccess = false,
+                };
             }
 
             if (IsLockedOut(user))
             {
-                return new LoginResponse { Token = string.Empty, ErrorMessage = "Account is locked. Please try again later." };
+                return new ApplicationResponse<LoginResponse>()
+                {
+                    Value = new LoginResponse { Token = string.Empty, ErrorMessage = "Account is locked. Please try again later." },
+                    IsSuccess = false
+                };
             }
 
             var passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, requestDto.Password);
+
             if (passwordResult == PasswordVerificationResult.Failed)
             {
                 await _userRepository.IncrementAccessFailedCountAsync(user.Id);
+                await _userRepository.UpdateLockoutStateAsync(user.Id);
                 _logger.LogWarning("Invalid password for email: {Email}", normalizedEmail);
-                return new LoginResponse { User = null, Token = string.Empty };
+                return new ApplicationResponse<LoginResponse>()
+                {
+                    Value = new LoginResponse { User = null, Token = string.Empty },
+                    IsSuccess = false
+                };
             }
 
             if (!user.EmailConfirmed)
             {
                 _logger.LogWarning("Login attempted with unconfirmed email: {Email}", normalizedEmail);
-                return new LoginResponse
+                return new ApplicationResponse<LoginResponse>()
                 {
-                    User = null,
-                    Token = string.Empty,
-                    ErrorMessage = "Email not confirmed. Please check your email and confirm your account."
+                    Value = new LoginResponse
+                    {
+                        User = null,
+                        Token = string.Empty,
+                        ErrorMessage = "Email not confirmed. Please check your email and confirm your account."
+                    },
+                    IsSuccess = false
                 };
             }
 
@@ -175,11 +193,15 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             var token = await _tokenService.GenerateToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
-            return new LoginResponse
+            return new ApplicationResponse<LoginResponse>()
             {
-                User = UserResponse.MapFromUser(user, roles.Value),
-                Token = token,
-                RefreshToken = refreshToken
+                Value = new LoginResponse
+                {
+                    User = UserResponse.MapFromUser(user, roles.Value),
+                    Token = token,
+                    RefreshToken = refreshToken
+                },
+                IsSuccess = true
             };
         }
 
