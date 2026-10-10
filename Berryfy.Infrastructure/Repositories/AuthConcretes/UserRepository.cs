@@ -169,7 +169,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "DELETE FROM users WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
             return new InfrastructureResponse<bool>()
             {
                 Value = await command.ExecuteNonQueryAsync() > 0,
@@ -225,8 +225,8 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "UPDATE users SET lockout_end = @LockoutEnd, lockout_enabled = true WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("LockoutEnd", (object?)lockoutEnd ?? DBNull.Value);
-            command.Parameters.AddWithValue("Id", userId);
+            command.Parameters.AddWithValue("@LockoutEnd", (object?)lockoutEnd ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Id", userId);
             return new InfrastructureResponse<bool>()
             {
                 Value = await command.ExecuteNonQueryAsync() > 0,
@@ -425,6 +425,24 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@Id", userId);
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
+        }
+
+        public async Task<InfrastructureResponse<bool>> UnlockUserAsync(int userId)
+        {
+            const string query = "UPDATE users SET lockout_end = NULL, lockout_enabled = false, access_failed_count = 0 WHERE id = @Id";
+
+            await using var connection = await OpenConnectionAsync();
+
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Id", userId);
+
             return new InfrastructureResponse<bool>()
             {
                 Value = await command.ExecuteNonQueryAsync() > 0,
