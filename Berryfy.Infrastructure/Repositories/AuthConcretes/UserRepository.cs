@@ -183,7 +183,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "SELECT COUNT(1) FROM users WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
@@ -222,7 +222,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         public async Task<InfrastructureResponse<bool>> SetLockoutAsync(int userId, DateTime? lockoutEnd)
         {
-            const string sql = "UPDATE users SET lockout_end = @LockoutEnd WHERE id = @Id";
+            const string sql = "UPDATE users SET lockout_end = @LockoutEnd, lockout_enabled = true WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("LockoutEnd", (object?)lockoutEnd ?? DBNull.Value);
