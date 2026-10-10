@@ -265,22 +265,11 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmail([FromBody] EmailConfirmation requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var result = await _authService.ConfirmEmailAsync(requestDto);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<object>
                     {
