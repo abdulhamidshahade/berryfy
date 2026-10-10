@@ -31,18 +31,18 @@ namespace Berryfy.API.Controllers
             {
                 return StatusCode(400, new ApiResponse<IEnumerable<CategoryResponse>>
                 {
-                    IsSuccess = false,
+                    IsSuccess = categories.IsSuccess,
                     StatusCode = StatusCodes.Status400BadRequest,
-                    StatusMessage = "Failed retriving categories",
-                    Data = null
+                    StatusMessage = categories.ErrorMessage,
+                    Data = categories.Value
                 });
             }
 
             var response = new ApiResponse<IEnumerable<CategoryResponse>>
             {
-                IsSuccess = true,
+                IsSuccess = categories.IsSuccess,
                 StatusCode = StatusCodes.Status200OK,
-                StatusMessage = "Categories retrieved successfully",
+                StatusMessage = categories.SuccessMessage,
                 Data = categories.Value
             };
 
