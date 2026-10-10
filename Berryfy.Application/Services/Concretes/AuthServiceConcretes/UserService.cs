@@ -242,6 +242,25 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     SecurityStamp = Guid.NewGuid().ToString(),
                     ConcurrencyStamp = Guid.NewGuid().ToString()
                 };
+
+                if (IsUsernameTaken(user.NormalizedUserName).GetAwaiter().GetResult().Value)
+                {
+                    return new ApplicationResponse<User>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Username is already taken"
+                    };
+                }
+
+                if(IsUserExistsByEmailAsync(user.NormalizedEmail).GetAwaiter().GetResult().Value)
+                {
+                    return new ApplicationResponse<User>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Email is already registered"
+                    };
+                }
+
                 user.PasswordHash = _passwordHasher.HashPassword(user, createUserDto.Password);
 
                 user = _userRepository.CreateAsync(user).GetAwaiter().GetResult().Value;
