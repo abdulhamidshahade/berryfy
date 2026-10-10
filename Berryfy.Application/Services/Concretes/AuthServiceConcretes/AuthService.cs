@@ -398,14 +398,19 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<bool> ResendConfirmationEmailAsync(string email)
+        public async Task<ApplicationResponse<bool>> ResendConfirmationEmailAsync(string email)
         {
             try
             {
                 var user = await FindUserByEmailAsync(email);
+
                 if (user == null || user.EmailConfirmed)
                 {
-                    return true;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found or email already confirmed."
+                    };
                 }
 
                 var code = GenerateOtpCode();
@@ -414,12 +419,20 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 await _userRepository.UpdateAsync(user);
 
                 await _mailService.SendEmailConfirmationAsync(user.Email, code, user.UserName);
-                return true;
+                return new ApplicationResponse<bool>()
+                {
+                    Value = true,
+                    IsSuccess = true
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while resending confirmation email for: {Email}", email);
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "An unexpected error occurred while resending confirmation email."
+                };
             }
         }
 
