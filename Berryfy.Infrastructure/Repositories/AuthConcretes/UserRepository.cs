@@ -417,5 +417,20 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 Message = "The process completed successfully"
             };
         }
+
+        public async Task<InfrastructureResponse<bool>> RevokeRefreshTokenAsync(int userId)
+        {
+            const string query = "UPDATE users SET refresh_token = NULL, refresh_token_expiry = NULL WHERE id = @Id";
+
+            using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Id", userId);
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
+        }
     }
 }
