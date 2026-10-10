@@ -7,12 +7,12 @@ namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
     {
         public LoginRequestDtoValidator()
         {
-            RuleFor(x => x.Email)
+            RuleFor(em => em.Email)
                 .NotEmpty().WithMessage("Email is required.")
                 .NotNull().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.");
 
-            RuleFor(x => x.Password)
+            RuleFor(p => p.Password)
                 .NotEmpty().WithMessage("Password is required.")
                 .NotNull().WithMessage("Password is required.");
         }
