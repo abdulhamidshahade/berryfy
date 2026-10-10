@@ -290,26 +290,15 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("resend-confirmation")]
         [AllowAnonymous]
-        public async Task<IActionResult> ResendConfirmation([FromBody] ForgotPasswordRequest requestDto)
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var result = await _authService.ResendConfirmationEmailAsync(requestDto.Email);
 
-                if (result)
+                if (result.Value)
                 {
-                    return Ok(new ApiResponse<object>
+                    return Ok(new ApiResponse<bool>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
