@@ -23,5 +23,6 @@ namespace Berryfy.Domain.Repositories.AuthInterfaces
         Task<InfrastructureResponse<bool>> ConfirmEmailAsync(int userId);
         Task<InfrastructureResponse<bool>> UpdateLockoutStateAsync(int userId);
         Task<InfrastructureResponse<bool>> RevokeRefreshTokenAsync(int userId);
+        Task<InfrastructureResponse<bool>> UnlockUserAsync(int userId);
     }
 }
