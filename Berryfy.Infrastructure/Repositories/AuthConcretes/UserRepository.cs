@@ -79,11 +79,11 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "SELECT * FROM users WHERE normalized_email = @NormalizedEmail LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("NormalizedEmail", normalizedEmail);
+            command.Parameters.AddWithValue("@NormalizedEmail", normalizedEmail);
             await using var reader = await command.ExecuteReaderAsync();
             return new InfrastructureResponse<User?>()
             {
-                Value =await reader.ReadAsync() ? MapUser(reader) : null,
+                Value = await reader.ReadAsync() ? MapUser(reader) : null,
                 Message = "The process completed successfully",
                 IsSuccess = true
             };
@@ -240,7 +240,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "UPDATE users SET access_failed_count = 0 WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", userId);
+            command.Parameters.AddWithValue("@Id", userId);
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
@@ -254,7 +254,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
             const string sql = "UPDATE users SET access_failed_count = access_failed_count + 1 WHERE id = @Id";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("Id", userId);
+            command.Parameters.AddWithValue("@Id", userId);
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
@@ -384,6 +384,38 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
         {
             var ordinal = reader.GetOrdinal(column);
             return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
+        }
+
+        public async Task<InfrastructureResponse<bool>> UpdateLockoutStateAsync(int userId)
+        {
+            string query = @"
+                UPDATE users
+                SET lockout_end = CASE
+                    WHEN access_failed_count >= 5 THEN NOW() + INTERVAL '15 minutes'
+                    ELSE NULL
+                END,
+                access_failed_count = CASE
+                    WHEN access_failed_count >= 5 THEN 0
+                    ELSE access_failed_count
+                END,
+                lockout_enabled = CASE
+                    WHEN access_failed_count >= 5 THEN true
+                    ELSE false
+                END
+                WHERE id = @Id";
+
+            await using var connection = await OpenConnectionAsync();
+
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Id", userId);
+
+            return new InfrastructureResponse<bool>()
+            {
+                Value = await command.ExecuteNonQueryAsync() > 0,
+                IsSuccess = true,
+                Message = "The process completed successfully"
+            };
         }
     }
 }
