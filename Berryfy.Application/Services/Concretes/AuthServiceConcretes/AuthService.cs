@@ -270,19 +270,29 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<VerifyPasswordResetCodeResponse?> VerifyPasswordResetCodeAsync(EmailConfirmation confirmationDto)
+        public async Task<ApplicationResponse<VerifyPasswordResetCodeResponse?>> VerifyPasswordResetCodeAsync(EmailConfirmation confirmationDto)
         {
             try
             {
                 var user = await FindUserByEmailAsync(confirmationDto.Email);
                 if (user == null || user.PasswordResetCode == null || user.PasswordResetCodeExpiry == null)
                 {
-                    return null;
+                    return new ApplicationResponse<VerifyPasswordResetCodeResponse?>()
+                    {
+                        IsSuccess = false,
+                        Value = null,
+                        ErrorMessage = "Invalid or expired password reset code."
+                    };
                 }
 
                 if (DateTime.UtcNow > user.PasswordResetCodeExpiry || user.PasswordResetCode != confirmationDto.Code)
                 {
-                    return null;
+                    return new ApplicationResponse<VerifyPasswordResetCodeResponse?>()
+                    {
+                        IsSuccess = false,
+                        Value = null,
+                        ErrorMessage = "Invalid or expired password reset code."
+                    };
                 }
 
                 var resetToken = GenerateResetToken();
@@ -291,12 +301,22 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 await _userRepository.UpdateAsync(user);
 
                 _logger.LogInformation("Password reset code verified for user {Email}", user.Email);
-                return new VerifyPasswordResetCodeResponse { ResetToken = resetToken };
+                return new ApplicationResponse<VerifyPasswordResetCodeResponse?>()
+                {
+                    IsSuccess = true,
+                    Value = new VerifyPasswordResetCodeResponse { ResetToken = resetToken },
+                    ErrorMessage = null
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while verifying password reset code for: {Email}", confirmationDto.Email);
-                return null;
+                return new ApplicationResponse<VerifyPasswordResetCodeResponse?>()
+                {
+                    IsSuccess = false,
+                    Value = null,
+                    ErrorMessage = "An unexpected error occurred while processing the request."
+                };
             }
         }
 
@@ -322,25 +342,37 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<bool> ResetPasswordAsync(ResetPasswordRequest requestDto)
+        public async Task<ApplicationResponse<bool>> ResetPasswordAsync(ResetPasswordRequest requestDto)
         {
             try
             {
                 if (requestDto.NewPassword != requestDto.ConfirmPassword)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "New password and confirm password do not match."
+                    };
                 }
 
                 var user = await FindUserByEmailAsync(requestDto.Email);
                 if (user == null || user.PasswordResetCode == null || user.PasswordResetCodeExpiry == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid or expired password reset code."
+                    };
                 }
 
                 var tokenHash = TokenService.HashToken(requestDto.Token);
                 if (DateTime.UtcNow > user.PasswordResetCodeExpiry || user.PasswordResetCode != tokenHash)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid or expired password reset code."
+                    };
                 }
 
                 var passwordHash = _passwordHasher.HashPassword(user, requestDto.NewPassword);
@@ -349,14 +381,30 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 if (result)
                 {
                     _logger.LogInformation("Password reset successful for user {Email}", user.Email);
+
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = true,
+                        Value = true,
+                        SuccessMessage = "Password has been reset successfully."
+                    };
                 }
 
-                return result;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = result,
+                    Value = result,
+                    ErrorMessage = result ? null : "Failed to reset password."
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while resetting password for email: {Email}", requestDto.Email);
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "An unexpected error occurred while resetting password."
+                };
             }
         }
 
