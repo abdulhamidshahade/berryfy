@@ -115,7 +115,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                if (!_userRepository.SetLockoutAsync(userId, null).GetAwaiter().GetResult().Value)
+                if (!_userRepository.UnlockUserAsync(userId).GetAwaiter().GetResult().Value)
                 {
                     return new ApplicationResponse<bool>
                     {
@@ -124,7 +124,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     };
                 }
 
-                await _userRepository.ResetAccessFailedCountAsync(userId);
+                //await _userRepository.ResetAccessFailedCountAsync(userId);
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = true,
