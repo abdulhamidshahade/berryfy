@@ -323,19 +323,28 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             }
         }
 
-        public async Task<bool> ConfirmEmailAsync(EmailConfirmation confirmationDto)
+        public async Task<ApplicationResponse<bool>> ConfirmEmailAsync(EmailConfirmation confirmationDto)
         {
             try
             {
                 var user = await FindUserByEmailAsync(confirmationDto.Email);
+
                 if (user == null)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found."
+                    };
                 }
 
                 if (user.EmailConfirmed)
                 {
-                    return true;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = true,
+                        Value = true
+                    };
                 }
 
                 if (user.EmailConfirmationCode == null ||
@@ -343,15 +352,27 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                     DateTime.UtcNow > user.EmailConfirmationCodeExpiry ||
                     user.EmailConfirmationCode != confirmationDto.Code)
                 {
-                    return false;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid or expired confirmation code."
+                    };
                 }
 
-                return _userRepository.ConfirmEmailAsync(user.Id).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<bool>()
+                {
+                    Value = _userRepository.ConfirmEmailAsync(user.Id).GetAwaiter().GetResult().Value,
+                    IsSuccess = true
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while confirming email for: {Email}", confirmationDto.Email);
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "An unexpected error occurred while confirming email."
+                };
             }
         }
 
