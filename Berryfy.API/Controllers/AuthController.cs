@@ -147,29 +147,18 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> VerifyPasswordResetCode([FromBody] EmailConfirmation requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<VerifyPasswordResetCodeResponse>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var result = await _authService.VerifyPasswordResetCodeAsync(requestDto);
 
-                if (result != null && !string.IsNullOrEmpty(result.ResetToken))
+                if (result != null && !string.IsNullOrEmpty(result.Value?.ResetToken))
                 {
                     return Ok(new ApiResponse<VerifyPasswordResetCodeResponse>
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         StatusMessage = "Code verified. You can now set a new password.",
-                        Data = result
+                        Data = result.Value
                     });
                 }
 
@@ -196,17 +185,6 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResendPasswordReset([FromBody] ForgotPasswordRequest requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var result = await _authService.ResendPasswordResetCodeAsync(requestDto.Email);
@@ -318,22 +296,11 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest requestDto)
         {
-            if (requestDto == null || !ModelState.IsValid)
-            {
-                return StatusCode(400, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid request data.",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
-                });
-            }
-
             try
             {
                 var result = await _authService.ResetPasswordAsync(requestDto);
 
-                if (result)
+                if (result.Value)
                 {
                     return Ok(new ApiResponse<object>
                     {
