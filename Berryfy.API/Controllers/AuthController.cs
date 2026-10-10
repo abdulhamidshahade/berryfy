@@ -455,15 +455,17 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [Route("logout")]
-        [AllRoles]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
-            //TODO: implement token blacklisting or session management
+            var revoked = await _userService.RevokeRefreshTokenAsync(GetCurrentUserId().Value);
+            
             return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
                 StatusCode = 200,
-                StatusMessage = "Logged out successfully"
+                StatusMessage = "Logged out successfully",
+                Data = revoked.Value
             });
         }
 
