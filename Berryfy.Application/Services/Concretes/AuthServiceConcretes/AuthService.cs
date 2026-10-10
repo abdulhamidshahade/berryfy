@@ -233,7 +233,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             };
         }
 
-        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest requestDto)
+        public async Task<ApplicationResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest requestDto)
         {
             try
             {
@@ -241,17 +241,32 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 if (user == null)
                 {
                     _logger.LogWarning("Password reset requested for non-existent email: {Email}", requestDto.Email);
-                    return true;
+                    return new ApplicationResponse<bool>()
+                    {
+                        IsSuccess = false,
+                        Value = false,
+                        ErrorMessage = "If the email exists, a password reset code will be sent."
+                    };
                 }
 
                 await SetPasswordResetCodeAsync(user);
                 await SendPasswordResetCodeAsync(user);
-                return true;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = true,
+                    Value = true,
+                    SuccessMessage = "If the email exists, a password reset code will be sent."
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing forgot password request for email: {Email}", requestDto.Email);
-                return false;
+                return new ApplicationResponse<bool>()
+                {
+                    IsSuccess = false,
+                    Value = false,
+                    ErrorMessage = "An unexpected error occurred while processing the request."
+                };
             }
         }
 
