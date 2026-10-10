@@ -7,7 +7,7 @@ namespace Berryfy.Application.Dtos.AuthDtos.AuthValidations
     {
         public ForgotPasswordRequestDtoValidator()
         {
-            RuleFor(fn => fn.Email)
+            RuleFor(em => em.Email)
                 .NotNull().WithMessage("Email is required.")
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Email must be a valid email address.");
