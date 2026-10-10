@@ -126,12 +126,65 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
             using var mailtrapClientFactory = new MailtrapClientFactory(ApiToken);
             var clinet = mailtrapClientFactory.CreateClient();
 
+            var digits = code.ToCharArray();
+
             var emailRequest = new SendEmailRequest
             {
                 From = new EmailAddress("support@berryfy.org"),
                 To = new List<EmailAddress> { new EmailAddress(email) },
                 Subject = "Password Reset Code",
-                HtmlBody = $"<p>Hi {userName},</p><p>Your password reset code is: <strong>{code}</strong></p>"
+                HtmlBody = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>Reset your Berryfy password</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                        .content {{ background-color: #f8f9fa; padding: 30px; border-radius: 0 0 5px 5px; }}
+                        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+                        .code-box {{ display: flex; justify-content: center; gap: 8px; margin: 24px 0; }}
+                        .digit {{ display: inline-block; width: 48px; height: 56px; line-height: 56px; text-align: center;
+                                  font-size: 28px; font-weight: bold; color: #007bff;
+                                  border: 2px solid #007bff; border-radius: 8px;
+                                  background: #ffffff; }}
+                        .warning {{ background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin: 15px 0; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>🫐 Berryfy</h1>
+                            <h2>Password reset</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Hello {userName},</p>
+                            <p>We received a request to reset the password for your Berryfy account. Enter this 6-digit code on the reset page:</p>
+
+                            <div class='code-box'>
+                                {string.Join("", digits.Select(d => $"<span class='digit'>{d}</span>"))}
+                            </div>
+
+                            <div class='warning'>
+                                <strong>Security:</strong>
+                                <ul>
+                                    <li>This code expires in <strong>15 minutes</strong>.</li>
+                                    <li>If you did not request a reset, you can ignore this email.</li>
+                                    <li>Never share this code with anyone.</li>
+                                </ul>
+                            </div>
+
+                            <p>Best regards,<br><strong>The Berryfy Team</strong></p>
+                        </div>
+                        <div class='footer'>
+                            <p>&copy; 2026 Berryfy. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>"
             };
 
             await clinet.Email().Send(emailRequest);
