@@ -20,5 +20,6 @@ namespace Berryfy.Application.Services.Interfaces.AuthServiceInterfaces
         Task<ApplicationResponse<User>> CreateUserAsync(CreateUser createUserDto);
         Task<ApplicationResponse<bool>> DeleteUserAsync(int userId);
         Task<ApplicationResponse<bool>> IsUsernameTaken(string username);
+        Task<ApplicationResponse<bool>> RevokeRefreshTokenAsync(int userId);
     }
 }

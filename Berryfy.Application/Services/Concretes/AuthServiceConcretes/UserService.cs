@@ -308,5 +308,17 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             return value.Trim().ToUpperInvariant();
         }
+
+        public async Task<ApplicationResponse<bool>> RevokeRefreshTokenAsync(int userId)
+        {
+            var revoked = _userRepository.RevokeRefreshTokenAsync(userId).GetAwaiter().GetResult().Value;
+
+            return new ApplicationResponse<bool>()
+            {
+                IsSuccess = revoked,
+                SuccessMessage = revoked ? "Refresh token revoked successfully" : "Failed to revoke refresh token",
+                Value = revoked
+            };
+        }
     }
 }
