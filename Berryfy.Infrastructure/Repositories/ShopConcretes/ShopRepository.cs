@@ -86,6 +86,25 @@ namespace Berryfy.Infrastructure.Repositories.ShopConcretes
 
 
 
+        public async Task<InfrastructureResponse<bool>> ExistsAsync(int id)
+        {
+            const string sql = "SELECT EXISTS (SELECT 1 FROM shops WHERE id = @id);";
+
+            await using var connection = await OpenConnectionAsync();
+
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("id", id);
+
+            var exists = (bool)(await command.ExecuteScalarAsync() ?? false);
+
+            return new InfrastructureResponse<bool>
+            {
+                IsSuccess = true,
+                Message = exists ? "Shop exists" : "Shop not found",
+                Value = exists
+            };
+        }
+
         private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
             var connection = new NpgsqlConnection(_connectionString);
