@@ -69,7 +69,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             return await AddProductCategoryAsync(product, categories);
         }
 
-        public async Task<InfrastructureResponse<List<Category>>> GetCategoriesByProuductId(int productId)
+        public async Task<InfrastructureResponse<List<GlobalCategory>>> GetCategoriesByProuductId(int productId)
         {
             const string sql = @"
                 SELECT c.Id, c.Name, c.Description, c.ImageUrl, c.CreatedAt, c.UpdatedAt
@@ -86,10 +86,10 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            var categories = new List<Category>();
+            var categories = new List<GlobalCategory>();
             while (await reader.ReadAsync())
             {
-                categories.Add(new Category
+                categories.Add(new GlobalCategory
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
                     Name = reader.GetString(reader.GetOrdinal("Name")),
@@ -100,7 +100,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 });
             }
 
-            return new InfrastructureResponse<List<Category>>()
+            return new InfrastructureResponse<List<GlobalCategory>>()
             {
                 IsSuccess = true,
                 Message = "Categories retrieved successfully",
