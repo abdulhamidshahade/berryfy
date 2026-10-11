@@ -10,7 +10,7 @@ namespace Berryfy.Domain.Entities.ProductEntities
         [JsonIgnore] public Product Product { get; set; }
 
         public int CategoryId { get; set; }
-        [JsonIgnore] public Category Category { get; set; }
+        [JsonIgnore] public GlobalCategory Category { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
