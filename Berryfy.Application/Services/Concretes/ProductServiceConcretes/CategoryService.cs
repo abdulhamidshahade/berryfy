@@ -116,9 +116,9 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            var existingCategory = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            var existingCategory = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult();
 
-            if (existingCategory == null)
+            if (!existingCategory.IsSuccess)
             {
                 return new ApplicationResponse<CategoryResponse>
                 {
@@ -127,9 +127,9 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            var isNameExists = GetByNameAsync(request.Name).GetAwaiter().GetResult().Value;
+            var isNameExists = GetByNameAsync(request.Name).GetAwaiter().GetResult();
 
-            if(isNameExists != null && isNameExists.Id != id)
+            if(isNameExists.IsSuccess && isNameExists.Value.Id != id)
             {
                 return new ApplicationResponse<CategoryResponse>
                 {
@@ -140,13 +140,13 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             var mappedCategory = UpdateCategoryRequest.MapToCategory(request);
 
-            var updatedCategory = _categoryRepository.UpdateAsync(id, mappedCategory).GetAwaiter().GetResult().Value;
+            var updatedCategory = _categoryRepository.UpdateAsync(id, mappedCategory).GetAwaiter().GetResult();
 
 
             return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = CategoryResponse.MapFromCategory(updatedCategory)
+                Value = CategoryResponse.MapFromCategory(updatedCategory.Value)
             };
         }
 
