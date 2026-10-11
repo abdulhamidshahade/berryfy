@@ -13,5 +13,6 @@ namespace Berryfy.Domain.Repositories.ProductInterfaces
         Task<InfrastructureResponse<bool>> DeleteAsync(Category category);
         Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id);
         Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name);
+        Task<InfrastructureResponse<List<Product>>> GetProductsByCategoryId(int categoryId);
     }
 }
