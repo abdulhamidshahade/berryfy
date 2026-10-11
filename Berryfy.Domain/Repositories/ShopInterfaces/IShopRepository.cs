@@ -1,4 +1,4 @@
-﻿using Berryfy.Domain.Entities;
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ShopEntities;
 
 namespace Berryfy.Domain.Repositories.ShopInterfaces
@@ -7,5 +7,6 @@ namespace Berryfy.Domain.Repositories.ShopInterfaces
     {
         Task<InfrastructureResponse<Shop>> GetShopAsync(int id);
         Task<InfrastructureResponse<Shop>> UpdateShopAsync(Shop shop);
+        Task<InfrastructureResponse<bool>> ExistsAsync(int id);
     }
 }
