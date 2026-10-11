@@ -251,5 +251,52 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@CreatedAt", category.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", category.UpdatedAt);
         }
+
+        public async Task<InfrastructureResponse<List<Product>>> GetProductsByCategoryId(int categoryId)
+        {
+            string query = "Select p.* from products p inner join product_categories pc on (p.id = pc.product_id) where pc.category_id = @CategoryId";
+
+            using var connection = await OpenConnectionAsync();
+
+            using var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@CategoryId", categoryId);
+
+            List<Product> products = new List<Product>();
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            while(await reader.ReadAsync())
+            {
+                products.Add(MapProduct(reader, new Product()));
+            }
+
+            return new InfrastructureResponse<List<Product>>()
+            {
+                IsSuccess = true,
+                Message = "Products that related to category retrived successfully.",
+                Value = products
+            };
+        }
+
+
+        private Product MapProduct(NpgsqlDataReader reader, Product product)
+        {
+            product = new Product()
+            {
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                Name = reader.GetString(reader.GetOrdinal("name")),
+                Description = reader.GetString(reader.GetOrdinal("description")),
+                StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
+                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Price = reader.GetDecimal(reader.GetOrdinal("price")),
+                ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
+                LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                SKU = reader.GetString(reader.GetOrdinal("sku")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
+            return product;
+        }
     }
 }
