@@ -18,7 +18,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
-        public List<CategoryResponse> ProductCategories { get; set; } = new();
+        public List<GlobalCategoryResponse> ProductCategories { get; set; } = new();
 
         public static ProductResponse MapFromProduct(Product product)
         {
