@@ -1,4 +1,3 @@
-using AutoMapper.Configuration.Annotations;
 using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -17,12 +16,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             _connectionString = PostgresConnectionStrings.Resolve(config);
         }
 
-        public async Task<InfrastructureResponse<Category>> CreateAsync(Category category)
+        public async Task<InfrastructureResponse<GlobalCategory>> CreateAsync(GlobalCategory category)
         {
             const string sql = @"
-                INSERT INTO Categories (name, description, image_url, created_at, updated_at)
-                VALUES (@Name, @Description, @ImageUrl, @CreatedAt, @UpdatedAt)
-                RETURNING id, name, description, image_url, created_at, updated_at;";
+                INSERT INTO global_categories (name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at)
+                VALUES (@Name, @Description, @ImageUrl, @Slug, @ParentCategoryId, @IsActive, @DisplayOrder, @CreatedAt, @UpdatedAt)
+                RETURNING id, name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at;";
 
             using var connection = await OpenConnectionAsync();
 
@@ -32,14 +31,14 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category createdCategory = null;
+            GlobalCategory createdCategory = null;
 
             if (await reader.ReadAsync())
             {
                 createdCategory = MapCategory(reader);
             }
 
-            return new InfrastructureResponse<Category>()
+            return new InfrastructureResponse<GlobalCategory>()
             {
                 IsSuccess = true,
                 Message = "Category created successfully",
@@ -47,9 +46,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<bool>> DeleteAsync(Category category)
+        public async Task<InfrastructureResponse<bool>> DeleteAsync(GlobalCategory category)
         {
-            const string sql = "DELETE FROM Categories WHERE id = @Id";
+            const string sql = "DELETE FROM global_categories WHERE id = @Id";
 
             var connection = await OpenConnectionAsync();
             
@@ -67,7 +66,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
-            const string sql = "SELECT COUNT(1) FROM Categories WHERE id = @Id";
+            const string sql = "SELECT COUNT(1) FROM global_categories WHERE id = @Id";
 
             var connection = await OpenConnectionAsync();
 
@@ -85,7 +84,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name)
         {
-            const string sql = "SELECT COUNT(1) FROM Categories WHERE name = @Name";
+            const string sql = "SELECT COUNT(1) FROM global_categories WHERE name = @Name";
 
             var connection = await OpenConnectionAsync();
 
@@ -101,23 +100,24 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<IEnumerable<Category>>> GetAllAsync()
+        public async Task<InfrastructureResponse<IEnumerable<GlobalCategory>>> GetAllAsync()
         {
-            const string sql = @"SELECT c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
-                                FROM Categories c order by c.id";
+            const string sql = @"SELECT gc.id, gc.name, gc.description, gc.image_url, gc.slug, gc.parent_category_id,
+                                gc.is_active, gc.display_order, gc.created_at, gc.updated_at
+                                FROM global_categories gc order by gc.id";
 
             var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
 
-            var categories = new List<Category>();
+            var categories = new List<GlobalCategory>();
             while (await reader.ReadAsync())
             {
                 categories.Add(MapCategory(reader));
             }
 
-            return new InfrastructureResponse<IEnumerable<Category>>()
+            return new InfrastructureResponse<IEnumerable<GlobalCategory>>()
             {
                 IsSuccess = true,
                 Message = "Categories retrieved successfully",
@@ -125,14 +125,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<Category>> GetByIdAsync(int id)
+        public async Task<InfrastructureResponse<GlobalCategory>> GetByIdAsync(int id)
         {
             //using variables more good than select * --> using * is not too good
             const string sql = @"
                 SELECT
-                    c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
-                FROM categories c
-                WHERE c.id = @Id;";
+                    gc.id, gc.name, gc.description, gc.image_url, gc.slug, 
+                    gc.parent_category_id, gc.is_active, gc.display_order, gc.created_at, gc.updated_at
+                FROM global_categories gc
+                WHERE gc.id = @Id;";
 
             using var connection = await OpenConnectionAsync();
 
@@ -141,14 +142,14 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = null;
+            GlobalCategory category = null;
 
             if (await reader.ReadAsync())
             {
                 category = MapCategory(reader);
             }
 
-            return new InfrastructureResponse<Category>()
+            return new InfrastructureResponse<GlobalCategory>()
             {
                 IsSuccess = true,
                 Message = "Category retrieved successfully",
@@ -156,13 +157,14 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<Category>> GetByNameAsync(string name)
+        public async Task<InfrastructureResponse<GlobalCategory>> GetByNameAsync(string name)
         {
             const string sql = @"
                 SELECT
-                    c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
-                FROM categories c
-                WHERE c.name = @Name";
+                    gc.id, gc.name, gc.description, gc.image_url, gc.slug,
+                    gc.parent_category_id, gc.is_active, gc.display_order, gc.created_at, gc.updated_at
+                FROM global_categories gc
+                WHERE gc.name = @Name";
 
             var connection = await OpenConnectionAsync();
 
@@ -171,7 +173,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = null;
+            GlobalCategory category = null;
 
             if (await reader.ReadAsync())
             {
@@ -180,7 +182,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             
             
-            return new InfrastructureResponse<Category>()
+            return new InfrastructureResponse<GlobalCategory>()
             {
                 IsSuccess = true,
                 Message = "Category retrieved successfully",
@@ -188,16 +190,20 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         } 
 
-        public async Task<InfrastructureResponse<Category>> UpdateAsync(int id, Category category)
+        public async Task<InfrastructureResponse<GlobalCategory>> UpdateAsync(int id, GlobalCategory category)
         {
             const string sql = @"
-                UPDATE categories
+                UPDATE global_categories
                 SET name = @Name,
                     description = @Description,
                     image_url = @ImageUrl,
+                    slug = @Slug,
+                    parent_category_id = @ParentCategoryId,
+                    is_active = @IsActive,
+                    display_order = @DisplayOrder,
                     updated_at = @UpdatedAt
                 WHERE id = @Id
-                RETURNING id, name, description, image_url, created_at, updated_at;";
+                RETURNING id, name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at;";
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -214,7 +220,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 category = MapCategory(reader);
             }
             
-            return new InfrastructureResponse<Category>()
+            return new InfrastructureResponse<GlobalCategory>()
             {
                 IsSuccess = true,
                 Message = "Category updated successfully",
@@ -222,14 +228,18 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             };
         }
 
-        private Category MapCategory(NpgsqlDataReader reader)
+        private GlobalCategory MapCategory(NpgsqlDataReader reader)
         {
-            return new Category()
+            return new GlobalCategory()
             {
                 Id = reader.GetInt32(reader.GetOrdinal("id")),
                 Name = reader.GetString(reader.GetOrdinal("name")),
                 Description = reader.GetString(reader.GetOrdinal("description")),
                 ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Slug = reader.GetString(reader.GetOrdinal("slug")),
+                ParentCategoryId = reader.IsDBNull(reader.GetOrdinal("parent_category_id")) ? null : reader.GetInt32("parent_category_id"),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                DisplayOrder = reader.GetInt32(reader.GetOrdinal("display_order")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
@@ -244,23 +254,30 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             return connection;
         }
 
-        private void AddCategoryParameters(NpgsqlCommand command, Category category)
+        private void AddCategoryParameters(NpgsqlCommand command, GlobalCategory category)
         {
             command.Parameters.AddWithValue("@Name", category.Name);
             command.Parameters.AddWithValue("@Description", category.Description);
             command.Parameters.AddWithValue("@ImageUrl", category.ImageUrl);
+            command.Parameters.AddWithValue("@Slug", category.Slug);
+            command.Parameters.AddWithValue(
+                                            "@ParentCategoryId",
+                                                (object?)category.ParentCategoryId ?? DBNull.Value
+);
+            command.Parameters.AddWithValue("@IsActive", category.IsActive);
+            command.Parameters.AddWithValue("@DisplayOrder", category.DisplayOrder);
             command.Parameters.AddWithValue("@CreatedAt", category.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", category.UpdatedAt);
         }
 
-        public async Task<InfrastructureResponse<List<Product>>> GetProductsByCategoryId(int categoryId)
+        public async Task<InfrastructureResponse<List<Product>>> GetProductsByGlobalCategoryId(int globalCategoryId)
         {
-            string query = "Select p.* from products p inner join product_categories pc on (p.id = pc.product_id) where pc.category_id = @CategoryId";
+            string query = "Select * from products p where p.global_category_id = @GlobalCategoryId";
 
             using var connection = await OpenConnectionAsync();
 
             using var command = new NpgsqlCommand(query, connection);
-            command.Parameters.AddWithValue("@CategoryId", categoryId);
+            command.Parameters.AddWithValue("@GlobalCategoryId", globalCategoryId);
 
             List<Product> products = new List<Product>();
 
@@ -295,20 +312,23 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 SKU = reader.GetString(reader.GetOrdinal("sku")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
-                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+                ShopId = reader.GetInt32(reader.GetOrdinal("shop_id")),
+                GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("global_category_id")),
+                ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("shop_category_id"))
             };
             return product;
         }
 
-        public async Task<InfrastructureResponse<int>> GetProductCountByCategoryIdAsync(int categoryId)
+        public async Task<InfrastructureResponse<int>> GetProductCountByGlobalCategoryIdAsync(int globalCategoryId)
         {
-            string query = "select count(*) from product_categories where category_id = @CategoryId;";
+            string query = "select count(*) from products where global_category_id = @GlobalCategoryId;";
 
             using var connection = await OpenConnectionAsync();
 
             using var command = new NpgsqlCommand(query, connection);
 
-            command.Parameters.AddWithValue("@CategoryId", categoryId);
+            command.Parameters.AddWithValue("@GlobalCategoryId", globalCategoryId);
 
             var result = await command.ExecuteScalarAsync();
 
