@@ -285,5 +285,18 @@ namespace Berryfy.API.Controllers
                 Data = products.Value
             };
         }
+
+        [HttpGet("{categoryId}/products/count")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<int>>> GetProductCountByCategoryIdAsync(int categoryId)
+        {
+            int count = _categoryService.GetProductCountByCategoryIdAsync(categoryId).GetAwaiter().GetResult().Value;
+
+            return new ApiResponse<int>()
+            {
+                IsSuccess = true,
+                Data = count
+            };
+        }
     }
 }
