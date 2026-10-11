@@ -143,7 +143,7 @@ namespace Berryfy.API.Controllers
         {
             var updatedCategory = await _categoryService.UpdateAsync(id, request);
 
-            if (updatedCategory == null)
+            if (!updatedCategory.IsSuccess)
             {
                 return new ApiResponse<CategoryResponse>
                 {
