@@ -116,7 +116,7 @@ namespace Berryfy.API.Controllers
         {
             var createdCategory = await _categoryService.CreateAsync(categoryRequest);
 
-            if (createdCategory == null)
+            if (!createdCategory.IsSuccess)
             {
                 return new ApiResponse<CategoryResponse>
                 {
@@ -130,9 +130,9 @@ namespace Berryfy.API.Controllers
             }
             var response = new ApiResponse<CategoryResponse>
             {
-                IsSuccess = true,
+                IsSuccess = createdCategory.IsSuccess,
                 StatusCode = StatusCodes.Status201Created,
-                StatusMessage = "Category created successfully",
+                StatusMessage = createdCategory.SuccessMessage,
                 Data = createdCategory.Value
             };
             return response;
