@@ -2,6 +2,7 @@
 using Berryfy.Application.Dtos.CategoryDtos.Requests;
 using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
+using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 
@@ -241,6 +242,17 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 IsSuccess = categories.IsSuccess,
                 Value = categories.Value,
                 SuccessMessage = categories.Message
+            };
+        }
+
+        public async Task<InfrastructureResponse<int>> GetProductCountByCategoryIdAsync(int categoryId)
+        {
+            int count = _categoryRepository.GetProductCountByCategoryIdAsync(categoryId).GetAwaiter().GetResult().Value;
+
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Value = count
             };
         }
     }
