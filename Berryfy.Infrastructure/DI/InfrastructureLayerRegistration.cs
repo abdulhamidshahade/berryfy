@@ -55,6 +55,7 @@ namespace Berryfy.Infrastructure.DI
 
             serviceDescriptors.AddScoped<IInventoryRepository, InventoryRepository>();
             serviceDescriptors.AddScoped<IShopRepository, ShopRepository>();
+            serviceDescriptors.AddScoped<IShopCategoryRepository, ShopCategoryRepository>();
 
             serviceDescriptors.AddScoped<IUnitOfWork, UnitOfWork>();
 
