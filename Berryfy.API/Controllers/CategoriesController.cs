@@ -49,7 +49,6 @@ namespace Berryfy.API.Controllers
             return Ok(response);
         }
 
-
         [HttpGet]
         [Route("{id}")]
         [AllowAnonymous]
@@ -58,7 +57,7 @@ namespace Berryfy.API.Controllers
 
             var category = await _categoryService.GetByIdAsync(id);
 
-            if (category == null)
+            if (!category.IsSuccess)
             {
                 return NotFound(new ApiResponse<CategoryResponse>
                 {
@@ -79,7 +78,6 @@ namespace Berryfy.API.Controllers
 
             return Ok(response);
         }
-
 
         [HttpGet]
         [Route("name/{name}")]
