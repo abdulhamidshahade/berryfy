@@ -159,8 +159,8 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 SELECT
-                    c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at,
-                FROM Categories
+                    c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
+                FROM categories c
                 WHERE c.name = @Name";
 
             var connection = await OpenConnectionAsync();
@@ -170,7 +170,14 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = MapCategory(reader);
+            Category category = null;
+
+            if (await reader.ReadAsync())
+            {
+                category = MapCategory(reader);
+            }
+
+            
             
             return new InfrastructureResponse<Category>()
             {
@@ -183,7 +190,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<InfrastructureResponse<Category>> UpdateAsync(int id, Category category)
         {
             const string sql = @"
-                UPDATE Categories
+                UPDATE categories
                 SET name = @Name,
                     description = @Description,
                     image_url = @ImageUrl,
@@ -200,7 +207,11 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
-            category = MapCategory(reader);
+
+            if (await reader.ReadAsync())
+            {
+                category = MapCategory(reader);
+            }
             
             return new InfrastructureResponse<Category>()
             {
