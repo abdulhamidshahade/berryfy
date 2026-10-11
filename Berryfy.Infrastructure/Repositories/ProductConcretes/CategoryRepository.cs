@@ -237,7 +237,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 Description = reader.GetString(reader.GetOrdinal("description")),
                 ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
                 Slug = reader.GetString(reader.GetOrdinal("slug")),
-                ParentCategoryId = reader.IsDBNull(reader.GetOrdinal("parent_category_id")) ? null : reader.GetInt32("parent_category_id"),
+                ParentCategoryId = reader.IsDBNull(reader.GetOrdinal("parent_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("parent_category_id")),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 DisplayOrder = reader.GetInt32(reader.GetOrdinal("display_order")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
