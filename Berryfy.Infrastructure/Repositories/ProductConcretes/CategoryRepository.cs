@@ -130,16 +130,22 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             const string sql = @"
                 SELECT
                     c.id, c.name, c.description, c.image_url, c.created_at, c.updated_at
+                FROM categories c
                 WHERE c.id = @Id;";
 
-            var connection = await OpenConnectionAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = MapCategory(reader);
+            Category category = null;
+
+            if (await reader.ReadAsync())
+            {
+                category = MapCategory(reader);
+            }
 
             return new InfrastructureResponse<Category>()
             {
