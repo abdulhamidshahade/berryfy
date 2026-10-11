@@ -1,3 +1,4 @@
+using AutoMapper.Configuration.Annotations;
 using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -297,6 +298,25 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
             return product;
+        }
+
+        public async Task<InfrastructureResponse<int>> GetProductCountByCategoryIdAsync(int categoryId)
+        {
+            string query = "select count(*) from product_categories where category_id = @CategoryId;";
+
+            using var connection = await OpenConnectionAsync();
+
+            using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@CategoryId", categoryId);
+
+            var result = await command.ExecuteScalarAsync();
+
+            return new InfrastructureResponse<int>()
+            {
+                IsSuccess = true,
+                Value = Convert.ToInt32(result)
+            };
         }
     }
 }
