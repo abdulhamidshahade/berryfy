@@ -17,9 +17,9 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
         public async Task<ApplicationResponse<CategoryResponse>> GetByIdAsync(int id)
         {
-            var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult().Value;
+            var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult();
 
-            if (category == null)
+            if (!category.IsSuccess)
             {
                 return new ApplicationResponse<CategoryResponse>
                 {
@@ -31,7 +31,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = CategoryResponse.MapFromCategory(category)
+                Value = CategoryResponse.MapFromCategory(category.Value)
             };
         }
 
