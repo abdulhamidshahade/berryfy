@@ -2,6 +2,7 @@
 using Berryfy.Application.Dtos.CategoryDtos.Requests;
 using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
+using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 
 namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
@@ -218,6 +219,28 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             {
                 IsSuccess = true,
                 Value = exists
+            };
+        }
+
+        public async Task<ApplicationResponse<List<Product>>> GetProductsByCategoryId(int categoryId)
+        {
+            var categories = await _categoryRepository.GetProductsByCategoryId(categoryId);
+
+            if (!categories.IsSuccess)
+            {
+                return new ApplicationResponse<List<Product>>()
+                {
+                    IsSuccess = categories.IsSuccess,
+                    ErrorMessage = categories.Message,
+                    Value = new List<Product>()
+                };
+            }
+
+            return new ApplicationResponse<List<Product>>()
+            {
+                IsSuccess = categories.IsSuccess,
+                Value = categories.Value,
+                SuccessMessage = categories.Message
             };
         }
     }
