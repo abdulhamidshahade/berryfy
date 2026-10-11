@@ -3,6 +3,7 @@ using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.CategoryDtos.Requests;
 using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
+using Berryfy.Domain.Entities.ProductEntities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -257,6 +258,32 @@ namespace Berryfy.API.Controllers
                 Data = false
             };
             return NotFound(notFoundResponse);
+        }
+
+        [HttpGet("{categoryId}/products")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<List<Product>>>> GetProductsByCategoryId(int categoryId)
+        {
+            var products = await _categoryService.GetProductsByCategoryId(categoryId);
+
+            if (!products.IsSuccess)
+            {
+                return new ApiResponse<List<Product>>()
+                {
+                    IsSuccess = products.IsSuccess,
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = products.ErrorMessage,
+                    Data = null
+                };
+            }
+
+            return new ApiResponse<List<Product>>()
+            {
+                IsSuccess = products.IsSuccess,
+                StatusCode = StatusCodes.Status200OK,
+                StatusMessage = products.SuccessMessage,
+                Data = products.Value
+            };
         }
     }
 }
