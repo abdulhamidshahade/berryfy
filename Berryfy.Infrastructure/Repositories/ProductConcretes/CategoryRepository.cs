@@ -23,7 +23,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 VALUES (@Name, @Description, @ImageUrl, @CreatedAt, @UpdatedAt)
                 RETURNING id, name, description, image_url, created_at, updated_at;";
 
-            var connection = await OpenConnectionAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             
@@ -31,7 +31,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category createdCategory = MapCategory(reader);
+            Category createdCategory = null;
+
+            if (await reader.ReadAsync())
+            {
+                createdCategory = MapCategory(reader);
+            }
 
             return new InfrastructureResponse<Category>()
             {
