@@ -18,6 +18,8 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
+        public int ShopId { get; set; }
+        public int? ShopCategoryId { get; set; }
         public List<GlobalCategoryResponse> ProductCategories { get; set; } = new();
 
         public static ProductResponse MapFromProduct(Product product)
@@ -33,7 +35,9 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
                 ReservedStock = product.ReservedStock,
                 LowStockThreshold = product.LowStockThreshold,
                 IsActive = product.IsActive,
-                SKU = product.SKU
+                SKU = product.SKU,
+                ShopId = product.ShopId,
+                ShopCategoryId = product.ShopCategoryId
             };
         }
 
@@ -55,7 +59,9 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
                 ReservedStock = response.ReservedStock,
                 LowStockThreshold = response.LowStockThreshold,
                 IsActive = response.IsActive,
-                SKU = response.SKU
+                SKU = response.SKU,
+                ShopId = response.ShopId,
+                ShopCategoryId = response.ShopCategoryId
             };
         }
 
