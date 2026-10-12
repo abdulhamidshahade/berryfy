@@ -16,7 +16,6 @@ namespace Berryfy.Application.Dtos.ProductDtos.Requests
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
-        public int? GlobalCategoryId { get; set; }
         public int? ShopCategoryId { get; set; }
         public int ShopId { get; set; }
 
@@ -34,7 +33,6 @@ namespace Berryfy.Application.Dtos.ProductDtos.Requests
                 IsActive = request.IsActive,
                 SKU = request.SKU,
                 ShopId = request.ShopId,
-                GlobalCategoryId = request.GlobalCategoryId,
                 ShopCategoryId = request.ShopCategoryId
             };
         }
