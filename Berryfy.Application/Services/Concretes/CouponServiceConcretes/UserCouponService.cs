@@ -187,7 +187,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
         public async Task<ApplicationResponse<List<CouponResponse>>> GetCouponsByUserIdAsync(int userId)
         {
-            if (_userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
+            if (!_userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value)
             {
                 return new ApplicationResponse<List<CouponResponse>>
                 {
