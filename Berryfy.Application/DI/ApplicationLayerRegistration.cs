@@ -47,7 +47,6 @@ namespace Berryfy.Application.DI
             serviceDescriptors.AddScoped<IUserCouponService, UserCouponService>();
 
             serviceDescriptors.AddScoped<ICategoryService, CategoryService>();
-            serviceDescriptors.AddScoped<IProductCategoryService, ProductCategoryService>();
             serviceDescriptors.AddScoped<IProductService, ProductService>();
 
             serviceDescriptors.AddScoped<ICartService, CartService>();
