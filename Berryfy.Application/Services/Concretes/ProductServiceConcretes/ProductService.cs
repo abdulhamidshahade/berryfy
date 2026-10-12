@@ -87,10 +87,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
         }
 
 
-        public async Task<ApplicationResponse<ProductResponse>> CreateAsync(CreateProduct productDto, List<int> categories)
+        public async Task<ApplicationResponse<ProductResponse>> CreateAsync(CreateProduct productDto)
         {
             if (productDto == null || productDto.Price < 0 || productDto.StockQuantity < 0 ||
-                productDto.ReservedStock != 0 || productDto.LowStockThreshold < 0)
+                productDto.ReservedStock < 0 || productDto.LowStockThreshold < 0)
             {
                 return new ApplicationResponse<ProductResponse>
                 {
@@ -130,7 +130,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
         }
 
 
-        public async Task<ApplicationResponse<ProductResponse>> UpdateAsync(int id, UpdateProduct productDto, List<int> categories)
+        public async Task<ApplicationResponse<ProductResponse>> UpdateAsync(int id, UpdateProduct productDto)
         {
             if (productDto == null || productDto.Price < 0 || productDto.LowStockThreshold < 0)
             {
