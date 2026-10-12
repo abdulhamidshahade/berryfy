@@ -105,7 +105,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", userId);
+            command.Parameters.AddWithValue("@UserId", userId);
             await using var reader = await command.ExecuteReaderAsync();
 
             var coupons = new List<Coupon>();
@@ -280,7 +280,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 Id = reader.GetInt32(reader.GetOrdinal("id")),
                 Code = reader.GetString(reader.GetOrdinal("code")),
                 Description = reader.GetString(reader.GetOrdinal("description")),
-                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("discount_amount")),
+                DiscountAmount = reader.IsDBNull(reader.GetOrdinal("discount_amount")) ? (decimal?)null : reader.GetDecimal(reader.GetOrdinal("discount_amount")),
                 MinimumOrderAmount = reader.GetDecimal(reader.GetOrdinal("minimum_order_amount")),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
