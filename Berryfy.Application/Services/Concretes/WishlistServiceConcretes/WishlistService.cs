@@ -389,12 +389,7 @@ namespace Berryfy.Application.Services.Concretes.WishlistServiceConcretes
                 Price = product.Price,
                 ImageUrl = product.ImageUrl,
                 IsActive = product.IsActive,
-                ProductCategories = product.ProductCategories?.Select(pc => new GlobalCategoryResponse
-                {
-                    Id = pc.Category.Id,
-                    Name = pc.Category.Name,
-                    Description = pc.Category.Description
-                }).ToList() ?? new List<GlobalCategoryResponse>()
+                
             };
         }
     }
