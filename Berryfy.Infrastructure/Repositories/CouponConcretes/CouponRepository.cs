@@ -80,10 +80,10 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             const string sql = @"
                 INSERT INTO coupons (
                     code, description, discount_amount, minimum_order_amount, is_active,
-                    created_at, updated_at, type, value, is_for_new_users_only)
+                    created_at, updated_at, type, value, is_for_new_users_only, shop_id)
                 VALUES (
                     @Code, @Description, @DiscountAmount, @MinimumOrderAmount, @IsActive,
-                    @CreatedAt, @UpdatedAt, @Type, @Value, @IsForNewUsersOnly)
+                    @CreatedAt, @UpdatedAt, @Type, @Value, @IsForNewUsersOnly, @ShopId)
                 RETURNING id;";
 
             var now = DateTime.UtcNow;
@@ -111,6 +111,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                     discount_amount = @DiscountAmount,
                     minimum_order_amount = @MinimumOrderAmount,
                     is_active = @IsActive,
+                    shop_id = @ShopId,
                     updated_at = @UpdatedAt,
                     type = @Type,
                     value = @Value,
@@ -191,6 +192,14 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             command.Parameters.AddWithValue("@Type", (int)coupon.Type);
             command.Parameters.AddWithValue("@Value", coupon.Value);
             command.Parameters.AddWithValue("@IsForNewUsersOnly", coupon.IsForNewUsersOnly);
+            if (coupon.ShopId.HasValue)
+            {
+                command.Parameters.AddWithValue("@ShopId", coupon.ShopId.Value);
+            }
+            else
+            {
+                command.Parameters.AddWithValue("@ShopId", DBNull.Value);
+            }
         }
 
         private static Coupon MapCoupon(NpgsqlDataReader reader)
