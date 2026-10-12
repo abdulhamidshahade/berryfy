@@ -11,18 +11,15 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
     public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepository;
-        private readonly IProductCategoryService _productCategoryService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ProductService> _logger;
 
         public ProductService(IProductRepository productRepository,
-                              IProductCategoryService productCategoryService,
                               IUnitOfWork unitOfWork,
                               ILogger<ProductService> logger
         )
         {
             _productRepository = productRepository;
-            _productCategoryService = productCategoryService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -111,16 +108,13 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            await _unitOfWork.BeginTransactionAsync();
-
             var product = CreateProduct.MapToProduct(productDto);
-            var createdProduct = _productRepository.CreateAsync(product).GetAwaiter().GetResult().Value;
+            var createdProduct = _productRepository.CreateAsync(product).GetAwaiter().GetResult();
 
-            var productToDto = ProductResponse.MapFromProduct(createdProduct);
+            var productToDto = ProductResponse.MapFromProduct(createdProduct.Value);
 
-            if (!_productCategoryService.AddProductCategoryAsync(productToDto, categories).GetAwaiter().GetResult().Value)
+            if (!createdProduct.IsSuccess)
             {
-                await _unitOfWork.RollbackTransactionAsync();
                 return new ApplicationResponse<ProductResponse>
                 {
                     IsSuccess = false,
@@ -128,16 +122,14 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            await _unitOfWork.CommitTransactionAsync();
-
             return new ApplicationResponse<ProductResponse>
             {
                 IsSuccess = true,
-                Value = ProductResponse.MapFromProduct(_productRepository.GetByIdAsync(createdProduct.Id).GetAwaiter().GetResult().Value)
+                Value = ProductResponse.MapFromProduct(_productRepository.GetByIdAsync(createdProduct.Value.Id).GetAwaiter().GetResult().Value)
             };
         }
 
-        
+
         public async Task<ApplicationResponse<ProductResponse>> UpdateAsync(int id, UpdateProduct productDto, List<int> categories)
         {
             if (productDto == null || productDto.Price < 0 || productDto.LowStockThreshold < 0)
@@ -176,13 +168,11 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             mappedProduct.StockQuantity = existingProduct.StockQuantity;
             mappedProduct.ReservedStock = existingProduct.ReservedStock;
 
-            await _unitOfWork.BeginTransactionAsync();
+            var updatedProduct = _productRepository.UpdateAsync(id, mappedProduct).GetAwaiter().GetResult();
 
-            var updatedProduct = _productRepository.UpdateAsync(id, mappedProduct).GetAwaiter().GetResult().Value;
+            var productToDto = ProductResponse.MapFromProduct(updatedProduct.Value);
 
-            var productToDto = ProductResponse.MapFromProduct(updatedProduct);
-
-            if (!_productCategoryService.UpdateProductCategoryAsync(productToDto, categories).GetAwaiter().GetResult().Value)
+            if (!updatedProduct.IsSuccess)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 return new ApplicationResponse<ProductResponse>
@@ -192,9 +182,8 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            await _unitOfWork.CommitTransactionAsync();
 
-            var returnProduct = _productRepository.GetByIdAsync(updatedProduct.Id).GetAwaiter().GetResult().Value;
+            var returnProduct = _productRepository.GetByIdAsync(updatedProduct.Value.Id).GetAwaiter().GetResult().Value;
 
             return new ApplicationResponse<ProductResponse>
             {
