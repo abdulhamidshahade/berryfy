@@ -22,7 +22,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at
+                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
                 FROM Products p
                 ORDER BY p.id;";
 
@@ -53,7 +53,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at 
+                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
                 FROM Products p
                 WHERE p.id = @Id
                 ORDER BY p.id;";
@@ -81,7 +81,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at
+                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
                 FROM Products p
                 WHERE p.name = @Name
                 ORDER BY p.id, pc.id;";
@@ -107,11 +107,11 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_threshold, is_active, sku, created_at, updated_at)
+                    low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
-                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt)
+                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt, @ShopId, @GlobalCategoryId, @ShopCategoryId)
                 RETURNING id, name, description, stock_quantity, image_url, price,
-                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at;";
+                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, global_category_id, shop_category_id;";
 
             var connection = await OpenConnectionAsync();
 
@@ -144,16 +144,18 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     low_stock_quantity = @LowStockThreshold,
                     is_active = @IsActive,
                     sku = @SKU,
-                    updated_at = @UpdatedAt
+                    updated_at = @UpdatedAt,
+                    shop_id = @ShopId,
+                    global_category_id = @GlobalCategoryId,
                 WHERE id = @Id
                 RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_quantity, is_active, sku, created_at, updated_at;";
+                    low_stock_quantity, is_active, sku, created_at, updated_at, shop_id, global_category_id;";
 
             var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             AddProductParameters(command, product);
-            command.Parameters.AddWithValue("Id", id);
+            command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
             
@@ -252,6 +254,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     p.Id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
                     p.created_at, p.updated_at
+                FROM products p
                 WHERE 1=1 ";
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -261,30 +264,30 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc INNER JOIN Categories c ON pc.CategoryId = c.Id WHERE pc.ProductId = p.Id AND LOWER(c.Name) = LOWER(@CategoryName)) ";
+                sql += "AND EXISTS (SELECT 1 FROM global_categories gc WHERE gc.id = p.global_category_id AND LOWER(gc.name) = LOWER(@CategoryName) UNION ALL SELECT 1 FROM shop_categories sc WHERE sc.id = p.shop_category_id AND LOWER(sc.name) = LOWER(@CategoryName))";
             }
 
             if (minPrice.HasValue)
             {
-                sql += "AND p.Price >= @MinPrice ";
+                sql += "AND p.price >= @MinPrice ";
             }
 
             if (maxPrice.HasValue)
             {
-                sql += "AND p.Price <= @MaxPrice ";
+                sql += "AND p.price <= @MaxPrice ";
             }
 
             if (isActive.HasValue)
             {
-                sql += "AND p.IsActive = @IsActive ";
+                sql += "AND p.is_active = @IsActive ";
             }
 
             string orderByClause = sortBy?.ToLower() switch
             {
-                "price-low" => "ORDER BY p.Price ASC",
-                "price-high" => "ORDER BY p.Price DESC",
-                "newest" => "ORDER BY p.CreatedAt DESC",
-                _ => "ORDER BY p.Name ASC" 
+                "price-low" => "ORDER BY p.price ASC",
+                "price-high" => "ORDER BY p.price DESC",
+                "newest" => "ORDER BY p.created_at DESC",
+                _ => "ORDER BY p.name ASC" 
             };
             sql += orderByClause + " ";
 
@@ -295,26 +298,26 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                command.Parameters.AddWithValue("SearchTerm", $"%{searchTerm}%");
+                command.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
             }
             if (!string.IsNullOrWhiteSpace(category))
             {
-                command.Parameters.AddWithValue("CategoryName", category);
+                command.Parameters.AddWithValue("@CategoryName", category);
             }
             if (minPrice.HasValue)
             {
-                command.Parameters.AddWithValue("MinPrice", minPrice.Value);
+                command.Parameters.AddWithValue("@MinPrice", minPrice.Value);
             }
             if (maxPrice.HasValue)
             {
-                command.Parameters.AddWithValue("MaxPrice", maxPrice.Value);
+                command.Parameters.AddWithValue("@MaxPrice", maxPrice.Value);
             }
             if (isActive.HasValue)
             {
-                command.Parameters.AddWithValue("IsActive", isActive.Value);
+                command.Parameters.AddWithValue("@IsActive", isActive.Value);
             }
-            command.Parameters.AddWithValue("Offset", (pageNumber - 1) * pageSize);
-            command.Parameters.AddWithValue("PageSize", pageSize);
+            command.Parameters.AddWithValue("@Offset", (pageNumber - 1) * pageSize);
+            command.Parameters.AddWithValue("@PageSize", pageSize);
 
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -338,8 +341,8 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             decimal? minPrice = null, decimal? maxPrice = null, bool? isActive = true)
         {
             var sql = @"
-                SELECT COUNT(DISTINCT p.Id)
-                FROM Products p
+                SELECT COUNT(DISTINCT p.id)
+                FROM products p
                 WHERE 1=1 ";
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -349,22 +352,22 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM ProductCategories pc INNER JOIN Categories c ON pc.CategoryId = c.Id WHERE pc.ProductId = p.Id AND LOWER(c.name) = LOWER(@CategoryName)) ";
+                sql += "AND EXISTS (SELECT 1 FROM global_categories gc WHERE gc.id = p.global_category_id AND LOWER(gc.name) = LOWER(@CategoryName) UNION ALL SELECT 1 FROM shop_categories sc WHERE sc.id = p.shop_category_id AND LOWER(sc.name) = LOWER(@CategoryName))";
             }
 
             if (minPrice.HasValue)
             {
-                sql += "AND p.Price >= @MinPrice ";
+                sql += "AND p.price >= @MinPrice ";
             }
 
             if (maxPrice.HasValue)
             {
-                sql += "AND p.Price <= @MaxPrice ";
+                sql += "AND p.price <= @MaxPrice ";
             }
 
             if (isActive.HasValue)
             {
-                sql += "AND p.IsActive = @IsActive ";
+                sql += "AND p.is_active = @IsActive ";
             }
 
             var connection = await OpenConnectionAsync();
@@ -372,23 +375,23 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                command.Parameters.AddWithValue("SearchTerm", $"%{searchTerm}%");
+                command.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
             }
             if (!string.IsNullOrWhiteSpace(category))
             {
-                command.Parameters.AddWithValue("CategoryName", category);
+                command.Parameters.AddWithValue("@CategoryName", category);
             }
             if (minPrice.HasValue)
             {
-                command.Parameters.AddWithValue("MinPrice", minPrice.Value);
+                command.Parameters.AddWithValue("@MinPrice", minPrice.Value);
             }
             if (maxPrice.HasValue)
             {
-                command.Parameters.AddWithValue("MaxPrice", maxPrice.Value);
+                command.Parameters.AddWithValue("@MaxPrice", maxPrice.Value);
             }
             if (isActive.HasValue)
             {
-                command.Parameters.AddWithValue("IsActive", isActive.Value);
+                command.Parameters.AddWithValue("@IsActive", isActive.Value);
             }
 
             var count = await command.ExecuteScalarAsync();
@@ -422,7 +425,10 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 SKU = reader.GetString(reader.GetOrdinal("sku")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
-                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+                ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
+                GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("global_category_id")),
+                ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
             };
             return product;
         }
@@ -440,6 +446,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("SKU", product.SKU);
             command.Parameters.AddWithValue("CreatedAt", product.CreatedAt);
             command.Parameters.AddWithValue("UpdatedAt", product.UpdatedAt);
+            command.Parameters.AddWithValue("ShopId", product.ShopId);
+            command.Parameters.AddWithValue("GlobalCategoryId", (object?)product.GlobalCategoryId ?? DBNull.Value);
+            command.Parameters.AddWithValue("ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
         }
     }
 }
