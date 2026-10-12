@@ -200,7 +200,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 Id = reader.GetInt32(reader.GetOrdinal("id")),
                 Code = reader.GetString(reader.GetOrdinal("code")),
                 Description = reader.GetString(reader.GetOrdinal("description")),
-                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("discount_amount")),
+                DiscountAmount = reader.IsDBNull(reader.GetOrdinal("discount_amount")) ? null : reader.GetDecimal(reader.GetOrdinal("discount_amount")),
                 MinimumOrderAmount = reader.GetDecimal(reader.GetOrdinal("minimum_order_amount")),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
