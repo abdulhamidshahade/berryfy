@@ -46,7 +46,6 @@ namespace Berryfy.Infrastructure.DI
             serviceDescriptors.AddScoped<IRoleRepository, RoleRepository>();
 
             serviceDescriptors.AddScoped<ICategoryRepository, CategoryRepository>();
-            serviceDescriptors.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
             serviceDescriptors.AddScoped<IProductRepository, ProductRepository>();
 
             serviceDescriptors.AddScoped<ICartRepository, CartRepository>();
