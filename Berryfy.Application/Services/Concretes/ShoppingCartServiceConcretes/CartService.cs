@@ -60,7 +60,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
             if (coupon.DiscountAmount > 0)
             {
-                return coupon.DiscountAmount / 100m;
+                return coupon.DiscountAmount.Value / 100m;
             }
 
             return 0;
@@ -73,7 +73,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return coupon.Value;
             }
 
-            return coupon.DiscountAmount > 0 ? coupon.DiscountAmount : 0;
+            return coupon.DiscountAmount.Value > 0 ? coupon.DiscountAmount.Value : 0;
         }
 
         private static decimal ComputePercentageDiscount(CouponResponse coupon, decimal cartSubTotal)
