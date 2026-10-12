@@ -22,8 +22,8 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
-                FROM Products p
+                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
+                FROM products p
                 ORDER BY p.id;";
 
             var connection = await OpenConnectionAsync();
@@ -35,7 +35,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             while (await reader.ReadAsync())
             {
-                Product product = MapProduct(reader, new Product());
+                Product product = MapProduct(reader);
                 products.Add(product);
             }
             
@@ -53,7 +53,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
                 FROM Products p
                 WHERE p.id = @Id
                 ORDER BY p.id;";
@@ -65,7 +65,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = MapProduct(reader, new Product());
+            Product product = MapProduct(reader);
 
             return new InfrastructureResponse<Product>()
             {
@@ -93,7 +93,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = MapProduct(reader, new Product());
+            Product product = MapProduct(reader);
 
             return new InfrastructureResponse<Product>()
             {
@@ -109,9 +109,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
                     low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
-                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt, @ShopId, @GlobalCategoryId, @ShopCategoryId)
+                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt, @ShopId, @ShopCategoryId)
                 RETURNING id, name, description, stock_quantity, image_url, price,
-                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, global_category_id, shop_category_id;";
+                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id;";
 
             var connection = await OpenConnectionAsync();
 
@@ -119,9 +119,15 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             AddProductParameters(command, product);
 
-            await using var reader = await command.ExecuteReaderAsync();
             
-            Product createdProduct = MapProduct(reader, new Product());
+            using var reader = await command.ExecuteReaderAsync();
+
+            Product createdProduct = new Product();
+
+            if (await reader.ReadAsync())
+            {
+                createdProduct = MapProduct(reader);
+            }
 
             return new InfrastructureResponse<Product>()
             {
@@ -161,7 +167,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             
             if(await reader.ReadAsync())
             {
-                Product updatedProduct = MapProduct(reader, new Product());
+                Product updatedProduct = MapProduct(reader);
                 return new InfrastructureResponse<Product>()
                 {
                     IsSuccess = true,
@@ -253,7 +259,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.Id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at
+                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
                 FROM products p
                 WHERE 1=1 ";
 
@@ -325,7 +331,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             while (await reader.ReadAsync())
             {
-                Product product = MapProduct(reader, new Product());
+                Product product = MapProduct(reader);
                 products.Add(product);
             }
 
@@ -410,9 +416,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             return connection;
         }
 
-        private Product MapProduct(NpgsqlDataReader reader, Product product)
+        private Product MapProduct(NpgsqlDataReader reader)
         {
-            product = new Product()
+            Product product = new Product()
             {
                 Id = reader.GetInt16(reader.GetOrdinal("id")),
                 Name = reader.GetString(reader.GetOrdinal("name")),
@@ -427,7 +433,6 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
                 ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
-                GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("global_category_id")),
                 ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
             };
             return product;
@@ -435,20 +440,19 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         private void AddProductParameters(NpgsqlCommand command, Product product)
         {
-            command.Parameters.AddWithValue("Name", product.Name);
-            command.Parameters.AddWithValue("Description", (object?)product.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("StockQuantity", product.StockQuantity);
-            command.Parameters.AddWithValue("ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
-            command.Parameters.AddWithValue("Price", product.Price);
-            command.Parameters.AddWithValue("ReservedStock", product.ReservedStock);
-            command.Parameters.AddWithValue("LowStockThreshold", product.LowStockThreshold);
-            command.Parameters.AddWithValue("IsActive", product.IsActive);
-            command.Parameters.AddWithValue("SKU", product.SKU);
-            command.Parameters.AddWithValue("CreatedAt", product.CreatedAt);
-            command.Parameters.AddWithValue("UpdatedAt", product.UpdatedAt);
-            command.Parameters.AddWithValue("ShopId", product.ShopId);
-            command.Parameters.AddWithValue("GlobalCategoryId", (object?)product.GlobalCategoryId ?? DBNull.Value);
-            command.Parameters.AddWithValue("ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Name", product.Name);
+            command.Parameters.AddWithValue("@Description", (object?)product.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            command.Parameters.AddWithValue("@ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            command.Parameters.AddWithValue("@ReservedStock", product.ReservedStock);
+            command.Parameters.AddWithValue("@LowStockThreshold", product.LowStockThreshold);
+            command.Parameters.AddWithValue("@IsActive", product.IsActive);
+            command.Parameters.AddWithValue("@SKU", product.SKU);
+            command.Parameters.AddWithValue("@CreatedAt", product.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt);
+            command.Parameters.AddWithValue("@ShopId", product.ShopId);
+            command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
         }
     }
 }
