@@ -59,7 +59,7 @@ namespace Berryfy.API.Controllers
 
             var result = await _productService.GetPaginatedAsync(filter);
 
-            if (!result.Value.Data.Any())
+            if (!result.IsSuccess)
             {
                 return NotFound(new ApiResponse<PaginationResponse<ProductResponse>>
                 {
@@ -168,11 +168,10 @@ namespace Berryfy.API.Controllers
 
 
         [HttpPost]
-        [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<ProductResponse>>> Create([FromBody] CreateProduct productDto,
-            [FromQuery] List<int> categories)
+        //[AdminAndAbove]
+        public async Task<ActionResult<ApiResponse<ProductResponse>>> Create([FromBody] CreateProduct productDto)
         {
-            var createdProduct = await _productService.CreateAsync(productDto, categories);
+            var createdProduct = await _productService.CreateAsync(productDto);
 
             if (createdProduct == null)
             {
@@ -201,11 +200,10 @@ namespace Berryfy.API.Controllers
 
         [HttpPut]
         [Route("{id}")]
-        [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto,
-            [FromQuery] List<int> categories)
+        //[AdminAndAbove]
+        public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto)
         {
-            var updatedProduct = await _productService.UpdateAsync(id, productDto, categories);
+            var updatedProduct = await _productService.UpdateAsync(id, productDto);
 
             if (updatedProduct == null)
             {
