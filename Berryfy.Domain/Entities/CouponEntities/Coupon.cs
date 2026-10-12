@@ -11,6 +11,7 @@ namespace Berryfy.Domain.Entities.CouponEntities
         public string Code { get; set; }
         public string Description { get; set; } = string.Empty;
         public decimal? DiscountAmount { get; set; }
+        public int? ShopId { get; set; }
         public decimal MinimumOrderAmount { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }

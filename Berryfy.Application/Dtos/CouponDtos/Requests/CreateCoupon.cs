@@ -10,7 +10,7 @@ namespace Berryfy.Application.Dtos.CouponDtos.Requests
         public decimal MinimumOrderAmount { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; }
-
+        public int? ShopId { get; set; }
         public CouponType Type { get; set; }
         public decimal Value { get; set; }
         public bool IsForNewUsersOnly { get; set; }
@@ -26,7 +26,8 @@ namespace Berryfy.Application.Dtos.CouponDtos.Requests
                 IsActive = coupon.IsActive,
                 Type = coupon.Type,
                 Value = coupon.Value,
-                IsForNewUsersOnly = coupon.IsForNewUsersOnly
+                IsForNewUsersOnly = coupon.IsForNewUsersOnly,
+                ShopId = coupon.ShopId
             };
         }
     }
