@@ -16,7 +16,5 @@ namespace Berryfy.Domain.Entities.ProductEntities
         public int DisplayOrder { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        [JsonIgnore] public List<ProductCategory> ProductCategories { get; set; }
     }
 }
