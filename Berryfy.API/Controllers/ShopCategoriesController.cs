@@ -13,11 +13,11 @@ namespace Berryfy.API.Controllers
 {
     [ApiController]
     [Route("api/shop-categories")]
-    public class ShopCategoryController : BaseController
+    public class ShopCategoriesController : BaseController
     {
         private readonly IShopCategoryService _shopCategoryService;
 
-        public ShopCategoryController(IShopCategoryService shopCategoryService)
+        public ShopCategoriesController(IShopCategoryService shopCategoryService)
         {
             _shopCategoryService = shopCategoryService;
         }
