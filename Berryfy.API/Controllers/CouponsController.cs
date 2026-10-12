@@ -289,7 +289,7 @@ namespace Berryfy.API.Controllers
         {
             var isDisabled = await _userCouponService.DisableCouponToUser(userId, couponId);
 
-            if (isDisabled.Value)
+            if (isDisabled.IsSuccess)
             {
                 return Ok(new ApiResponse<bool>
                 {
@@ -312,7 +312,7 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [Route("users/{userId}/coupons")]
-        [UserAndAbove]
+        //[UserAndAbove]
         public async Task<ActionResult<ApiResponse<List<CouponResponse>>>> GetCouponsByUserId(int userId)
         {
             var coupons = await _userCouponService.GetCouponsByUserIdAsync(userId);
@@ -411,7 +411,7 @@ namespace Berryfy.API.Controllers
         {
             var addedCoupon = await _userCouponService.AddCouponToUsersAsync(UserIds, couponId);
 
-            if (!addedCoupon.Value)
+            if (!addedCoupon.IsSuccess)
             {
                 return BadRequest(new ApiResponse<bool>
                 {
@@ -438,7 +438,7 @@ namespace Berryfy.API.Controllers
         {
             var addedCoupon = await _userCouponService.AddCouponToAllUsersAsync(couponId);
 
-            if (!addedCoupon.Value)
+            if (!addedCoupon.IsSuccess)
             {
                 return BadRequest(new ApiResponse<bool>
                 {
