@@ -65,7 +65,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = MapProduct(reader);
+            Product product = new Product();
+
+            if(await reader.ReadAsync())
+            {
+                product = MapProduct(reader);
+            }
 
             return new InfrastructureResponse<Product>()
             {
@@ -81,10 +86,10 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.global_category_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
                 FROM Products p
                 WHERE p.name = @Name
-                ORDER BY p.id, pc.id;";
+                ORDER BY p.id;";
 
             var connection = await OpenConnectionAsync();
 
@@ -93,7 +98,12 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = MapProduct(reader);
+            Product product = new Product();
+
+            if(await reader.ReadAsync())
+            {
+                product = MapProduct(reader);
+            }
 
             return new InfrastructureResponse<Product>()
             {
@@ -105,7 +115,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<Product>> CreateAsync(Product product)
         {
-            const string sql = @"
+           string sql = @"
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
                     low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
@@ -113,7 +123,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 RETURNING id, name, description, stock_quantity, image_url, price,
                 reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id;";
 
-            var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -140,24 +150,24 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<InfrastructureResponse<Product>> UpdateAsync(int id, Product product)
         {
             const string sql = @"
-                UPDATE Products
+                UPDATE products
                 SET name = @Name,
                     description = @Description,
                     stock_quantity = @StockQuantity,
                     image_url = @ImageUrl,
                     price = @Price,
                     reserved_stock = @ReservedStock,
-                    low_stock_quantity = @LowStockThreshold,
+                    low_stock_threshold = @LowStockThreshold,
                     is_active = @IsActive,
                     sku = @SKU,
                     updated_at = @UpdatedAt,
                     shop_id = @ShopId,
-                    global_category_id = @GlobalCategoryId,
+                    shop_category_id = @ShopCategoryId
                 WHERE id = @Id
                 RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_quantity, is_active, sku, created_at, updated_at, shop_id, global_category_id;";
+                    low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id;";
 
-            var connection = await OpenConnectionAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             AddProductParameters(command, product);
