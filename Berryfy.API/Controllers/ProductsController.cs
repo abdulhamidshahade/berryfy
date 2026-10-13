@@ -168,7 +168,7 @@ namespace Berryfy.API.Controllers
 
 
         [HttpPost]
-        //[AdminAndAbove]
+        [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<ProductResponse>>> Create([FromBody] CreateProduct productDto)
         {
             var createdProduct = await _productService.CreateAsync(productDto);
@@ -200,7 +200,7 @@ namespace Berryfy.API.Controllers
 
         [HttpPut]
         [Route("{id}")]
-        //[AdminAndAbove]
+        [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto)
         {
             var updatedProduct = await _productService.UpdateAsync(id, productDto);
