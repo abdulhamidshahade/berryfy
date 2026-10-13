@@ -23,7 +23,7 @@ namespace Berryfy.Domain.Entities.ProductEntities
         public string SKU { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        [JsonIgnore] public List<InventoryLog> InventoryLogs { get; set; }
+        public List<InventoryLog> InventoryLogs { get; set; } = new List<InventoryLog>();
         [JsonIgnore] public List<CartItem> CartItems { get; set; }
         [JsonIgnore] public List<OrderItem> OrderItems { get; set; }
     }
