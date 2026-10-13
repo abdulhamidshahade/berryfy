@@ -1,8 +1,10 @@
 ﻿using Berryfy.Application.Authorization.Attributes;
 using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Dtos.ProductDtos.Requests;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
+using Berryfy.Domain.Entities.ShopEntities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -319,5 +321,20 @@ namespace Berryfy.API.Controllers
 
             return NotFound(notFoundResponse);
         }
+
+        [HttpGet]
+        [HttpGet("{productId:int}/shop-category")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<ShopCategoryResponse>>> GetShopCategoryByProduct(int productId)
+        {
+            var shopCategory = await _productService.GetShopCategoryByProductAsync(productId);
+
+            return new ApiResponse<ShopCategoryResponse>()
+            {
+                Data = shopCategory.Value,
+                StatusCode = StatusCodes.Status200OK,
+            };
+        }
+
     }
 }
