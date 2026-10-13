@@ -1,6 +1,8 @@
 ﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Dtos.CategoryDtos.Responses;
 using Berryfy.Application.Dtos.ProductDtos.Requests;
 using Berryfy.Application.Dtos.ProductDtos.Responses;
+using Berryfy.Application.Dtos.ShopDtos.Responses;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -272,6 +274,23 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             {
                 IsSuccess = true,
                 Value = paginationResult
+            };
+        }
+
+        public async Task<ApplicationResponse<ShopCategoryResponse>> GetShopCategoryByProductAsync(int productId)
+        {
+            var shopCategory = await _productRepository.GetShopCategoryByProduct(productId);
+
+            if (!shopCategory.IsSuccess)
+            {
+                return new ApplicationResponse<ShopCategoryResponse> { IsSuccess = shopCategory.IsSuccess, ErrorMessage = shopCategory.Message };
+            }
+
+            return new ApplicationResponse<ShopCategoryResponse>()
+            {
+                IsSuccess = shopCategory.IsSuccess,
+                SuccessMessage = shopCategory.Message,
+                Value = ShopCategoryResponse.MapFromShopCategory(shopCategory.Value)
             };
         }
     }
