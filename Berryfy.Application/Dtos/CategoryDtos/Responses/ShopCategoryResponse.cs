@@ -6,6 +6,7 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
     {
         public int Id { get; set; }
         public int ShopId { get; set; }
+        public int? GlobalCategoryId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
@@ -30,7 +31,8 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
                 IsActive = category.IsActive,
                 DisplayOrder = category.DisplayOrder,
                 CreatedAt = category.CreatedAt,
-                UpdatedAt = category.UpdatedAt
+                UpdatedAt = category.UpdatedAt,
+                GlobalCategoryId = category.GlobalCategoryId
             };
         }
     }
