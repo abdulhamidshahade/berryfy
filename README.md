@@ -1,6 +1,7 @@
 # <img align="absmiddle" width="50" height="50" alt="1790012305130_1_-removebg-preview" src="https://github.com/user-attachments/assets/6392ae45-0de5-4f5f-b804-6f84094f172d" /> Berryfy
 
-<img width="3072" height="2076" alt="1790010321390(1)" src="https://github.com/user-attachments/assets/b8bd1c66-c3cf-4e59-889a-8523358c8c97" />
+<img width="1774" height="887" alt="berryfy" src="https://github.com/user-attachments/assets/c127fc70-8af6-4dc3-b9e4-598c815f5b57" />
+
 
 
 
