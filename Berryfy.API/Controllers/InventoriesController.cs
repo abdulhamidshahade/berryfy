@@ -47,37 +47,7 @@ namespace Berryfy.API.Controllers
                 });
             }
         }
-
-
-        [HttpGet("check-stock/{productId}")]
-        [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<object>>> CheckStock(int productId, [FromQuery] int quantity = 1)
-        {
-            try
-            {
-                var isInStock = await _inventoryService.IsInStockAsync(productId, quantity);
-
-                return Ok(new ApiResponse<object>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Stock check completed",
-                    Data = new { ProductId = productId, Quantity = quantity, IsInStock = isInStock }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error checking stock",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
-
-        
+  
         [HttpPost("reserve-stock")]
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<bool>>> ReserveStock([FromBody] ReserveStockRequest request)
