@@ -143,9 +143,11 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 ChangeType = InventoryChangeType.StockAdjustment,
                 Notes = notes,
                 CreatedAt = DateTime.UtcNow,
-                PerformedByUserId = performedByUserId
+                PerformedByUserId = performedByUserId,
+                ReferenceType = "Adjust Stock"
             };
 
+            var updatedProduct = await _productRepository.UpdateAsync(productId, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
             if (createdInventory == null)
@@ -189,7 +191,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 QuantityChanged = -quantity,
                 ChangeType = InventoryChangeType.Purchase,
                 ReferenceId = referenceId,
-                ReferenceType = referenceType,
+                ReferenceType = "Stock Deduction",
                 Notes = $"Purchased {quantity} units via {referenceType} {referenceId}",
                 CreatedAt = DateTime.UtcNow
             };
@@ -249,7 +251,8 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                     QuantityChanged = 0,
                     ChangeType = InventoryChangeType.StockAdjustment,
                     Notes = $"Low stock notification: {product.Name} has {product.StockQuantity} units (threshold: {product.LowStockThreshold})",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    ReferenceType = "Notification - Low Stocks"
                 };
 
                 await _inventoryRepository.CreateInventory(inventoryLog);
@@ -282,10 +285,10 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             {
                 ProductId = productId,
                 CurrentStockQuantity = product.StockQuantity,
-                QuantityChanged = 0,
+                QuantityChanged = quantity,
                 ChangeType = InventoryChangeType.ReleaseReservation,
                 ReferenceId = referenceId,
-                ReferenceType = referenceType,
+                ReferenceType = "Release Reserved Stock",
                 Notes = $"Released {quantity} units from {referenceType} {referenceId}",
                 CreatedAt = DateTime.UtcNow
             };
@@ -318,10 +321,10 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
             {
                 ProductId = productId,
                 CurrentStockQuantity = product.StockQuantity,
-                QuantityChanged = 0,
+                QuantityChanged = quantity,
                 ChangeType = InventoryChangeType.Reserved,
                 ReferenceId = referenceId,
-                ReferenceType = referenceType,
+                ReferenceType = "Reserve Stock",
                 Notes = $"Reserved {quantity} units for {referenceType} {referenceId}",
                 CreatedAt = DateTime.UtcNow
             };
