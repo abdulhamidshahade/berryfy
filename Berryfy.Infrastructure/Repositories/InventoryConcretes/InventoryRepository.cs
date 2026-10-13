@@ -20,14 +20,14 @@ namespace Berryfy.Infrastructure.Repositories.InventoryConcretes
 
         public async Task<InfrastructureResponse<InventoryLog>> CreateInventory(InventoryLog inventoryLog)
         {
-            string query = @"Insert into InventoryLogs (product_id, current_stock_quantity, quantity_changed,
+            string query = @"Insert into inventory_logs (product_id, current_stock_quantity, quantity_changed,
 change_type, reference_id, reference_type, performed_by_user_id, notes, created_at, updated_at) values (@ProductId,
 @CurrentStockQuantity, @QuantityChanged, @ChangeType, @ReferenceId, @ReferenceType, @PerformedByUserId, @Notes, @CreatedAt,
 @UpdatedAt) Returning *;";
 
-            var connection = await OpenConnectionAsync();
+            using var connection = await OpenConnectionAsync();
 
-            var command = new NpgsqlCommand(query, connection);
+            using var command = new NpgsqlCommand(query, connection);
 
             AddInventoryLogParameters(command, inventoryLog);
 
@@ -261,31 +261,56 @@ limit @limit;";
 
         public async Task<InfrastructureResponse<Product>> GetProductWithStockInfoAsync(int productId)
         {
-            string sql = @"select p.*, il.* from products p
-left join InventoryLogs il on (p.id = il.product_id)
-where p.id = @productId
+            string sql = @"select p.name, p.shop_id, p.shop_category_id, p.description, p.stock_quantity,
+p.image_url, p.price, p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku, il.product_id, il.current_stock_quantity,
+il.quantity_changed, il.change_type, il.reference_id, il.reference_type, il.performed_by_user_id, il.notes from products p
+left join inventory_logs il on (p.id = il.product_id)
+where p.id = @ProductId
 order by il.created_at desc
 limit 20;";
 
-            var connection = await OpenConnectionAsync();
+            using var connection = await OpenConnectionAsync();
 
-            var command = new NpgsqlCommand(sql, connection);
+            using var command = new NpgsqlCommand(sql, connection);
 
-            command.Parameters.AddWithValue("@productId", productId);
+            command.Parameters.AddWithValue("@ProductId", productId);
 
             Dictionary<int, Product> product = new Dictionary<int, Product>();
 
-            var reader = await command.ExecuteReaderAsync();
+            using var reader = await command.ExecuteReaderAsync();
 
             while(await reader.ReadAsync())
             {
-                int id = reader.GetInt16(reader.GetOrdinal("id"));
+                int id = reader.GetInt16(reader.GetOrdinal("product_id"));
 
-                if(product.TryGetValue(id, out Product productObj))
+                if(!product.TryGetValue(id, out Product productObj))
                 {
-                    productObj = MapProduct(reader);
+                    productObj = new Product()
+                    {
+                        Name = reader.GetString(reader.GetOrdinal("name")),
+                        Description = reader.GetString(reader.GetOrdinal("description")),
+                        StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
+                        ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                        Price = reader.GetDecimal(reader.GetOrdinal("price")),
+                        ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
+                        LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                        IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                        SKU = reader.GetString(reader.GetOrdinal("sku"))
+                    };
+
+                    product.Add(id, productObj);
                 }
-                productObj.InventoryLogs.Add(MapInventoryLog(reader));
+                productObj.InventoryLogs.Add(new InventoryLog()
+                {
+                    ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
+                    CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("current_stock_quantity")),
+                    QuantityChanged = reader.GetInt16(reader.GetOrdinal("quantity_changed")),
+                    ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("change_type")),
+                    ReferenceId = reader.GetInt16(reader.GetOrdinal("reference_id")),
+                    ReferenceType = reader.GetString(reader.GetOrdinal("reference_type")),
+                    PerformedByUserId = reader.IsDBNull(reader.GetOrdinal("performed_by_user_id")) ? null : reader.GetInt16(reader.GetOrdinal("performed_by_user_id")),
+                    Notes = reader.GetString(reader.GetOrdinal("notes"))
+                });
             }
 
             return new InfrastructureResponse<Product>()
@@ -308,14 +333,14 @@ limit 20;";
         {
             return new InventoryLog
             {
-                Id = reader.GetInt16(reader.GetOrdinal("Id")),
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
                 ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
                 CurrentStockQuantity = reader.GetInt16(reader.GetOrdinal("current_stock_quantity")),
                 QuantityChanged = reader.GetInt16(reader.GetOrdinal("quantity_changed")),
                 ChangeType = (InventoryChangeType)reader.GetValue(reader.GetOrdinal("change_type")),
                 ReferenceId = reader.GetInt16(reader.GetOrdinal("reference_id")),
                 ReferenceType = reader.GetString(reader.GetOrdinal("reference_type")),
-                PerformedByUserId = reader.GetInt16(reader.GetOrdinal("performed_by_user_id")),
+                PerformedByUserId = reader.IsDBNull(reader.GetOrdinal("performed_by_user_id")) ? null : reader.GetInt16(reader.GetOrdinal("performed_by_user_id")),
                 Notes = reader.GetString(reader.GetOrdinal("notes")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
@@ -327,10 +352,10 @@ limit 20;";
             command.Parameters.AddWithValue("@ProductId", inventoryLog.ProductId);
             command.Parameters.AddWithValue("@CurrentStockQuantity", inventoryLog.CurrentStockQuantity);
             command.Parameters.AddWithValue("@QuantityChanged", inventoryLog.QuantityChanged);
-            command.Parameters.AddWithValue("@ChangeType", inventoryLog.ChangeType);
+            command.Parameters.AddWithValue("@ChangeType", (int)inventoryLog.ChangeType);
             command.Parameters.AddWithValue("@ReferenceId", inventoryLog.ReferenceId);
-            command.Parameters.AddWithValue("@ReferenceType", inventoryLog.ReferenceType);
-            command.Parameters.AddWithValue("@PerformedByUserId", inventoryLog.PerformedByUserId);
+            command.Parameters.AddWithValue("@ReferenceType", (object?)inventoryLog.ReferenceType ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PerformedByUserId", (object?)inventoryLog.PerformedByUserId ?? DBNull.Value);
             command.Parameters.AddWithValue("@Notes", inventoryLog.Notes);
             command.Parameters.AddWithValue("@CreatedAt", inventoryLog.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", inventoryLog.UpdatedAt);
