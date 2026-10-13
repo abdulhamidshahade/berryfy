@@ -154,7 +154,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             var isProductExists = _productRepository.GetByNameAsync(productDto.Name).GetAwaiter().GetResult().Value;
 
-            if (isProductExists != null && isProductExists.Id != id)
+            if (isProductExists.Name == productDto.Name && isProductExists.Id != id)
             {
                 return new ApplicationResponse<ProductResponse>
                 {
