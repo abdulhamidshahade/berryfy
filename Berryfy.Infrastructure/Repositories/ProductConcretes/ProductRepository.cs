@@ -1,5 +1,6 @@
 using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShopEntities;
 using Berryfy.Domain.Repositories.ProductInterfaces;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
@@ -463,6 +464,55 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt);
             command.Parameters.AddWithValue("@ShopId", product.ShopId);
             command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
+        }
+
+        public async Task<InfrastructureResponse<ShopCategory>> GetShopCategoryByProduct(int productId)
+        {
+            const string query = "select sc.* from products p inner join shop_categories sc on (sc.id = p.shop_category_id) where p.id = @ProductId;";
+
+            using var connectoin = await OpenConnectionAsync();
+
+            using var command = new NpgsqlCommand(query, connectoin);
+            command.Parameters.AddWithValue("@ProductId", productId);
+
+            ShopCategory shopCategory = new ShopCategory();
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            if(await reader.ReadAsync())
+            {
+                shopCategory = MapShopCategory(reader);
+            }
+
+            return new InfrastructureResponse<ShopCategory>()
+            {
+                IsSuccess = true,
+                Message = "Shop category that related to the product retrived successfully!",
+                Value = shopCategory
+            };
+        }
+
+
+        private static ShopCategory MapShopCategory(NpgsqlDataReader reader)
+        {
+            var descriptionOrdinal = reader.GetOrdinal("description");
+            var imageUrlOrdinal = reader.GetOrdinal("image_url");
+            var parentOrdinal = reader.GetOrdinal("parent_category_id");
+
+            return new ShopCategory
+            {
+                Id = checked((int)reader.GetInt64(reader.GetOrdinal("id"))),
+                ShopId = checked((int)reader.GetInt64(reader.GetOrdinal("shop_id"))),
+                Name = reader.GetString(reader.GetOrdinal("name")),
+                Description = reader.IsDBNull(descriptionOrdinal) ? null : reader.GetString(descriptionOrdinal),
+                ImageUrl = reader.IsDBNull(imageUrlOrdinal) ? null : reader.GetString(imageUrlOrdinal),
+                Slug = reader.GetString(reader.GetOrdinal("slug")),
+                ParentCategoryId = reader.IsDBNull(parentOrdinal) ? null : checked((int)reader.GetInt64(parentOrdinal)),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                DisplayOrder = reader.GetInt32(reader.GetOrdinal("display_order")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            };
         }
     }
 }
