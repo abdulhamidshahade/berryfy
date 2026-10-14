@@ -1,12 +1,13 @@
 using Berryfy.Domain.Constants;
-using Berryfy.Domain.Entities.ShoppingCartEntities;
-using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities;
+using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Entities.CouponEntities;
+using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using Berryfy.Domain.Entities;
 
 namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 {
@@ -22,12 +23,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<InfrastructureResponse<Cart>> CreateCartAsync(int? userId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version)
-                VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
-                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
+                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version, notes)
+                VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version, @Notes)
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version, notes;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
@@ -36,6 +36,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@Version", 1);
+            command.Parameters.AddWithValue("@Notes", "initial cart");
 
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -62,12 +63,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         public async Task<InfrastructureResponse<Cart>> CreateCartAsync(string? sessionId, CartStatus status)
         {
             const string sql = @"
-                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version)
-                VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version)
-                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
+                INSERT INTO shopping_carts (user_id, session_id, status, created_at, updated_at, version, notes)
+                VALUES (@UserId, @SessionId, @Status, @CreatedAt, @UpdatedAt, @Version, @Notes)
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version, notes";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue(@"UserId", (object?)null ?? DBNull.Value);
@@ -76,6 +76,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@Version", 1);
+            command.Parameters.AddWithValue("@Notes", "initical cart"); 
 
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -105,8 +106,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             {
                 const string sql = "DELETE FROM shopping_carts WHERE user_id = @UserId AND status = @Status";
 
-                await using var connection = new NpgsqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var connection = await OpenConnectionAsync();
 
                 await using var command = new NpgsqlCommand(sql, connection);
                 command.Parameters.AddWithValue("@UserId", userId.Value);
@@ -150,161 +150,236 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<Cart>> GetCartByUserIdAsync(int? userId, CartStatus? status = CartStatus.Active)
+
+        public async Task<InfrastructureResponse<Cart>> GetCartByUserIdAsync(
+            int? userId,
+            CartStatus? status = CartStatus.Active)
         {
             if (!userId.HasValue)
-                return new InfrastructureResponse<Cart>()
+            {
+                return new InfrastructureResponse<Cart>
                 {
                     IsSuccess = false,
                     Message = "Invalid user ID",
                     Value = null
                 };
+            }
 
             const string sql = @"
-                SELECT
-                    c.Id, c.UserId, c.SessionId, c.Status, c.CreatedAt, c.UpdatedAt, c.Version,
-                    ci.Id AS Ci_Id, ci.ProductId AS Ci_ProductId, ci.Quantity AS Ci_Quantity, ci.UnitPrice AS Ci_UnitPrice,
-                    ci.CreatedAt AS Ci_CreatedAt, ci.UpdatedAt AS Ci_UpdatedAt,
-                    p.Id AS P_Id, p.Name AS P_Name, p.Description AS P_Description, p.StockQuantity AS P_StockQuantity,
-                    p.ImageUrl AS P_ImageUrl, p.Price AS P_Price, p.ReservedStock AS P_ReservedStock,
-                    p.LowStockThreshold AS P_LowStockThreshold, p.IsActive AS P_IsActive, p.SKU AS P_SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    cc.Id AS Cc_Id, cc.CouponId AS Cc_CouponId, cc.DiscountAmount AS Cc_DiscountAmount,
-                    cc.CreatedAt AS Cc_CreatedAt, cc.UpdatedAt AS Cc_UpdatedAt,
-                    cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountAmount AS Cp_DiscountAmount,
-                    cpn.DiscountValue AS Cp_MinimumOrderAmount, cpn.Type AS Cp_Type, cpn.Value AS Cp_Value,
-                    cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM shopping_carts c
-                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN products p ON ci.ProductId = p.Id
-                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
-                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
-                WHERE c.UserId = @UserId AND c.Status = @Status
-                ORDER BY c.Id, ci.Id, cc.Id";
+        SELECT
+            c.id AS Id,
+            c.user_id AS UserId,
+            c.session_id AS SessionId,
+            c.status AS Status,
+            c.created_at AS CreatedAt,
+            c.updated_at AS UpdatedAt,
+            c.version AS Version,
+            c.notes AS Notes,
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            ci.id AS Ci_Id,
+            ci.product_id AS Ci_ProductId,
+            ci.quantity AS Ci_Quantity,
+            ci.unit_price AS Ci_UnitPrice,
+            ci.created_at AS Ci_CreatedAt,
+            ci.updated_at AS Ci_UpdatedAt,
+
+            p.id AS P_Id,
+            p.name AS P_Name,
+            p.description AS P_Description,
+            p.stock_quantity AS P_StockQuantity,
+            p.image_url AS P_ImageUrl,
+            p.price AS P_Price,
+            p.reserved_stock AS P_ReservedStock,
+            p.low_stock_threshold AS P_LowStockThreshold,
+            p.is_active AS P_IsActive,
+            p.sku AS P_SKU,
+            p.created_at AS P_CreatedAt,
+            p.updated_at AS P_UpdatedAt,
+
+            cc.id AS Cc_Id,
+            cc.coupon_id AS Cc_CouponId,
+            cc.discount_amount AS Cc_DiscountAmount,
+            cc.created_at AS Cc_CreatedAt,
+            cc.updated_at AS Cc_UpdatedAt,
+
+            cpn.id AS Cp_Id,
+            cpn.code AS Cp_Code,
+            cpn.description AS Cp_Description,
+            cpn.discount_amount AS Cp_DiscountAmount,
+            cpn.minimum_order_amount AS Cp_MinimumOrderAmount,
+            cpn.type AS Cp_Type,
+            cpn.value AS Cp_Value,
+            cpn.is_active AS Cp_IsActive,
+            cpn.is_for_new_users_only AS Cp_IsForNewUsersOnly,
+            cpn.created_at AS Cp_CreatedAt,
+            cpn.updated_at AS Cp_UpdatedAt
+
+        FROM shopping_carts c
+        LEFT JOIN cart_items ci
+            ON c.id = ci.cart_id
+        LEFT JOIN products p
+            ON ci.product_id = p.id
+        LEFT JOIN cart_coupons cc
+            ON c.id = cc.cart_id
+        LEFT JOIN coupons cpn
+            ON cc.coupon_id = cpn.id
+
+        WHERE c.id = (
+            SELECT c2.id
+            FROM shopping_carts c2
+            WHERE c2.user_id = @UserId
+              AND c2.status = @Status
+            ORDER BY c2.id
+            LIMIT 1
+        )
+
+        ORDER BY ci.id, cc.id";
+
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("UserId", userId.Value);
-            command.Parameters.AddWithValue("Status", status?.ToString() ?? CartStatus.Active.ToString());
+
+            command.Parameters.AddWithValue("@UserId", userId.Value);
+            command.Parameters.AddWithValue(
+                "@Status",
+                (status ?? CartStatus.Active).ToString());
 
             await using var reader = await command.ExecuteReaderAsync();
 
             Cart? cart = null;
+
             var cartItems = new Dictionary<int, CartItem>();
             var cartCoupons = new Dictionary<int, CartCoupon>();
 
+            int Ordinal(string name) => reader.GetOrdinal(name);
+
+            string? NullableString(string name) =>
+                reader.IsDBNull(Ordinal(name))
+                    ? null
+                    : reader.GetString(Ordinal(name));
+
             while (await reader.ReadAsync())
             {
-                int cartId = reader.GetInt32(reader.GetOrdinal("Id"));
-                if (!cartItems.ContainsKey(cartId) || cart == null)
+                int cartId = reader.GetInt32(Ordinal("Id"));
+
+                if (cart == null)
                 {
                     cart = new Cart
                     {
                         Id = cartId,
-                        UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                        SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                        Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        Version = reader.GetInt32(reader.GetOrdinal("Version")),
+                        UserId = reader.IsDBNull(Ordinal("UserId"))
+                            ? null
+                            : reader.GetInt32(Ordinal("UserId")),
+                        SessionId = NullableString("SessionId"),
+                        Status = Enum.Parse<CartStatus>(
+                            reader.GetString(Ordinal("Status"))),
+                        CreatedAt = reader.GetDateTime(Ordinal("CreatedAt")),
+                        UpdatedAt = reader.GetDateTime(Ordinal("UpdatedAt")),
+                        Version = reader.GetInt32(Ordinal("Version")),
+                        Note = NullableString("Notes"),
                         CartItems = new List<CartItem>(),
                         CartCoupons = new List<CartCoupon>()
                     };
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Ci_Id")))
+                // Map cart items.
+                if (!reader.IsDBNull(Ordinal("Ci_Id")))
                 {
-                    var cartItemId = reader.GetInt32(reader.GetOrdinal("Ci_Id"));
+                    int cartItemId = reader.GetInt32(Ordinal("Ci_Id"));
+
                     if (!cartItems.TryGetValue(cartItemId, out var cartItem))
                     {
                         cartItem = new CartItem
                         {
                             Id = cartItemId,
                             ShoppingCartId = cartId,
-                            ProductId = reader.GetInt32(reader.GetOrdinal("Ci_ProductId")),
-                            Quantity = reader.GetInt32(reader.GetOrdinal("Ci_Quantity")),
-                            UnitPrice = reader.GetDecimal(reader.GetOrdinal("Ci_UnitPrice")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_UpdatedAt"))
+                            ProductId = reader.GetInt32(Ordinal("Ci_ProductId")),
+                            Quantity = reader.GetInt32(Ordinal("Ci_Quantity")),
+                            UnitPrice = reader.GetDecimal(Ordinal("Ci_UnitPrice")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Ci_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Ci_UpdatedAt"))
                         };
+
                         cartItems.Add(cartItemId, cartItem);
                         cart.CartItems.Add(cartItem);
                     }
 
- 
-                    if (!reader.IsDBNull(reader.GetOrdinal("P_Id")))
+                    // Map the associated product once per cart item.
+                    if (cartItem.Product == null &&
+                        !reader.IsDBNull(Ordinal("P_Id")))
                     {
-                        if (cartItem.Product == null)
+                        cartItem.Product = new Product
                         {
-                            cartItem.Product = new Product
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("P_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("P_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                                StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                                Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                                ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                                LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                                SKU = reader.GetString(reader.GetOrdinal("P_SKU")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("P_Id")),
+                            Name = reader.GetString(Ordinal("P_Name")),
+                            Description = NullableString("P_Description"),
+                            StockQuantity = reader.GetInt32(Ordinal("P_StockQuantity")),
+                            ImageUrl = NullableString("P_ImageUrl"),
+                            Price = reader.GetDecimal(Ordinal("P_Price")),
+                            ReservedStock = reader.GetInt32(Ordinal("P_ReservedStock")),
+                            LowStockThreshold = reader.GetInt32(Ordinal("P_LowStockThreshold")),
+                            IsActive = reader.GetBoolean(Ordinal("P_IsActive")),
+                            SKU = NullableString("P_SKU"),
+                            CreatedAt = reader.GetDateTime(Ordinal("P_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("P_UpdatedAt"))
+                        };
                     }
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Cc_Id")))
+                // Map applied coupons.
+                if (!reader.IsDBNull(Ordinal("Cc_Id")))
                 {
-                    var cartCouponId = reader.GetInt32(reader.GetOrdinal("Cc_Id"));
+                    int cartCouponId = reader.GetInt32(Ordinal("Cc_Id"));
+
                     if (!cartCoupons.TryGetValue(cartCouponId, out var cartCoupon))
                     {
                         cartCoupon = new CartCoupon
                         {
                             Id = cartCouponId,
                             CartId = cartId,
-                            CouponId = reader.GetInt32(reader.GetOrdinal("Cc_CouponId")),
-                            DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cc_DiscountAmount")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_UpdatedAt"))
+                            CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt"))
                         };
+
                         cartCoupons.Add(cartCouponId, cartCoupon);
                         cart.CartCoupons.Add(cartCoupon);
                     }
 
-                    if (!reader.IsDBNull(reader.GetOrdinal("Cp_Id")))
+                    if (cartCoupon.Coupon == null &&
+                        !reader.IsDBNull(Ordinal("Cp_Id")))
                     {
-                        if (cartCoupon.Coupon == null)
+                        cartCoupon.Coupon = new Coupon
                         {
-                            cartCoupon.Coupon = new Coupon
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("Cp_Id")),
-                                Code = reader.GetString(reader.GetOrdinal("Cp_Code")),
-                                Description = reader.GetString(reader.GetOrdinal("Cp_Description")),
-                                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cp_DiscountAmount")),
-                                MinimumOrderAmount = reader.GetDecimal(reader.GetOrdinal("Cp_MinimumOrderAmount")),
-                                Type = (CouponType)reader.GetValue(reader.GetOrdinal("Cp_Type")),
-                                Value = reader.GetDecimal(reader.GetOrdinal("Cp_Value")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("Cp_IsActive")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_UpdatedAt")),
-                                IsForNewUsersOnly = reader.GetBoolean(reader.GetOrdinal("Cp_IsForNewUsersOnly"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("Cp_Id")),
+                            Code = reader.GetString(Ordinal("Cp_Code")),
+                            Description = NullableString("Cp_Description"),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
+                            Type = Enum.Parse<CouponType>(
+                                reader.GetString(Ordinal("Cp_Type"))),
+                            Value = reader.GetDecimal(Ordinal("Cp_Value")),
+                            IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
+                            IsForNewUsersOnly = reader.GetBoolean(
+                                Ordinal("Cp_IsForNewUsersOnly")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cp_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cp_UpdatedAt"))
+                        };
                     }
                 }
             }
 
-            return new InfrastructureResponse<Cart>()
+            return new InfrastructureResponse<Cart>
             {
                 IsSuccess = true,
-                Message = "Cart retrieved successfully",
+                Message = cart == null
+                    ? "No cart found"
+                    : "Cart retrieved successfully",
                 Value = cart
             };
         }
+
 
         public async Task<InfrastructureResponse<Cart>> GetCartBySessionIdAsync(string sessionId, CartStatus? status = CartStatus.Active)
         {
@@ -317,145 +392,216 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 };
 
             const string sql = @"
-                SELECT
-                    c.Id, c.UserId, c.SessionId, c.Status, c.CreatedAt, c.UpdatedAt, c.Version,
-                    ci.Id AS Ci_Id, ci.ProductId AS Ci_ProductId, ci.Quantity AS Ci_Quantity, ci.UnitPrice AS Ci_UnitPrice,
-                    ci.CreatedAt AS Ci_CreatedAt, ci.UpdatedAt AS Ci_UpdatedAt,
-                    p.Id AS P_Id, p.Name AS P_Name, p.Description AS P_Description, p.StockQuantity AS P_StockQuantity,
-                    p.ImageUrl AS P_ImageUrl, p.Price AS P_Price, p.ReservedStock AS P_ReservedStock,
-                    p.LowStockThreshold AS P_LowStockThreshold, p.IsActive AS P_IsActive, p.SKU AS P_SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    cc.Id AS Cc_Id, cc.CouponId AS Cc_CouponId, cc.DiscountAmount AS Cc_DiscountAmount,
-                    cc.CreatedAt AS Cc_CreatedAt, cc.UpdatedAt AS Cc_UpdatedAt,
-                    cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountType AS Cp_DiscountType,
-                    cpn.DiscountAmount AS Cp_DiscountAmount, cpn.Type AS Cp_Type, cpn.Value AS Cp_Value,
-                    cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM shopping_carts c
-                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN products p ON ci.ProductId = p.Id
-                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
-                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
-                WHERE c.SessionId = @SessionId AND c.Status = @Status
-                ORDER BY c.Id, ci.Id, cc.Id";
+        SELECT
+            c.id AS Id,
+            c.user_id AS UserId,
+            c.session_id AS SessionId,
+            c.status AS Status,
+            c.created_at AS CreatedAt,
+            c.updated_at AS UpdatedAt,
+            c.version AS Version,
+            c.notes AS Notes,
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            ci.id AS Ci_Id,
+            ci.product_id AS Ci_ProductId,
+            ci.quantity AS Ci_Quantity,
+            ci.unit_price AS Ci_UnitPrice,
+            ci.created_at AS Ci_CreatedAt,
+            ci.updated_at AS Ci_UpdatedAt,
+
+            p.id AS P_Id,
+            p.name AS P_Name,
+            p.description AS P_Description,
+            p.stock_quantity AS P_StockQuantity,
+            p.image_url AS P_ImageUrl,
+            p.price AS P_Price,
+            p.reserved_stock AS P_ReservedStock,
+            p.low_stock_threshold AS P_LowStockThreshold,
+            p.is_active AS P_IsActive,
+            p.sku AS P_SKU,
+            p.created_at AS P_CreatedAt,
+            p.updated_at AS P_UpdatedAt,
+
+            cc.id AS Cc_Id,
+            cc.coupon_id AS Cc_CouponId,
+            cc.discount_amount AS Cc_DiscountAmount,
+            cc.created_at AS Cc_CreatedAt,
+            cc.updated_at AS Cc_UpdatedAt,
+
+            cpn.id AS Cp_Id,
+            cpn.code AS Cp_Code,
+            cpn.description AS Cp_Description,
+            cpn.discount_amount AS Cp_DiscountAmount,
+            cpn.minimum_order_amount AS Cp_MinimumOrderAmount,
+            cpn.type AS Cp_Type,
+            cpn.value AS Cp_Value,
+            cpn.is_active AS Cp_IsActive,
+            cpn.is_for_new_users_only AS Cp_IsForNewUsersOnly,
+            cpn.created_at AS Cp_CreatedAt,
+            cpn.updated_at AS Cp_UpdatedAt
+
+        FROM shopping_carts c
+        LEFT JOIN cart_items ci
+            ON c.id = ci.cart_id
+        LEFT JOIN products p
+            ON ci.product_id = p.id
+        LEFT JOIN cart_coupons cc
+            ON c.id = cc.cart_id
+        LEFT JOIN coupons cpn
+            ON cc.coupon_id = cpn.id
+
+        WHERE c.session_id = (
+            SELECT c2.session_id
+            FROM shopping_carts c2
+            WHERE c2.session_id = @SessionId
+              AND c2.status = @Status
+            ORDER BY c2.id
+            LIMIT 1
+        )
+
+        ORDER BY ci.id, cc.id";
+
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("SessionId", sessionId);
-            command.Parameters.AddWithValue("Status", status?.ToString() ?? CartStatus.Active.ToString());
+
+            command.Parameters.AddWithValue("@SessionId", sessionId);
+            command.Parameters.AddWithValue(
+                "@Status",
+                (status ?? CartStatus.Active).ToString());
 
             await using var reader = await command.ExecuteReaderAsync();
 
             Cart? cart = null;
+
             var cartItems = new Dictionary<int, CartItem>();
             var cartCoupons = new Dictionary<int, CartCoupon>();
 
+            int Ordinal(string name) => reader.GetOrdinal(name);
+
+            string? NullableString(string name) =>
+                reader.IsDBNull(Ordinal(name))
+                    ? null
+                    : reader.GetString(Ordinal(name));
+
             while (await reader.ReadAsync())
             {
-                int cartId = reader.GetInt32(reader.GetOrdinal("Id"));
-                if (!cartItems.ContainsKey(cartId) || cart == null)
+                int cartId = reader.GetInt32(Ordinal("Id"));
+
+                if (cart == null)
                 {
                     cart = new Cart
                     {
                         Id = cartId,
-                        UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                        SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                        Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        Version = reader.GetInt32(reader.GetOrdinal("Version")),
+                        UserId = reader.IsDBNull(Ordinal("UserId"))
+                            ? null
+                            : reader.GetInt32(Ordinal("UserId")),
+                        SessionId = NullableString("SessionId"),
+                        Status = Enum.Parse<CartStatus>(
+                            reader.GetString(Ordinal("Status"))),
+                        CreatedAt = reader.GetDateTime(Ordinal("CreatedAt")),
+                        UpdatedAt = reader.GetDateTime(Ordinal("UpdatedAt")),
+                        Version = reader.GetInt32(Ordinal("Version")),
+                        Note = NullableString("Notes"),
                         CartItems = new List<CartItem>(),
                         CartCoupons = new List<CartCoupon>()
                     };
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Ci_Id")))
+                // Map cart items.
+                if (!reader.IsDBNull(Ordinal("Ci_Id")))
                 {
-                    var cartItemId = reader.GetInt32(reader.GetOrdinal("Ci_Id"));
+                    int cartItemId = reader.GetInt32(Ordinal("Ci_Id"));
+
                     if (!cartItems.TryGetValue(cartItemId, out var cartItem))
                     {
                         cartItem = new CartItem
                         {
                             Id = cartItemId,
                             ShoppingCartId = cartId,
-                            ProductId = reader.GetInt32(reader.GetOrdinal("Ci_ProductId")),
-                            Quantity = reader.GetInt32(reader.GetOrdinal("Ci_Quantity")),
-                            UnitPrice = reader.GetDecimal(reader.GetOrdinal("Ci_UnitPrice")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_UpdatedAt"))
+                            ProductId = reader.GetInt32(Ordinal("Ci_ProductId")),
+                            Quantity = reader.GetInt32(Ordinal("Ci_Quantity")),
+                            UnitPrice = reader.GetDecimal(Ordinal("Ci_UnitPrice")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Ci_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Ci_UpdatedAt"))
                         };
+
                         cartItems.Add(cartItemId, cartItem);
                         cart.CartItems.Add(cartItem);
                     }
 
-                    if (!reader.IsDBNull(reader.GetOrdinal("P_Id")))
+                    // Map the associated product once per cart item.
+                    if (cartItem.Product == null &&
+                        !reader.IsDBNull(Ordinal("P_Id")))
                     {
-                        if (cartItem.Product == null)
+                        cartItem.Product = new Product
                         {
-                            cartItem.Product = new Product
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("P_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("P_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                                StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                                Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                                ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                                LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                                SKU = reader.GetString(reader.GetOrdinal("P_SKU")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("P_Id")),
+                            Name = reader.GetString(Ordinal("P_Name")),
+                            Description = NullableString("P_Description"),
+                            StockQuantity = reader.GetInt32(Ordinal("P_StockQuantity")),
+                            ImageUrl = NullableString("P_ImageUrl"),
+                            Price = reader.GetDecimal(Ordinal("P_Price")),
+                            ReservedStock = reader.GetInt32(Ordinal("P_ReservedStock")),
+                            LowStockThreshold = reader.GetInt32(Ordinal("P_LowStockThreshold")),
+                            IsActive = reader.GetBoolean(Ordinal("P_IsActive")),
+                            SKU = NullableString("P_SKU"),
+                            CreatedAt = reader.GetDateTime(Ordinal("P_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("P_UpdatedAt"))
+                        };
                     }
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Cc_Id")))
+                // Map applied coupons.
+                if (!reader.IsDBNull(Ordinal("Cc_Id")))
                 {
-                    var cartCouponId = reader.GetInt32(reader.GetOrdinal("Cc_Id"));
+                    int cartCouponId = reader.GetInt32(Ordinal("Cc_Id"));
+
                     if (!cartCoupons.TryGetValue(cartCouponId, out var cartCoupon))
                     {
                         cartCoupon = new CartCoupon
                         {
                             Id = cartCouponId,
                             CartId = cartId,
-                            CouponId = reader.GetInt32(reader.GetOrdinal("Cc_CouponId")),
-                            DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cc_DiscountAmount")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_UpdatedAt"))
+                            CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt"))
                         };
+
                         cartCoupons.Add(cartCouponId, cartCoupon);
                         cart.CartCoupons.Add(cartCoupon);
                     }
 
-                    if (!reader.IsDBNull(reader.GetOrdinal("Cp_Id")))
+                    if (cartCoupon.Coupon == null &&
+                        !reader.IsDBNull(Ordinal("Cp_Id")))
                     {
-                        if (cartCoupon.Coupon == null)
+                        cartCoupon.Coupon = new Coupon
                         {
-                            cartCoupon.Coupon = new Coupon
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("Cp_Id")),
-                                Code = reader.GetString(reader.GetOrdinal("Cp_Code")),
-                                Description = reader.GetString(reader.GetOrdinal("Cp_Description")),
-                                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cp_DiscountAmount")),
-                                Value = reader.GetDecimal(reader.GetOrdinal("Cp_Value")),
-                                Type = (CouponType)reader.GetValue(reader.GetOrdinal("Cp_Type")),
-                                IsForNewUsersOnly = reader.GetBoolean(reader.GetOrdinal("Cp_IsForNewUsersOnly")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("Cp_IsActive")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_UpdatedAt"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("Cp_Id")),
+                            Code = reader.GetString(Ordinal("Cp_Code")),
+                            Description = NullableString("Cp_Description"),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
+                            Type = Enum.Parse<CouponType>(
+                                reader.GetString(Ordinal("Cp_Type"))),
+                            Value = reader.GetDecimal(Ordinal("Cp_Value")),
+                            IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
+                            IsForNewUsersOnly = reader.GetBoolean(
+                                Ordinal("Cp_IsForNewUsersOnly")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cp_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cp_UpdatedAt"))
+                        };
                     }
                 }
             }
 
-            return new InfrastructureResponse<Cart>()
+            return new InfrastructureResponse<Cart>
             {
                 IsSuccess = true,
-                Message = "Cart retrieved successfully",
+                Message = cart == null
+                    ? "No cart found"
+                    : "Cart retrieved successfully",
                 Value = cart
             };
         }
@@ -464,12 +610,11 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             const string sql = @"
                 SELECT
-                    c.id, c.user_id, c.session_id, c.status, c.created_at, c.updated_at, c.version
+                    c.id, c.user_id, c.session_id, c.status, c.created_at, c.updated_at, c.version, c.notes
                 FROM shopping_carts c
                 ORDER BY c.id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
 
@@ -504,8 +649,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 WHERE Id = @Id
                 RETURNING Id, UserId, SessionId, Status, CreatedAt, UpdatedAt, Version";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("UserId", (object?)cart.UserId ?? DBNull.Value);
@@ -552,8 +696,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             const string sql = "DELETE FROM shopping_carts WHERE Id = @Id AND Status = @Status";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("Id", Id);
@@ -584,10 +727,9 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                     updated_at = @UpdatedAt,
                     version = version + 1
                 WHERE user_id = @UserId
-                RETURNING id, user_id, session_id, status, created_at, updated_at, version";
+                RETURNING id, user_id, session_id, status, created_at, updated_at, version, notes";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Status", status.ToString());
@@ -616,9 +758,9 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             };
         }
 
-        public async Task<InfrastructureResponse<Cart>> GetCartByIdAsync(int cartId, CartStatus status)
+        public async Task<InfrastructureResponse<Cart>> GetCartByIdAsync(int id, CartStatus? status = CartStatus.Active)
         {
-            if (cartId <= 0)
+            if (id <= 0)
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = false,
@@ -627,146 +769,216 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 };
 
             const string sql = @"
-                SELECT
-                    c.Id, c.UserId, c.SessionId, c.Status, c.CreatedAt, c.UpdatedAt, c.Version,
-                    ci.Id AS Ci_Id, ci.ProductId AS Ci_ProductId, ci.Quantity AS Ci_Quantity, ci.UnitPrice AS Ci_UnitPrice,
-                    ci.CreatedAt AS Ci_CreatedAt, ci.UpdatedAt AS Ci_UpdatedAt,
-                    p.Id AS P_Id, p.Name AS P_Name, p.Description AS P_Description, p.StockQuantity AS P_StockQuantity,
-                    p.ImageUrl AS P_ImageUrl, p.Price AS P_Price, p.ReservedStock AS P_ReservedStock,
-                    p.LowStockThreshold AS P_LowStockThreshold, p.IsActive AS P_IsActive, p.SKU AS P_SKU,
-                    p.CreatedAt AS P_CreatedAt, p.UpdatedAt AS P_UpdatedAt,
-                    cc.Id AS Cc_Id, cc.CouponId AS Cc_CouponId, cc.DiscountAmount AS Cc_DiscountAmount,
-                    cc.CreatedAt AS Cc_CreatedAt, cc.UpdatedAt AS Cc_UpdatedAt,
-                    cpn.Id AS Cp_Id, cpn.Code AS Cp_Code, cpn.Description AS Cp_Description, cpn.DiscountType AS Cp_DiscountType,
-                    cpn.DiscountValue AS Cp_DiscountValue, cpn.StartDate AS Cp_StartDate, cpn.EndDate AS Cp_EndDate,
-                    cpn.IsActive AS Cp_IsActive, cpn.CreatedAt AS Cp_CreatedAt, cpn.UpdatedAt AS Cp_UpdatedAt
-                FROM shopping_carts c
-                LEFT JOIN cart_items ci ON c.Id = ci.ShoppingCartId
-                LEFT JOIN products p ON ci.ProductId = p.Id
-                LEFT JOIN cart_coupons cc ON c.Id = cc.CartId
-                LEFT JOIN coupons cpn ON cc.CouponId = cpn.Id
-                WHERE c.Id = @CartId AND c.Status = @Status
-                ORDER BY c.Id, ci.Id, cc.Id";
+        SELECT
+            c.id AS Id,
+            c.user_id AS UserId,
+            c.session_id AS SessionId,
+            c.status AS Status,
+            c.created_at AS CreatedAt,
+            c.updated_at AS UpdatedAt,
+            c.version AS Version,
+            c.notes AS Notes,
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            ci.id AS Ci_Id,
+            ci.product_id AS Ci_ProductId,
+            ci.quantity AS Ci_Quantity,
+            ci.unit_price AS Ci_UnitPrice,
+            ci.created_at AS Ci_CreatedAt,
+            ci.updated_at AS Ci_UpdatedAt,
+
+            p.id AS P_Id,
+            p.name AS P_Name,
+            p.description AS P_Description,
+            p.stock_quantity AS P_StockQuantity,
+            p.image_url AS P_ImageUrl,
+            p.price AS P_Price,
+            p.reserved_stock AS P_ReservedStock,
+            p.low_stock_threshold AS P_LowStockThreshold,
+            p.is_active AS P_IsActive,
+            p.sku AS P_SKU,
+            p.created_at AS P_CreatedAt,
+            p.updated_at AS P_UpdatedAt,
+
+            cc.id AS Cc_Id,
+            cc.coupon_id AS Cc_CouponId,
+            cc.discount_amount AS Cc_DiscountAmount,
+            cc.created_at AS Cc_CreatedAt,
+            cc.updated_at AS Cc_UpdatedAt,
+
+            cpn.id AS Cp_Id,
+            cpn.code AS Cp_Code,
+            cpn.description AS Cp_Description,
+            cpn.discount_amount AS Cp_DiscountAmount,
+            cpn.minimum_order_amount AS Cp_MinimumOrderAmount,
+            cpn.type AS Cp_Type,
+            cpn.value AS Cp_Value,
+            cpn.is_active AS Cp_IsActive,
+            cpn.is_for_new_users_only AS Cp_IsForNewUsersOnly,
+            cpn.created_at AS Cp_CreatedAt,
+            cpn.updated_at AS Cp_UpdatedAt
+
+        FROM shopping_carts c
+        LEFT JOIN cart_items ci
+            ON c.id = ci.cart_id
+        LEFT JOIN products p
+            ON ci.product_id = p.id
+        LEFT JOIN cart_coupons cc
+            ON c.id = cc.cart_id
+        LEFT JOIN coupons cpn
+            ON cc.coupon_id = cpn.id
+
+        WHERE c.id = (
+            SELECT c2.id
+            FROM shopping_carts c2
+            WHERE c2.id = @CartId
+              AND c2.status = @Status
+            ORDER BY c2.id
+            LIMIT 1
+        )
+
+        ORDER BY ci.id, cc.id";
+
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("CartId", cartId);
-            command.Parameters.AddWithValue("Status", status.ToString());
+
+            command.Parameters.AddWithValue("@CartId", id);
+            command.Parameters.AddWithValue(
+                "@Status",
+                (status ?? CartStatus.Active).ToString());
 
             await using var reader = await command.ExecuteReaderAsync();
 
             Cart? cart = null;
+
             var cartItems = new Dictionary<int, CartItem>();
             var cartCoupons = new Dictionary<int, CartCoupon>();
 
+            int Ordinal(string name) => reader.GetOrdinal(name);
+
+            string? NullableString(string name) =>
+                reader.IsDBNull(Ordinal(name))
+                    ? null
+                    : reader.GetString(Ordinal(name));
+
             while (await reader.ReadAsync())
             {
-                int cartIdResult = reader.GetInt32(reader.GetOrdinal("Id"));
-                if (!cartItems.ContainsKey(cartIdResult) || cart == null)
+                int cartId = reader.GetInt32(Ordinal("Id"));
+
+                if (cart == null)
                 {
                     cart = new Cart
                     {
-                        Id = cartIdResult,
-                        UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId")),
-                        SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId")),
-                        Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status"))),
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
-                        Version = reader.GetInt32(reader.GetOrdinal("Version")),
+                        Id = cartId,
+                        UserId = reader.IsDBNull(Ordinal("UserId"))
+                            ? null
+                            : reader.GetInt32(Ordinal("UserId")),
+                        SessionId = NullableString("SessionId"),
+                        Status = Enum.Parse<CartStatus>(
+                            reader.GetString(Ordinal("Status"))),
+                        CreatedAt = reader.GetDateTime(Ordinal("CreatedAt")),
+                        UpdatedAt = reader.GetDateTime(Ordinal("UpdatedAt")),
+                        Version = reader.GetInt32(Ordinal("Version")),
+                        Note = NullableString("Notes"),
                         CartItems = new List<CartItem>(),
                         CartCoupons = new List<CartCoupon>()
                     };
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Ci_Id")))
+                // Map cart items.
+                if (!reader.IsDBNull(Ordinal("Ci_Id")))
                 {
-                    var cartItemId = reader.GetInt32(reader.GetOrdinal("Ci_Id"));
+                    int cartItemId = reader.GetInt32(Ordinal("Ci_Id"));
+
                     if (!cartItems.TryGetValue(cartItemId, out var cartItem))
                     {
                         cartItem = new CartItem
                         {
                             Id = cartItemId,
-                            ShoppingCartId = cartIdResult,
-                            ProductId = reader.GetInt32(reader.GetOrdinal("Ci_ProductId")),
-                            Quantity = reader.GetInt32(reader.GetOrdinal("Ci_Quantity")),
-                            UnitPrice = reader.GetDecimal(reader.GetOrdinal("Ci_UnitPrice")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Ci_UpdatedAt"))
+                            ShoppingCartId = cartId,
+                            ProductId = reader.GetInt32(Ordinal("Ci_ProductId")),
+                            Quantity = reader.GetInt32(Ordinal("Ci_Quantity")),
+                            UnitPrice = reader.GetDecimal(Ordinal("Ci_UnitPrice")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Ci_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Ci_UpdatedAt"))
                         };
+
                         cartItems.Add(cartItemId, cartItem);
                         cart.CartItems.Add(cartItem);
                     }
 
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("P_Id")))
+                    // Map the associated product once per cart item.
+                    if (cartItem.Product == null &&
+                        !reader.IsDBNull(Ordinal("P_Id")))
                     {
-                        if (cartItem.Product == null)
+                        cartItem.Product = new Product
                         {
-                            cartItem.Product = new Product
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("P_Id")),
-                                Name = reader.GetString(reader.GetOrdinal("P_Name")),
-                                Description = reader.GetString(reader.GetOrdinal("P_Description")),
-                                StockQuantity = reader.GetInt32(reader.GetOrdinal("P_StockQuantity")),
-                                ImageUrl = reader.GetString(reader.GetOrdinal("P_ImageUrl")),
-                                Price = reader.GetDecimal(reader.GetOrdinal("P_Price")),
-                                ReservedStock = reader.GetInt32(reader.GetOrdinal("P_ReservedStock")),
-                                LowStockThreshold = reader.GetInt32(reader.GetOrdinal("P_LowStockThreshold")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("P_IsActive")),
-                                SKU = reader.GetString(reader.GetOrdinal("P_SKU")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("P_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("P_UpdatedAt"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("P_Id")),
+                            Name = reader.GetString(Ordinal("P_Name")),
+                            Description = NullableString("P_Description"),
+                            StockQuantity = reader.GetInt32(Ordinal("P_StockQuantity")),
+                            ImageUrl = NullableString("P_ImageUrl"),
+                            Price = reader.GetDecimal(Ordinal("P_Price")),
+                            ReservedStock = reader.GetInt32(Ordinal("P_ReservedStock")),
+                            LowStockThreshold = reader.GetInt32(Ordinal("P_LowStockThreshold")),
+                            IsActive = reader.GetBoolean(Ordinal("P_IsActive")),
+                            SKU = NullableString("P_SKU"),
+                            CreatedAt = reader.GetDateTime(Ordinal("P_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("P_UpdatedAt"))
+                        };
                     }
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("Cc_Id")))
+                // Map applied coupons.
+                if (!reader.IsDBNull(Ordinal("Cc_Id")))
                 {
-                    var cartCouponId = reader.GetInt32(reader.GetOrdinal("Cc_Id"));
+                    int cartCouponId = reader.GetInt32(Ordinal("Cc_Id"));
+
                     if (!cartCoupons.TryGetValue(cartCouponId, out var cartCoupon))
                     {
                         cartCoupon = new CartCoupon
                         {
                             Id = cartCouponId,
-                            CartId = cartIdResult,
-                            CouponId = reader.GetInt32(reader.GetOrdinal("Cc_CouponId")),
-                            DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cc_DiscountAmount")),
-                            CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cc_UpdatedAt"))
+                            CartId = cartId,
+                            CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt"))
                         };
+
                         cartCoupons.Add(cartCouponId, cartCoupon);
                         cart.CartCoupons.Add(cartCoupon);
                     }
 
-                    if (!reader.IsDBNull(reader.GetOrdinal("Cp_Id")))
+                    if (cartCoupon.Coupon == null &&
+                        !reader.IsDBNull(Ordinal("Cp_Id")))
                     {
-                        if (cartCoupon.Coupon == null)
+                        cartCoupon.Coupon = new Coupon
                         {
-                            cartCoupon.Coupon = new Coupon
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("Cp_Id")),
-                                Code = reader.GetString(reader.GetOrdinal("Cp_Code")),
-                                Description = reader.GetString(reader.GetOrdinal("Cp_Description")),
-                                Value = reader.GetDecimal(reader.GetOrdinal("Cp_Value")),
-                                Type = (CouponType)reader.GetValue(reader.GetOrdinal("Cp_Type")),
-                                DiscountAmount = reader.GetDecimal(reader.GetOrdinal("Cp_DiscountAmount")),
-                                IsForNewUsersOnly = reader.GetBoolean(reader.GetOrdinal("Cp_IsForNewUsersOnly")),
-                                IsActive = reader.GetBoolean(reader.GetOrdinal("Cp_IsActive")),
-                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_CreatedAt")),
-                                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("Cp_UpdatedAt"))
-                            };
-                        }
+                            Id = reader.GetInt32(Ordinal("Cp_Id")),
+                            Code = reader.GetString(Ordinal("Cp_Code")),
+                            Description = NullableString("Cp_Description"),
+                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
+                            Type = Enum.Parse<CouponType>(
+                                reader.GetString(Ordinal("Cp_Type"))),
+                            Value = reader.GetDecimal(Ordinal("Cp_Value")),
+                            IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
+                            IsForNewUsersOnly = reader.GetBoolean(
+                                Ordinal("Cp_IsForNewUsersOnly")),
+                            CreatedAt = reader.GetDateTime(Ordinal("Cp_CreatedAt")),
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cp_UpdatedAt"))
+                        };
                     }
                 }
             }
 
-            return new InfrastructureResponse<Cart>()
+            return new InfrastructureResponse<Cart>
             {
                 IsSuccess = true,
-                Message = "Cart retrieved successfully",
+                Message = cart == null
+                    ? "No cart found"
+                    : "Cart retrieved successfully",
                 Value = cart
             };
         }
@@ -810,8 +1022,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 WHERE id = @Id
                 RETURNING id, quantity, updated_at";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(updateItemSql, connection);
             command.Parameters.AddWithValue("@Quantity", cartItem.Quantity);
@@ -866,8 +1077,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 VALUES (@ShoppingCartId, @ProductId, @UserId, @SessionId, @Quantity, @UnitPrice, @CreatedAt, @UpdatedAt)
                 RETURNING id, cart_id, product_id, user_id, session_id, quantity, unit_price, created_at, updated_at";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@ShoppingCartId", cartId);
@@ -943,8 +1153,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             const string sql = "DELETE FROM cart_items WHERE id = @Id";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", cartItem.Id);
@@ -977,8 +1186,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                         updated_at = @UpdatedAt
                     WHERE id = @Id";
 
-                await using var connection = new NpgsqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var connection = await OpenConnectionAsync();
 
                 await using var command = new NpgsqlCommand(sql, connection);
                 command.Parameters.AddWithValue("@Quantity", item.Quantity);
@@ -1015,8 +1223,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                   AND ci.product_id = @ProductId
                   AND ci.user_id = @UserId";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@CartId", cartId);
@@ -1041,8 +1248,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 WHERE user_id = @UserId AND status = @Status";
 
             Cart? cart = null;
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            
+            using var connection = await OpenConnectionAsync(); 
 
             await using var command = new NpgsqlCommand(getCartSql, connection);
             command.Parameters.AddWithValue("UserId", userId);
@@ -1108,8 +1315,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
         {
             const string sql = "SELECT COUNT(1) FROM shopping_carts WHERE id = @Id AND status = @Status";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", cartId);
@@ -1127,6 +1333,9 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         private Cart MapCart(NpgsqlDataReader reader)
         {
+            int notesOrdinal = -1;
+            try { notesOrdinal = reader.GetOrdinal("notes"); } catch { }
+
             return new Cart()
             {
                 Id = reader.GetInt32(reader.GetOrdinal("id")),
@@ -1135,8 +1344,17 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("status"))),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                Version = reader.GetInt32(reader.GetOrdinal("version"))
+                Version = reader.GetInt32(reader.GetOrdinal("version")),
+                Note = notesOrdinal >= 0 && !reader.IsDBNull(notesOrdinal) ? reader.GetString(notesOrdinal) : null
             };
+        }
+
+        private async Task<NpgsqlConnection> OpenConnectionAsync()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            return connection;
         }
     }
 }
