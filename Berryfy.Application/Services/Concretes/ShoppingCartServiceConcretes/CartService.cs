@@ -302,55 +302,28 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
         public async Task<ApplicationResponse<CartResponse>> CreateCartAsync(int? userId, string? sessionId)
         {
-            CartResponse? cart = null;
+            Cart? cart = null;
 
             if (userId.HasValue)
             {
-                cart = CartResponse.MapFromCart(_cartRepository.GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value);
+                CartResponse cartResponse = new();
 
-                if (cart != null)
+                var createdCart = _cartRepository.CreateCartAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<CartResponse>
                 {
-                    return new ApplicationResponse<CartResponse>
-                    {
-                        IsSuccess = true,
-                        Value = cart
-                    };
-                }
-
-                else
-                {
-                    var createdCart = _cartRepository.CreateCartAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
-                    return new ApplicationResponse<CartResponse>
-                    {
-                        IsSuccess = true,
-                        Value = CartResponse.MapFromCart(createdCart)
-                    };
-                }
-
+                    IsSuccess = true,
+                    Value = CartResponse.MapFromCart(createdCart)
+                };
             }
 
             else if (!string.IsNullOrEmpty(sessionId))
             {
-
-                cart = CartResponse.MapFromCart(_cartRepository.GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value);
-
-                if (cart != null)
+                var createdCart = _cartRepository.CreateCartAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                return new ApplicationResponse<CartResponse>
                 {
-                    return new ApplicationResponse<CartResponse>
-                    {
-                        IsSuccess = true,
-                        Value = cart
-                    };
-                }
-                else
-                {
-                    var createdCart = _cartRepository.CreateCartAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
-                    return new ApplicationResponse<CartResponse>
-                    {
-                        IsSuccess = true,
-                        Value = CartResponse.MapFromCart(createdCart)
-                    };
-                }
+                    IsSuccess = true,
+                    Value = CartResponse.MapFromCart(createdCart)
+                };
             }
 
             else
