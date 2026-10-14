@@ -19,7 +19,7 @@ namespace Berryfy.Domain.Repositories.ShoppingCartInterfaces
 
         Task<InfrastructureResponse<bool>> RemoveItemAsync(int? userId, string? sessionId, int productId);
         Task<InfrastructureResponse<Cart>> UpdateCartStatusAsync(int? userId, CartStatus status);
-        Task<InfrastructureResponse<Cart>> GetCartByIdAsync(int cartId, CartStatus status);
+        Task<InfrastructureResponse<Cart>> GetCartByIdAsync(int id, CartStatus? status);
 
         Task<InfrastructureResponse<bool>> UpdateItemsAsync(List<CartItem> items);
         Task<InfrastructureResponse<bool>> DeleteCartById(int Id);
