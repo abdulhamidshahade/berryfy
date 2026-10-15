@@ -342,5 +342,16 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 Value = _userCouponRepository.GetCouponIdsUsedInOrderAsync(orderId).GetAwaiter().GetResult().Value
             };
         }
+
+        public async Task<ApplicationResponse<bool>> ReleaseCouponsRelatedToCartId(int cartId)
+        {
+            var released = await _userCouponRepository.ReleaseCouponsRelatedToCartId(cartId);
+
+            return new ApplicationResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = released.Value
+            };
+        }
     }
 }
