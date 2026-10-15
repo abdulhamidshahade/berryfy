@@ -2,6 +2,7 @@
 using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
 using Berryfy.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
@@ -379,6 +380,19 @@ limit 20;";
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
             };
             
+        }
+
+        public async Task<InfrastructureResponse<bool>> ReleaseItemsRelatedToCartId(int cartId, List<CartItem> cartItems)
+        {
+            foreach(var item in cartItems)
+            {
+                var releasing = ReleaseReservedStockAsync(item.ProductId, item.Quantity, 1412, "Releasing");
+            }
+
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true
+            };
         }
     }
 }
