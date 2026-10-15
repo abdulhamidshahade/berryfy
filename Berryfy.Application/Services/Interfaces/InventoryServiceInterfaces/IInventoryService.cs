@@ -1,6 +1,8 @@
 ﻿using Berryfy.Application.Dtos;
+using Berryfy.Application.Services.Concretes.InventoryServiceConcretes;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 
 namespace Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces
 {
@@ -16,5 +18,7 @@ namespace Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces
         Task<ApplicationResponse<List<Product>>> GetLowStockProductsAsync(int limit = 50);
         Task<ApplicationResponse<List<InventoryLog>>> GetInventoryHistoryAsync(int productId, int limit = 50);
         Task<ApplicationResponse<bool>> ProcessStockNotificationsAsync();
+
+        Task<bool> ReleaseItemsRelatedToCartId(int cartId);
     }
 }
