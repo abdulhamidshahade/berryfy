@@ -1,6 +1,7 @@
 using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.ShoppingCartDtos.Responses;
 using Berryfy.Domain.Constants;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 
 namespace Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces
 {
@@ -25,6 +26,8 @@ namespace Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces
         Task<ApplicationResponse<CartResponse>> ApplyCouponAsync(int cartId, int? userId, string couponCode);
         Task<ApplicationResponse<CartResponse>> RemoveCouponAsync(int cartId, int? userId, string? sessionId, int couponId);
         Task<ApplicationResponse<bool>> MergeCartAsync(int userId, string sessionId);
+
+        Task<ApplicationResponse<List<CartItemResponse>>> GetItemsRelatedToCartId(int cartId);
         
     }
 }
