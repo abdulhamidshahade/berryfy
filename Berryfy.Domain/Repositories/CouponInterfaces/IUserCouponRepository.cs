@@ -13,5 +13,6 @@ namespace Berryfy.Domain.Repositories.CouponInterfaces
         Task<InfrastructureResponse<bool>> MarkCouponAsUsedAsync(int userId, int couponId, int orderId);
         Task<InfrastructureResponse<bool>> RevertCouponUsageAsync(int userId, int couponId, int orderId);
         Task<InfrastructureResponse<List<int>>> GetCouponIdsUsedInOrderAsync(int orderId);
+        Task<InfrastructureResponse<bool>> ReleaseCouponsRelatedToCartId(int cartId);
     }
 }
