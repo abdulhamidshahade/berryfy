@@ -13,8 +13,8 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
 
         public DateTime? ExpiresAt { get; set; }
 
-        public List<CartItemResponse> CartItems { get; set; }
-        public List<CartCouponResponse> CartCoupons { get; set; } 
+        public List<CartItemResponse> CartItems { get; set; } = new List<CartItemResponse>();
+        public List<CartCouponResponse> CartCoupons { get; set; } = new List<CartCouponResponse>();
 
         public string? Note { get; set; }
         public decimal SubTotal { get; set; }
@@ -35,7 +35,9 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
                 SubTotal = cart.SubTotal,
                 DiscountTotal = cart.DiscountTotal,
                 TaxAmount = cart.TaxAmount,
-                Total = cart.Total
+                Total = cart.Total,
+                CartItems = cart.CartItems.Select(c => CartItemResponse.MapFromCartItem(c)).ToList(),
+                CartCoupons = cart.CartCoupons.Select(c => CartCouponResponse.MapFromCartCoupon(c)).ToList()
             };
         }
     }
