@@ -49,12 +49,14 @@ namespace Berryfy.Application.DI
             serviceDescriptors.AddScoped<ICategoryService, CategoryService>();
             serviceDescriptors.AddScoped<IProductService, ProductService>();
 
-            serviceDescriptors.AddScoped<ICartService, CartService>();
+            
             serviceDescriptors.AddScoped<IUserCheckoutInfoService, UserCheckoutInfoService>();
             serviceDescriptors.AddScoped<IShopService, ShopService>();
             serviceDescriptors.AddScoped<IShopCategoryService, ShopCategoryService>();
 
             serviceDescriptors.AddScoped<IInventoryService, InventoryService>();
+
+            serviceDescriptors.AddScoped<ICartService, CartService>();
 
             serviceDescriptors.AddScoped<IOrderService, OrderService>();
 
