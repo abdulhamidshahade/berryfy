@@ -251,6 +251,27 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             };
         }
 
+
+
+        public async Task<InfrastructureResponse<bool>> ReleaseCouponsRelatedToCartId(int cartId)
+        {
+            string query = @"Delete from user_coupons where cart_id = @CartId;";
+
+            var connection = await OpenConnectionAsync();
+
+            using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@CartId", cartId);
+
+            var rowEffected = await command.ExecuteReaderAsync();
+
+            return new InfrastructureResponse<bool>()
+            {
+                IsSuccess = true,
+                Value = Convert.ToInt16(rowEffected) > 0
+            };
+        }
+
         private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
             var connection = new NpgsqlConnection(_connectionString);
