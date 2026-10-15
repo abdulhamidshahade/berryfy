@@ -1,6 +1,7 @@
 ﻿using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 
 namespace Berryfy.Domain.Repositories.InventoryInterfaces
 {
@@ -16,6 +17,8 @@ namespace Berryfy.Domain.Repositories.InventoryInterfaces
         Task<InfrastructureResponse<List<Product>>> GetLowStockProductsAsync(int limit = 50);
         Task<InfrastructureResponse<List<InventoryLog>>> GetInventoryHistoryAsync(int productId, int limit = 50);
         Task<InfrastructureResponse<InventoryLog>> CreateInventory(InventoryLog inventoryLog);
+
+        Task<InfrastructureResponse<bool>> ReleaseItemsRelatedToCartId(int cartId, List<CartItem> cartItems);
 
     }
 }
