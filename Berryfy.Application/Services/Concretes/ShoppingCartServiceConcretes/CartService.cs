@@ -813,7 +813,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 await _inventoryService.ReleaseItemsRelatedToCartId(cartId);
                 await _cartRepository.ClearItemsRelatedToCartId(cartId);
                 await _userCouponService.ReleaseCouponsRelatedToCartId(cartId);
-                await _cartRepository.ClearCouponsRelatedToCartId(cartId);
+                //await _cartRepository.ClearCouponsRelatedToCartId(cartId);
 
                 var success = updatedCart != null;
 
