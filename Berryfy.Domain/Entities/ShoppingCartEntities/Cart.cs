@@ -11,7 +11,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
     public class Cart : IAuditableEntity
     {
         public int Id { get; set; }
-        [JsonIgnore] public List<CartItem> CartItems { get; set; } = new List<CartItem>();
+        public List<CartItem> CartItems { get; set; } = new List<CartItem>();
         public int? UserId { get; set; }
         public string? SessionId { get; set; }
 
@@ -42,7 +42,7 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
         public decimal Total => SubTotal - DiscountTotal + TaxAmount;
 
 
-        [JsonIgnore] public List<CartCoupon> CartCoupons { get; set; } = new List<CartCoupon>();
+        public List<CartCoupon> CartCoupons { get; set; } = new List<CartCoupon>();
         [JsonIgnore] public User User { get; set; }
 
         private decimal CalculateTax()
