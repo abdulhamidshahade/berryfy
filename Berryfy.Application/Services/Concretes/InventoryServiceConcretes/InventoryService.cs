@@ -1,8 +1,10 @@
 using Berryfy.Application.Dtos;
 using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
+using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
 using Berryfy.Domain.Entities.InventoryEntities;
 using Berryfy.Domain.Entities.ProductEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
 using Berryfy.Domain.Repositories.ProductInterfaces;
@@ -13,6 +15,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
     {
         private readonly IProductRepository _productRepository;
         private readonly IInventoryRepository _inventoryRepository;
+        private readonly ICartService _cartService;
         public InventoryService(IProductRepository productRepository,
                                 IInventoryRepository inventoryRepository)
         {
@@ -337,6 +340,24 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 IsSuccess = true,
                 Value = createdInventory != null && updatedProduct != null
             };
+        }
+
+        public async Task<bool> ReleaseItemsRelatedToCartId(int cartId)
+        {
+            var items = await _cartService.GetItemsRelatedToCartId(cartId);
+
+            var selected = items.Value.Select(x => new CartItem()
+            {
+                Id = x.Id,
+                ShoppingCartId = x.ShoppingCartId,
+                ProductId= x.ProductId,
+                Quantity = x.Quantity,
+                UnitPrice = x.UnitPrice
+            }).ToList();
+
+            var result = await _inventoryRepository.ReleaseItemsRelatedToCartId(cartId, selected);
+
+            return result.Value;
         }
     }
 }
