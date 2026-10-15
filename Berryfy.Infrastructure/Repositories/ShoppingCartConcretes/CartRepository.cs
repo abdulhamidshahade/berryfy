@@ -429,6 +429,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             cc.discount_amount AS Cc_DiscountAmount,
             cc.created_at AS Cc_CreatedAt,
             cc.updated_at AS Cc_UpdatedAt,
+            cc.applied_at AS Cc_AppliedAt,
 
             cpn.id AS Cp_Id,
             cpn.code AS Cp_Code,
@@ -568,7 +569,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
                             CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt"))
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt")),
+                            AppliedAt = reader.GetDateTime(Ordinal("Cc_AppliedAt"))
                         };
 
                         cartCoupons.Add(cartCouponId, cartCoupon);
@@ -585,8 +587,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Description = NullableString("Cp_Description"),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type = Enum.Parse<CouponType>(
-                                reader.GetString(Ordinal("Cp_Type"))),
+                            Type = (CouponType)
+                                reader.GetInt16(Ordinal("Cp_Type")),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
                             IsForNewUsersOnly = reader.GetBoolean(
@@ -663,13 +665,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             await using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                cart.Id = reader.GetInt32(reader.GetOrdinal("Id"));
-                cart.UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32(reader.GetOrdinal("UserId"));
-                cart.SessionId = reader.IsDBNull(reader.GetOrdinal("SessionId")) ? null : reader.GetString(reader.GetOrdinal("SessionId"));
-                cart.Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("Status")));
-                cart.CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"));
-                cart.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"));
-                cart.Version = reader.GetInt32(reader.GetOrdinal("Version"));
+                cart.Id = reader.GetInt32(reader.GetOrdinal("id"));
+                cart.UserId = reader.IsDBNull(reader.GetOrdinal("user_id")) ? null : reader.GetInt32(reader.GetOrdinal("user_id"));
+                cart.SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id"));
+                cart.Status = Enum.Parse<CartStatus>(reader.GetString(reader.GetOrdinal("status")));
+                cart.CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"));
+                cart.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"));
+                cart.Version = reader.GetInt32(reader.GetOrdinal("version"));
                 return new InfrastructureResponse<Cart>()
                 {
                     IsSuccess = true,
@@ -806,6 +808,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             cc.discount_amount AS Cc_DiscountAmount,
             cc.created_at AS Cc_CreatedAt,
             cc.updated_at AS Cc_UpdatedAt,
+            cc.applied_at AS Cc_AppliedAt,
 
             cpn.id AS Cp_Id,
             cpn.code AS Cp_Code,
@@ -945,7 +948,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
                             CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
-                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt"))
+                            UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt")),
+                            AppliedAt = reader.GetDateTime(Ordinal("Cc_AppliedAt"))
                         };
 
                         cartCoupons.Add(cartCouponId, cartCoupon);
@@ -962,8 +966,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Description = NullableString("Cp_Description"),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type = Enum.Parse<CouponType>(
-                                reader.GetString(Ordinal("Cp_Type"))),
+                            Type = 
+                                (CouponType)reader.GetInt16(Ordinal("Cp_Type")),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
                             IsForNewUsersOnly = reader.GetBoolean(
@@ -1430,7 +1434,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                 Quantity = reader.GetInt32(reader.GetOrdinal("quantity")),
                 UnitPrice = reader.GetDecimal(reader.GetOrdinal("unit_price")),
-                SessionId = reader.GetString(reader.GetOrdinal("session_id")),
+                SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
