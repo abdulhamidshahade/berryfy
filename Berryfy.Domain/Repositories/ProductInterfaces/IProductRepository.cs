@@ -1,6 +1,7 @@
 ﻿using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Entities.ShopEntities;
+using Berryfy.Domain.Entities.ShoppingCartEntities;
 
 namespace Berryfy.Domain.Repositories.ProductInterfaces
 {
@@ -16,6 +17,8 @@ namespace Berryfy.Domain.Repositories.ProductInterfaces
         Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name);
         Task<InfrastructureResponse<int>> GetTotalCountAsync();
         Task<InfrastructureResponse<ShopCategory>> GetShopCategoryByProduct(int productId);
+
+       
 
         Task<InfrastructureResponse<IReadOnlyList<Product>>> GetFilteredAsync(string? searchTerm = null, string? category = null,
             string? sortBy = "name", decimal? minPrice = null, decimal? maxPrice = null,

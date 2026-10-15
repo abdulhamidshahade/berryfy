@@ -26,5 +26,11 @@ namespace Berryfy.Domain.Repositories.ShoppingCartInterfaces
         Task<InfrastructureResponse<bool>> IsItemExistingByRealCart(int cartId, int productId, int userId);
         Task<InfrastructureResponse<bool>> RemoveItemAsync(int cartId, int userId, int productId);
         Task<InfrastructureResponse<bool>> IsConverted(int cartId);
+
+        Task<bool> ClearItemsRelatedToCartId(int cartId);
+        Task<bool> ClearCouponsRelatedToCartId(int cartId);
+        Task<InfrastructureResponse<List<CartItem>>> GetItemsRelatedToCartId(int cartId);
+
+        Task<InfrastructureResponse<bool>> AddCartCouponsAsync(Cart cart);
     }
 }
