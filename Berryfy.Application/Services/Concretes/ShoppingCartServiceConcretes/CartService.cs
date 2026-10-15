@@ -809,6 +809,12 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 cart.UpdatedAt = DateTime.UtcNow;
 
                 var updatedCart = await _cartRepository.UpdateCartAsync(cart);
+
+                await _inventoryService.ReleaseItemsRelatedToCartId(cartId);
+                await _cartRepository.ClearItemsRelatedToCartId(cartId);
+                await _userCouponService.ReleaseCouponsRelatedToCartId(cartId);
+                await _cartRepository.ClearCouponsRelatedToCartId(cartId);
+
                 var success = updatedCart != null;
 
                 if (success)
@@ -1193,7 +1199,10 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 cart.CartCoupons.Add(cartCoupon);
 
-                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
+                //var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
+                var updatedCart = _cartRepository.AddCartCouponsAsync(cart);
+
+
                 if (updatedCart == null)
                 {
                     return new ApplicationResponse<CartResponse>
@@ -1206,7 +1215,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return new ApplicationResponse<CartResponse>
                 {
                     IsSuccess = true,
-                    Value = CartResponse.MapFromCart(updatedCart)
+                    //Value = CartResponse.MapFromCart(updatedCart)
                 };
             }
             catch (Exception ex)
@@ -1410,6 +1419,24 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     ErrorMessage = "Error during expired cart cleanup."
                 };
             }
+        }
+
+        public async Task<ApplicationResponse<List<CartItemResponse>>> GetItemsRelatedToCartId(int cartId)
+        {
+            var items = await _cartRepository.GetItemsRelatedToCartId(cartId);
+
+            return new ApplicationResponse<List<CartItemResponse>>()
+            {
+                IsSuccess = true,
+                Value = items.Value.Select(x => new CartItemResponse()
+                {
+                    Id = x.Id,
+                    ShoppingCartId = x.ShoppingCartId,
+                    ProductId = x.ProductId,
+                    Quantity = x.Quantity,
+                    UnitPrice = x.UnitPrice
+                }).ToList()
+            };
         }
     }
 }
