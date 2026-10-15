@@ -17,5 +17,7 @@ namespace Berryfy.Application.Services.Interfaces.CouponServiceInterfaces
         Task<ApplicationResponse<bool>> MarkCouponAsUsedAsync(int userId, int couponId, int orderId);
         Task<ApplicationResponse<bool>> RevertCouponUsageAsync(int userId, int couponId, int orderId);
         Task<ApplicationResponse<List<int>>> GetCouponIdsUsedInOrderAsync(int orderId);
+
+        Task<ApplicationResponse<bool>> ReleaseCouponsRelatedToCartId(int cartId);
     }
 }
