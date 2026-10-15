@@ -8,6 +8,7 @@ using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.InventoryInterfaces;
 using Berryfy.Domain.Repositories.ProductInterfaces;
+using Berryfy.Domain.Repositories.ShoppingCartInterfaces;
 
 namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 {
@@ -15,12 +16,14 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
     {
         private readonly IProductRepository _productRepository;
         private readonly IInventoryRepository _inventoryRepository;
-        private readonly ICartService _cartService;
+        private readonly ICartRepository _cartRepository;
         public InventoryService(IProductRepository productRepository,
-                                IInventoryRepository inventoryRepository)
+                                IInventoryRepository inventoryRepository,
+                                ICartRepository cartRepository)
         {
             _productRepository = productRepository;
             _inventoryRepository = inventoryRepository;
+            _cartRepository  = cartRepository;
         }
 
         public async Task<ApplicationResponse<bool>> IsInStockAsync(int productId, int quantity)
@@ -344,7 +347,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
         public async Task<bool> ReleaseItemsRelatedToCartId(int cartId)
         {
-            var items = await _cartService.GetItemsRelatedToCartId(cartId);
+            var items = await _cartRepository.GetItemsRelatedToCartId(cartId);
 
             var selected = items.Value.Select(x => new CartItem()
             {
