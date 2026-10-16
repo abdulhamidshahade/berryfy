@@ -32,5 +32,6 @@ namespace Berryfy.Domain.Repositories.ShoppingCartInterfaces
         Task<InfrastructureResponse<List<CartItem>>> GetItemsRelatedToCartId(int cartId);
 
         Task<InfrastructureResponse<bool>> AddCartCouponsAsync(Cart cart);
+        Task<InfrastructureResponse<bool>> RemoveCouponFromCartAsync(int cartId, int couponId);
     }
 }
