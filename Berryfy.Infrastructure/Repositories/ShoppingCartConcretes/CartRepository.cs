@@ -1481,5 +1481,24 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 Value = true
             };
         }
+
+        public async Task<InfrastructureResponse<bool>> RemoveCouponFromCartAsync(int cartId, int couponId)
+        {
+            string query = @"Delete from cart_coupons where cart_id = @CartId and coupon_id = @CouponId;";
+
+            var connection = await OpenConnectionAsync();
+
+            var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@CartId", cartId);
+            command.Parameters.AddWithValue("@CouponId", couponId);
+
+            var rowEffected = await command.ExecuteScalarAsync();
+
+            return new InfrastructureResponse<bool>
+            {
+                IsSuccess = true,
+                Value = Convert.ToInt16(rowEffected) > 0
+            };
+        }
     }
 }
