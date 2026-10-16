@@ -1258,7 +1258,9 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 cart.CartCoupons.Remove(cartCoupon);
 
-                var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
+                var updatedCart = _cartRepository.RemoveCouponFromCartAsync(cartId, couponId); //_cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
+
+
                 if (updatedCart == null)
                 {
                     return new ApplicationResponse<CartResponse>
@@ -1271,7 +1273,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 return new ApplicationResponse<CartResponse>
                 {
                     IsSuccess = true,
-                    Value = CartResponse.MapFromCart(updatedCart)
+                    Value = null
                 };
             }
             catch (Exception ex)
