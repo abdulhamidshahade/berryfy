@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Berryfy.Domain.Entities;
 using Berryfy.Domain.Entities.AuthEntities;
 using Berryfy.Domain.Repositories.AuthInterfaces;
