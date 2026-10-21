@@ -15,7 +15,7 @@ namespace Berryfy.API.Controllers
 {
     [Route("api/shopping-carts")]
     [ApiController]
-    public class ShoppingCartsController : BaseController, IAsyncActionFilter
+    public class ShoppingCartsController : BaseController /*,IAsyncActionFilter*/
     {
         private readonly IUserCouponService _userCouponService;
         private readonly ICartService _cartService;
@@ -23,39 +23,39 @@ namespace Berryfy.API.Controllers
         private readonly IOrderService _orderService;
         private readonly ICheckoutOrchestrationService _checkoutOrchestrationService;
 
-        [NonAction]
-        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
-        {
-            var value = context.RouteData.Values["cartId"] ?? context.RouteData.Values["id"];
-            if (value != null)
-            {
-                if (!int.TryParse(value.ToString(), out var cartId) || cartId <= 0)
-                {
-                    context.Result = BadRequest();
-                    return;
-                }
+        //[NonAction]
+        //public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        //{
+        //    var value = context.RouteData.Values["cartId"] ?? context.RouteData.Values["id"];
+        //    if (value != null)
+        //    {
+        //        if (!int.TryParse(value.ToString(), out var cartId) || cartId <= 0)
+        //        {
+        //            context.Result = BadRequest();
+        //            return;
+        //        }
 
-                CartResponse? cart = null;
-                foreach (var status in Enum.GetValues<CartStatus>())
-                {
-                    cart =  _cartService.GetCartByIdAsync(cartId, status).GetAwaiter().GetResult().Value;
-                    if (cart != null) break;
-                }
+        //        CartResponse? cart = null;
+        //        foreach (var status in Enum.GetValues<CartStatus>())
+        //        {
+        //            cart =  _cartService.GetCartByIdAsync(cartId, status).GetAwaiter().GetResult().Value;
+        //            if (cart != null) break;
+        //        }
 
-                var userId = GetCurrentUserId();
-                var sessionId = GetSessionId();
-                var ownsCart = cart != null && (cart.UserId.HasValue
-                    ? userId.HasValue && cart.UserId == userId
-                    : !string.IsNullOrEmpty(sessionId) && cart.SessionId == sessionId);
-                if (!ownsCart)
-                {
-                    context.Result = NotFound();
-                    return;
-                }
-            }
+        //        var userId = GetCurrentUserId();
+        //        var sessionId = GetSessionId();
+        //        var ownsCart = cart != null && (cart.UserId.HasValue
+        //            ? userId.HasValue && cart.UserId == userId
+        //            : !string.IsNullOrEmpty(sessionId) && cart.SessionId == sessionId);
+        //        if (!ownsCart)
+        //        {
+        //            context.Result = NotFound();
+        //            return;
+        //        }
+        //    }
 
-            await next();
-        }
+        //    await next();
+        //}
 
 
         public ShoppingCartsController(
