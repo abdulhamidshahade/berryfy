@@ -29,7 +29,7 @@ namespace Berryfy.API.Controllers
 
 
         [HttpPost]
-        [UserAndAbove]
+        //[UserAndAbove]
         public async Task<ActionResult<ApiResponse<Order>>> CreateOrder([FromBody] CreateOrder request)
         {
             try
