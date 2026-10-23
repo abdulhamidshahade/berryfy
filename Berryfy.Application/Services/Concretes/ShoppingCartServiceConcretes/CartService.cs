@@ -3,7 +3,6 @@ using Berryfy.Application.Services.Interfaces.InventoryServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ProductServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
 using Berryfy.Domain.Constants;
-using Berryfy.Domain.Entities.ProductEntities;
 using Berryfy.Domain.Entities.ShoppingCartEntities;
 using Berryfy.Domain.Repositories;
 using Berryfy.Domain.Repositories.OrderInterfaces;
