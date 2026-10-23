@@ -76,7 +76,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("@Version", 1);
-            command.Parameters.AddWithValue("@Notes", "initical cart"); 
+            command.Parameters.AddWithValue("@Notes", "initical cart");
 
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -359,7 +359,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Description = NullableString("Cp_Description"),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type = 
+                            Type =
                                 (CouponType)reader.GetInt16(Ordinal("Cp_Type")),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
@@ -966,7 +966,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Description = NullableString("Cp_Description"),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type = 
+                            Type =
                                 (CouponType)reader.GetInt16(Ordinal("Cp_Type")),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
@@ -1254,8 +1254,8 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                 WHERE user_id = @UserId AND status = @Status";
 
             Cart? cart = null;
-            
-            using var connection = await OpenConnectionAsync(); 
+
+            using var connection = await OpenConnectionAsync();
 
             await using var command = new NpgsqlCommand(getCartSql, connection);
             command.Parameters.AddWithValue("UserId", userId);
@@ -1373,7 +1373,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             command.Parameters.AddWithValue("@CartId", cartId);
 
-            var rowEffected = await command.ExecuteScalarAsync();
+            var rowEffected = await command.ExecuteNonQueryAsync();
 
             return (int)rowEffected != 0;
         }
