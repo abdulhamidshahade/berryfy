@@ -803,8 +803,6 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     _logger.LogDebug("Cart {CartId} is converted - skipping stock release (inventory already deducted)", cartId);
                 }
 
-                cart.CartItems.Clear();
-                cart.CartCoupons.Clear();
                 cart.UpdatedAt = DateTime.UtcNow;
 
                 var updatedCart = await _cartRepository.UpdateCartAsync(cart);
