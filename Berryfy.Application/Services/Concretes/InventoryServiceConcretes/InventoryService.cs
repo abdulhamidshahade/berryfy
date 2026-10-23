@@ -284,8 +284,8 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
             }
 
-            product.ReservedStock -= quantity;
-            product.UpdatedAt = DateTime.UtcNow;
+            //product.ReservedStock -= quantity;
+            //product.UpdatedAt = DateTime.UtcNow;
 
             var inventoryLog = new InventoryLog
             {
@@ -299,13 +299,13 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 CreatedAt = DateTime.UtcNow
             };
 
-            var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
+            //var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
             return new ApplicationResponse<bool>
             {
                 IsSuccess = true,
-                Value = createdInventory != null && updatedProduct != null
+                Value = createdInventory != null/* && updatedProduct != null*/
             };
         }
 
