@@ -524,7 +524,7 @@ namespace Berryfy.API.Controllers
             try
             {
                 var success = await _cartService.ClearCartAsync(cartId, GetCurrentUserId(), GetSessionId());
-                if (!success.Value)
+                if (!success.IsSuccess)
                 {
                     return StatusCode(500, new ApiResponse<bool>
                     {
