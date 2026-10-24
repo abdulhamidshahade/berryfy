@@ -1,0 +1,2 @@
+﻿alter table order_items
+drop column shop_order_id
