@@ -1,0 +1,2 @@
+﻿alter table products
+drop column shop_category_id
