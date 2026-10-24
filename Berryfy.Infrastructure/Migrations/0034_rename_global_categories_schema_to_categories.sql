@@ -1,0 +1,2 @@
+﻿Alter table global_categories
+rename to categories
