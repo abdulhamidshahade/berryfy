@@ -87,7 +87,7 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             }
 
             var existingOrder = await _orderRepository.GetOrderByCartIdAsync(cartId);
-            if (existingOrder != null)
+            if (existingOrder.Value != null)
             {
                 return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
@@ -126,7 +126,9 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 ShippingPostalCode = orderDto.ShippingPostalCode,
                 ShippingCountry = orderDto.ShippingCountry,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                CancalledAt= null,
             };
 
             order = _orderRepository.CreateOrderAsync(order).GetAwaiter().GetResult().Value;
