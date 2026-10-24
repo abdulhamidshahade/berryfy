@@ -194,7 +194,7 @@ ORDER BY o.CreatedAt DESC;";
 
         public async Task<InfrastructureResponse<Order>> CreateOrderAsync(Order order)
         {
-            string query = @"Insert into Orders (user_id, cart_id, status, subtotal, tax_amount, shipping_amount,
+            string query = @"Insert into orders (user_id, cart_id, status, subtotal, tax_amount, shipping_amount,
 total, discount_total, customer_email, customer_phone, reference_number, completed_at, cancelled_at, shipping_name,
 shipping_address1, shipping_address2, shipping_city, shipping_state, shipping_postal_code, shipping_country,
 created_at, updated_at, is_paid, session_id) Values (@UserId, @CartId, @Status, @SubTotal, @TaxAmount, @ShippingAmount,
@@ -226,8 +226,8 @@ created_at, updated_at, is_paid, session_id) Values (@UserId, @CartId, @Status, 
 
         public async Task<InfrastructureResponse<OrderItem>> CreateOrderItemAsync(OrderItem item)
         {
-            string query = @"insert into order_items (order_id, product_id, quantity, unit_price, total_price,
-discount_amount, created_at, updated_at, product_name) values (@OrderId, @ProductId, @Quantity, @UnitPrice,
+            string query = @"insert into order_items (shop_order_id, product_id, quantity, unit_price, total_price,
+discount_amount, created_at, updated_at, product_name) values (@ShopOrderId, @ProductId, @Quantity, @UnitPrice,
 @TotalPrice, @DiscountAmount, @CreatedAt, @UpdatedAt, @ProductName) Returning *;";
 
             var connection = await OpenConnectionAsync();
@@ -337,9 +337,9 @@ where id = @orderId;";
 
         public async Task<InfrastructureResponse<Order?>> GetOrderByCartIdAsync(int cartId)
         {
-            string query = @"select o.*
-                             from Orders o
-                            where o.cart_id = @cartId;";
+            string query = @"select *
+                             from orders
+                            where cart_id = @cartId;";
 
             var connection = await OpenConnectionAsync();
 
@@ -354,6 +354,16 @@ where id = @orderId;";
             while (await reader.ReadAsync())
             {
                 order = MapOrder(reader);
+            }
+
+            if(order.Id == 0)
+            {
+                return new InfrastructureResponse<Order?>()
+                {
+                    IsSuccess = true,
+                    Message = "The process completed successfully",
+                    Value = null
+                };
             }
 
             return new InfrastructureResponse<Order?>()
@@ -484,7 +494,7 @@ END";
                 CustomerEmail = reader.GetString(reader.GetOrdinal("customer_email")),
                 CustomerPhone = reader.GetString(reader.GetOrdinal("customer_phone")),
                 CompletedAt = reader.GetDateTime(reader.GetOrdinal("completed_at")),
-                CancalledAt = reader.GetDateTime(reader.GetOrdinal("cancelled_at")),
+                CancalledAt = reader.IsDBNull(reader.GetOrdinal("cancelled_at")) ? null : reader.GetDateTime(reader.GetOrdinal("cancelled_at")),
                 ShippingName = reader.GetString(reader.GetOrdinal("shipping_name")),
                 ShippingAddress1 = reader.GetString(reader.GetOrdinal("shipping_address1")),
                 ShippingAddress2 = reader.GetString(reader.GetOrdinal("shipping_address2")),
@@ -502,7 +512,7 @@ END";
             return new OrderItem()
             {
                 Id = reader.GetInt16(reader.GetOrdinal("id")),
-                OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
+                OrderId = reader.GetInt16(reader.GetOrdinal("shop_order_id")),
                 ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
                 ProductName = reader.GetString(reader.GetOrdinal("product_name")),
                 Quantity = reader.GetInt16(reader.GetOrdinal("quantity")),
@@ -519,7 +529,7 @@ END";
         {
             command.Parameters.AddWithValue("@UserId", order.UserId);
             command.Parameters.AddWithValue("@CartId", order.CartId);
-            command.Parameters.AddWithValue("@Status", order.Status);
+            command.Parameters.AddWithValue("@Status", Convert.ToInt16(order.Status));
             command.Parameters.AddWithValue("@SubTotal", order.SubTotal);
             command.Parameters.AddWithValue("@TaxAmount", order.TaxAmount);
             command.Parameters.AddWithValue("@ShippingAmount", order.ShippingAmount);
@@ -529,7 +539,7 @@ END";
             command.Parameters.AddWithValue("@CustomerPhone", order.CustomerPhone);
             command.Parameters.AddWithValue("@ReferenceNumber", order.ReferenceNumber);
             command.Parameters.AddWithValue("@CompletedAt", order.CompletedAt);
-            command.Parameters.AddWithValue("@CancelledAt", order.CancalledAt);
+            command.Parameters.AddWithValue("@CancelledAt", (object?)order.CancalledAt ?? DBNull.Value);
             command.Parameters.AddWithValue("@ShippingName", order.ShippingName);
             command.Parameters.AddWithValue("@ShippingAddress1", order.ShippingAddress1);
             command.Parameters.AddWithValue("@ShippingAddress2", order.ShippingAddress2);
@@ -540,12 +550,12 @@ END";
             command.Parameters.AddWithValue("@CreatedAt", order.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", order.UpdatedAt);
             command.Parameters.AddWithValue("@IsPaid", order.isPaid);
-            command.Parameters.AddWithValue("@SessionId", order.sessionId);
+            command.Parameters.AddWithValue("@SessionId", (object?)order.sessionId ?? DBNull.Value);
         }
 
         private void AddOrderItemParameters(NpgsqlCommand command, OrderItem orderItem)
         {
-            command.Parameters.AddWithValue("@OrderId", orderItem.OrderId);
+            command.Parameters.AddWithValue("@ShopOrderId", orderItem.OrderId);
             command.Parameters.AddWithValue("@ProductId", orderItem.ProductId);
             command.Parameters.AddWithValue("@Quantity", orderItem.Quantity);
             command.Parameters.AddWithValue("@UnitPrice", orderItem.UnitPrice);
