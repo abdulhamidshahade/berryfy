@@ -1,0 +1,1 @@
+﻿drop table shop_categories;
