@@ -29,8 +29,6 @@ namespace Berryfy.Domain.Entities.ShoppingCartEntities
         [JsonIgnore] public virtual User? User { get; set; }
 
 
-
-
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
