@@ -2,7 +2,7 @@
 
 namespace Berryfy.Domain.Entities.ProductEntities.Validations.CategoryValidations
 {
-    public class CategoryBaseValidator<T> : AbstractValidator<T> where T : GlobalCategory
+    public class CategoryBaseValidator<T> : AbstractValidator<T> where T : Category
     {
         public CategoryBaseValidator()
         {
