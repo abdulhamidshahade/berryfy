@@ -27,7 +27,6 @@ namespace Berryfy.Application.Dtos.CouponDtos.Requests
                 Type = coupon.Type,
                 Value = coupon.Value,
                 IsForNewUsersOnly = coupon.IsForNewUsersOnly,
-                ShopId = coupon.ShopId
             };
         }
     }
