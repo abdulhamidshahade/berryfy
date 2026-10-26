@@ -24,13 +24,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [AllowAnonymous]
         [EnableRateLimiting("DefaultPolicy")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<GlobalCategoryResponse>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CategoryResponse>>>> GetAll()
         {
             var categories = await _categoryService.GetAllAsync();
 
             if (categories == null)
             {
-                return StatusCode(400, new ApiResponse<IEnumerable<GlobalCategoryResponse>>
+                return StatusCode(400, new ApiResponse<IEnumerable<CategoryResponse>>
                 {
                     IsSuccess = categories.IsSuccess,
                     StatusCode = StatusCodes.Status400BadRequest,
@@ -39,7 +39,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ApiResponse<IEnumerable<GlobalCategoryResponse>>
+            var response = new ApiResponse<IEnumerable<CategoryResponse>>
             {
                 IsSuccess = categories.IsSuccess,
                 StatusCode = StatusCodes.Status200OK,
@@ -53,14 +53,14 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<GlobalCategoryResponse>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetById(int id)
         {
 
             var category = await _categoryService.GetByIdAsync(id);
 
             if (!category.IsSuccess)
             {
-                return NotFound(new ApiResponse<GlobalCategoryResponse>
+                return NotFound(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -69,7 +69,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ApiResponse<GlobalCategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -83,13 +83,13 @@ namespace Berryfy.API.Controllers
         [HttpGet]
         [Route("name/{name}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<GlobalCategoryResponse>>> GetByName(string name)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetByName(string name)
         {
             var category = await _categoryService.GetByNameAsync(name);
 
             if (category == null)
             {
-                return NotFound(new ApiResponse<GlobalCategoryResponse>
+                return NotFound(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status404NotFound,
@@ -98,7 +98,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var response = new ApiResponse<GlobalCategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -111,13 +111,13 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<GlobalCategoryResponse>>> Create([FromBody] CreateCategoryRequest categoryRequest)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> Create([FromBody] CreateCategoryRequest categoryRequest)
         {
             var createdCategory = await _categoryService.CreateAsync(categoryRequest);
 
             if (!createdCategory.IsSuccess)
             {
-                return new ApiResponse<GlobalCategoryResponse>
+                return new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -127,7 +127,7 @@ namespace Berryfy.API.Controllers
                 };
 
             }
-            var response = new ApiResponse<GlobalCategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = createdCategory.IsSuccess,
                 StatusCode = StatusCodes.Status201Created,
@@ -140,13 +140,13 @@ namespace Berryfy.API.Controllers
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<GlobalCategoryResponse>>> Update(int id, [FromBody] UpdateCategoryRequest request)
+        public async Task<ActionResult<ApiResponse<CategoryResponse>>> Update(int id, [FromBody] UpdateCategoryRequest request)
         {
             var updatedCategory = await _categoryService.UpdateAsync(id, request);
 
             if (!updatedCategory.IsSuccess)
             {
-                return new ApiResponse<GlobalCategoryResponse>
+                return new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
@@ -157,7 +157,7 @@ namespace Berryfy.API.Controllers
 
             }
 
-            var response = new ApiResponse<GlobalCategoryResponse>
+            var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = true,
                 StatusCode = StatusCodes.Status200OK,
