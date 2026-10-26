@@ -17,31 +17,31 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             _categoryRepository = categoryRepository;
         }
 
-        public async Task<ApplicationResponse<GlobalCategoryResponse>> GetByIdAsync(int id)
+        public async Task<ApplicationResponse<CategoryResponse>> GetByIdAsync(int id)
         {
             var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult();
 
             if (!category.IsSuccess)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Category not found"
                 };
             }
 
-            return new ApplicationResponse<GlobalCategoryResponse>
+            return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = GlobalCategoryResponse.MapFromCategory(category.Value)
+                Value = CategoryResponse.MapFromCategory(category.Value)
             };
         }
 
-        public async Task<ApplicationResponse<GlobalCategoryResponse>> GetByNameAsync(string name)
+        public async Task<ApplicationResponse<CategoryResponse>> GetByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Invalid category name"
@@ -52,35 +52,35 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             
             if (category == null)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Category not found"
                 };
             }
 
-            return new ApplicationResponse<GlobalCategoryResponse>
+            return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = GlobalCategoryResponse.MapFromCategory(category)
+                Value = CategoryResponse.MapFromCategory(category)
             };
         }
 
-        public async Task<ApplicationResponse<IEnumerable<GlobalCategoryResponse>>> GetAllAsync()
+        public async Task<ApplicationResponse<IEnumerable<CategoryResponse>>> GetAllAsync()
         {
             var categories = _categoryRepository.GetAllAsync().GetAwaiter().GetResult().Value;
-            return new ApplicationResponse<IEnumerable<GlobalCategoryResponse>>
+            return new ApplicationResponse<IEnumerable<CategoryResponse>>
             {
                 IsSuccess = true,
-                Value = categories.Select(GlobalCategoryResponse.MapFromCategory)
+                Value = categories.Select(CategoryResponse.MapFromCategory)
             };
         }
 
-        public async Task<ApplicationResponse<GlobalCategoryResponse>> CreateAsync(CreateCategoryRequest categoryRequest)
+        public async Task<ApplicationResponse<CategoryResponse>> CreateAsync(CreateCategoryRequest categoryRequest)
         {
             if (categoryRequest == null)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Invalid category request"
@@ -89,7 +89,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             if (ExistsByNameAsync(categoryRequest.Name).GetAwaiter().GetResult().Value)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Category already exists"
@@ -99,19 +99,19 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             var category = CreateCategoryRequest.MapToCategory(categoryRequest);
 
             var createdCategory = _categoryRepository.CreateAsync(category).GetAwaiter().GetResult().Value;
-            return new ApplicationResponse<GlobalCategoryResponse>
+            return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = GlobalCategoryResponse.MapFromCategory(createdCategory)
+                Value = CategoryResponse.MapFromCategory(createdCategory)
             };
         }
 
 
-        public async Task<ApplicationResponse<GlobalCategoryResponse>> UpdateAsync(int id, UpdateCategoryRequest request)
+        public async Task<ApplicationResponse<CategoryResponse>> UpdateAsync(int id, UpdateCategoryRequest request)
         {
             if (request == null)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Invalid category request"
@@ -122,7 +122,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             if (!existingCategory.IsSuccess)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Category not found"
@@ -133,7 +133,7 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
             if(isNameExists.IsSuccess && isNameExists.Value.Id != id)
             {
-                return new ApplicationResponse<GlobalCategoryResponse>
+                return new ApplicationResponse<CategoryResponse>
                 {
                     IsSuccess = false,
                     ErrorMessage = "Category already exists"
@@ -145,10 +145,10 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             var updatedCategory = _categoryRepository.UpdateAsync(id, mappedCategory).GetAwaiter().GetResult();
 
 
-            return new ApplicationResponse<GlobalCategoryResponse>
+            return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = GlobalCategoryResponse.MapFromCategory(updatedCategory.Value)
+                Value = CategoryResponse.MapFromCategory(updatedCategory.Value)
             };
         }
 
