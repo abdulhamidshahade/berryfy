@@ -322,19 +322,19 @@ namespace Berryfy.API.Controllers
             return NotFound(notFoundResponse);
         }
 
-        [HttpGet]
-        [HttpGet("{productId:int}/shop-category")]
-        [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<ShopCategoryResponse>>> GetShopCategoryByProduct(int productId)
-        {
-            var shopCategory = await _productService.GetShopCategoryByProductAsync(productId);
+        //[HttpGet]
+        //[HttpGet("{productId:int}/shop-category")]
+        //[AllowAnonymous]
+        //public async Task<ActionResult<ApiResponse<ShopCategoryResponse>>> GetShopCategoryByProduct(int productId)
+        //{
+        //    var shopCategory = await _productService.GetShopCategoryByProductAsync(productId);
 
-            return new ApiResponse<ShopCategoryResponse>()
-            {
-                Data = shopCategory.Value,
-                StatusCode = StatusCodes.Status200OK,
-            };
-        }
+        //    return new ApiResponse<ShopCategoryResponse>()
+        //    {
+        //        Data = shopCategory.Value,
+        //        StatusCode = StatusCodes.Status200OK,
+        //    };
+        //}
 
     }
 }

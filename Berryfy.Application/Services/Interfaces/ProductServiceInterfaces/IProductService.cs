@@ -16,6 +16,6 @@ namespace Berryfy.Application.Services.Interfaces.ProductServiceInterfaces
         Task<ApplicationResponse<bool>> DeleteAsync(int id);
         Task<ApplicationResponse<bool>> ExistsByIdAsync(int id);
         Task<ApplicationResponse<bool>> ExistsByNameAsync(string name);
-        Task<ApplicationResponse<ShopCategoryResponse>> GetShopCategoryByProductAsync(int productId);
+        //Task<ApplicationResponse<ShopCategoryResponse>> GetShopCategoryByProductAsync(int productId);
     }
 }

@@ -32,8 +32,8 @@ namespace Berryfy.Application.Dtos.ProductDtos.Requests
                 LowStockThreshold = request.LowStockThreshold,
                 IsActive = request.IsActive,
                 SKU = request.SKU,
-                ShopId = request.ShopId,
-                ShopCategoryId = request.ShopCategoryId
+                //ShopId = request.ShopId,
+                //ShopCategoryId = request.ShopCategoryId
             };
         }
     }

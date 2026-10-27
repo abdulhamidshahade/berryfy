@@ -304,9 +304,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SKU = reader.GetString(reader.GetOrdinal("sku")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                ShopId = reader.GetInt32(reader.GetOrdinal("shop_id")),
-                GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("global_category_id")),
-                ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("shop_category_id"))
+                //ShopId = reader.GetInt32(reader.GetOrdinal("shop_id")),
+                //GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("global_category_id")),
+                //ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("shop_category_id"))
             };
             return product;
         }

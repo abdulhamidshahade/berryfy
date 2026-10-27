@@ -14,19 +14,19 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Requests
         public bool IsActive { get; set; } = true;
         public int DisplayOrder { get; set; }
 
-        public static ShopCategory MapToShopCategory(int shopId, CreateShopCategoryRequest request, string slug)
-        {
-            return new ShopCategory
-            {
-                ShopId = shopId,
-                Name = request.Name.Trim(),
-                Description = request.Description,
-                ImageUrl = request.ImageUrl,
-                Slug = slug,
-                ParentCategoryId = request.ParentCategoryId,
-                IsActive = request.IsActive,
-                DisplayOrder = request.DisplayOrder
-            };
-        }
+        //public static ShopCategory MapToShopCategory(int shopId, CreateShopCategoryRequest request, string slug)
+        //{
+        //    return new ShopCategory
+        //    {
+        //        ShopId = shopId,
+        //        Name = request.Name.Trim(),
+        //        Description = request.Description,
+        //        ImageUrl = request.ImageUrl,
+        //        Slug = slug,
+        //        ParentCategoryId = request.ParentCategoryId,
+        //        IsActive = request.IsActive,
+        //        DisplayOrder = request.DisplayOrder
+        //    };
+        //}
     }
 }

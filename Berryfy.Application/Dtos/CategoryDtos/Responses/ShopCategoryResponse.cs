@@ -17,23 +17,23 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public static ShopCategoryResponse MapFromShopCategory(ShopCategory category)
-        {
-            return new ShopCategoryResponse
-            {
-                Id = category.Id,
-                ShopId = category.ShopId,
-                Name = category.Name,
-                Description = category.Description,
-                ImageUrl = category.ImageUrl,
-                Slug = category.Slug,
-                ParentCategoryId = category.ParentCategoryId,
-                IsActive = category.IsActive,
-                DisplayOrder = category.DisplayOrder,
-                CreatedAt = category.CreatedAt,
-                UpdatedAt = category.UpdatedAt,
-                GlobalCategoryId = category.GlobalCategoryId
-            };
-        }
+        //public static ShopCategoryResponse MapFromShopCategory(ShopCategory category)
+        //{
+        //    return new ShopCategoryResponse
+        //    {
+        //        Id = category.Id,
+        //        ShopId = category.ShopId,
+        //        Name = category.Name,
+        //        Description = category.Description,
+        //        ImageUrl = category.ImageUrl,
+        //        Slug = category.Slug,
+        //        ParentCategoryId = category.ParentCategoryId,
+        //        IsActive = category.IsActive,
+        //        DisplayOrder = category.DisplayOrder,
+        //        CreatedAt = category.CreatedAt,
+        //        UpdatedAt = category.UpdatedAt,
+        //        GlobalCategoryId = category.GlobalCategoryId
+        //    };
+        //}
     }
 }

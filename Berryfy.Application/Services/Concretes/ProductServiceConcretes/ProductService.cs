@@ -277,21 +277,21 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
             };
         }
 
-        public async Task<ApplicationResponse<ShopCategoryResponse>> GetShopCategoryByProductAsync(int productId)
-        {
-            var shopCategory = await _productRepository.GetShopCategoryByProduct(productId);
+        //public async Task<ApplicationResponse<ShopCategoryResponse>> GetShopCategoryByProductAsync(int productId)
+        //{
+        //    var shopCategory = await _productRepository.GetShopCategoryByProduct(productId);
 
-            if (!shopCategory.IsSuccess)
-            {
-                return new ApplicationResponse<ShopCategoryResponse> { IsSuccess = shopCategory.IsSuccess, ErrorMessage = shopCategory.Message };
-            }
+        //    if (!shopCategory.IsSuccess)
+        //    {
+        //        return new ApplicationResponse<ShopCategoryResponse> { IsSuccess = shopCategory.IsSuccess, ErrorMessage = shopCategory.Message };
+        //    }
 
-            return new ApplicationResponse<ShopCategoryResponse>()
-            {
-                IsSuccess = shopCategory.IsSuccess,
-                SuccessMessage = shopCategory.Message,
-                Value = ShopCategoryResponse.MapFromShopCategory(shopCategory.Value)
-            };
-        }
+        //    return new ApplicationResponse<ShopCategoryResponse>()
+        //    {
+        //        IsSuccess = shopCategory.IsSuccess,
+        //        SuccessMessage = shopCategory.Message,
+        //        //Value = ShopCategoryResponse.MapFromShopCategory(shopCategory.Value)
+        //    };
+        //}
     }
 }

@@ -52,7 +52,7 @@ namespace Berryfy.Application.DI
             
             serviceDescriptors.AddScoped<IUserCheckoutInfoService, UserCheckoutInfoService>();
             serviceDescriptors.AddScoped<IShopService, ShopService>();
-            serviceDescriptors.AddScoped<IShopCategoryService, ShopCategoryService>();
+            //serviceDescriptors.AddScoped<IShopCategoryService, ShopCategoryService>();
 
             serviceDescriptors.AddScoped<IInventoryService, InventoryService>();
 

@@ -443,8 +443,8 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SKU = reader.GetString(reader.GetOrdinal("sku")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
-                ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
+                //ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
+                //ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
             };
             return product;
         }
@@ -462,57 +462,57 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@SKU", product.SKU);
             command.Parameters.AddWithValue("@CreatedAt", product.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt);
-            command.Parameters.AddWithValue("@ShopId", product.ShopId);
-            command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
+            //command.Parameters.AddWithValue("@ShopId", product.ShopId);
+            //command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
         }
 
-        public async Task<InfrastructureResponse<ShopCategory>> GetShopCategoryByProduct(int productId)
-        {
-            const string query = "select sc.* from products p inner join shop_categories sc on (sc.id = p.shop_category_id) where p.id = @ProductId;";
+        //public async Task<InfrastructureResponse<ShopCategory>> GetShopCategoryByProduct(int productId)
+        //{
+        //    const string query = "select sc.* from products p inner join shop_categories sc on (sc.id = p.shop_category_id) where p.id = @ProductId;";
 
-            using var connectoin = await OpenConnectionAsync();
+        //    using var connectoin = await OpenConnectionAsync();
 
-            using var command = new NpgsqlCommand(query, connectoin);
-            command.Parameters.AddWithValue("@ProductId", productId);
+        //    using var command = new NpgsqlCommand(query, connectoin);
+        //    command.Parameters.AddWithValue("@ProductId", productId);
 
-            ShopCategory shopCategory = new ShopCategory();
+        //    ShopCategory shopCategory = new ShopCategory();
 
-            using var reader = await command.ExecuteReaderAsync();
+        //    using var reader = await command.ExecuteReaderAsync();
 
-            if(await reader.ReadAsync())
-            {
-                shopCategory = MapShopCategory(reader);
-            }
+        //    if(await reader.ReadAsync())
+        //    {
+        //        shopCategory = MapShopCategory(reader);
+        //    }
 
-            return new InfrastructureResponse<ShopCategory>()
-            {
-                IsSuccess = true,
-                Message = "Shop category that related to the product retrived successfully!",
-                Value = shopCategory
-            };
-        }
+        //    return new InfrastructureResponse<ShopCategory>()
+        //    {
+        //        IsSuccess = true,
+        //        Message = "Shop category that related to the product retrived successfully!",
+        //        Value = shopCategory
+        //    };
+        //}
 
 
-        private static ShopCategory MapShopCategory(NpgsqlDataReader reader)
-        {
-            var descriptionOrdinal = reader.GetOrdinal("description");
-            var imageUrlOrdinal = reader.GetOrdinal("image_url");
-            var parentOrdinal = reader.GetOrdinal("parent_category_id");
+        //private static ShopCategory MapShopCategory(NpgsqlDataReader reader)
+        //{
+        //    var descriptionOrdinal = reader.GetOrdinal("description");
+        //    var imageUrlOrdinal = reader.GetOrdinal("image_url");
+        //    var parentOrdinal = reader.GetOrdinal("parent_category_id");
 
-            return new ShopCategory
-            {
-                Id = checked((int)reader.GetInt64(reader.GetOrdinal("id"))),
-                ShopId = checked((int)reader.GetInt64(reader.GetOrdinal("shop_id"))),
-                Name = reader.GetString(reader.GetOrdinal("name")),
-                Description = reader.IsDBNull(descriptionOrdinal) ? null : reader.GetString(descriptionOrdinal),
-                ImageUrl = reader.IsDBNull(imageUrlOrdinal) ? null : reader.GetString(imageUrlOrdinal),
-                Slug = reader.GetString(reader.GetOrdinal("slug")),
-                ParentCategoryId = reader.IsDBNull(parentOrdinal) ? null : checked((int)reader.GetInt64(parentOrdinal)),
-                IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
-                DisplayOrder = reader.GetInt32(reader.GetOrdinal("display_order")),
-                CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
-                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
-            };
-        }
+        //    return new ShopCategory
+        //    {
+        //        Id = checked((int)reader.GetInt64(reader.GetOrdinal("id"))),
+        //        ShopId = checked((int)reader.GetInt64(reader.GetOrdinal("shop_id"))),
+        //        Name = reader.GetString(reader.GetOrdinal("name")),
+        //        Description = reader.IsDBNull(descriptionOrdinal) ? null : reader.GetString(descriptionOrdinal),
+        //        ImageUrl = reader.IsDBNull(imageUrlOrdinal) ? null : reader.GetString(imageUrlOrdinal),
+        //        Slug = reader.GetString(reader.GetOrdinal("slug")),
+        //        ParentCategoryId = reader.IsDBNull(parentOrdinal) ? null : checked((int)reader.GetInt64(parentOrdinal)),
+        //        IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+        //        DisplayOrder = reader.GetInt32(reader.GetOrdinal("display_order")),
+        //        CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
+        //        UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+        //    };
+        //}
     }
 }
