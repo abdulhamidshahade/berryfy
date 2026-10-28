@@ -262,7 +262,7 @@ limit @limit;";
 
         public async Task<InfrastructureResponse<Product>> GetProductWithStockInfoAsync(int productId)
         {
-            string sql = @"select p.name, p.shop_id, p.shop_category_id, p.description, p.stock_quantity,
+            string sql = @"select p.name, p.category_id, p.description, p.stock_quantity,
 p.image_url, p.price, p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku, il.product_id, il.current_stock_quantity,
 il.quantity_changed, il.change_type, il.reference_id, il.reference_type, il.performed_by_user_id, il.notes from products p
 left join inventory_logs il on (p.id = il.product_id)
