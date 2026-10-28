@@ -23,7 +23,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.category_id
                 FROM products p
                 ORDER BY p.id;";
 
@@ -87,7 +87,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.category_id
                 FROM Products p
                 WHERE p.name = @Name
                 ORDER BY p.id;";
@@ -118,11 +118,11 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
            string sql = @"
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id)
+                    low_stock_threshold, is_active, sku, created_at, updated_at, category_id)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
-                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt, @ShopId, @ShopCategoryId)
+                    @LowStockThreshold, @IsActive, @SKU, @CreatedAt, @UpdatedAt, @CategoryId)
                 RETURNING id, name, description, stock_quantity, image_url, price,
-                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id;";
+                reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, category_id;";
 
             await using var connection = await OpenConnectionAsync();
 
@@ -269,7 +269,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.Id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.category_id
                 FROM products p
                 WHERE 1=1 ";
 
