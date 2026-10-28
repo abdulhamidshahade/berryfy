@@ -226,8 +226,8 @@ created_at, updated_at, is_paid, session_id) Values (@UserId, @CartId, @Status, 
 
         public async Task<InfrastructureResponse<OrderItem>> CreateOrderItemAsync(OrderItem item)
         {
-            string query = @"insert into order_items (shop_order_id, product_id, quantity, unit_price, total_price,
-discount_amount, created_at, updated_at, product_name) values (@ShopOrderId, @ProductId, @Quantity, @UnitPrice,
+            string query = @"insert into order_items (order_id, product_id, quantity, unit_price, total_price,
+discount_amount, created_at, updated_at, product_name) values (@OrderId, @ProductId, @Quantity, @UnitPrice,
 @TotalPrice, @DiscountAmount, @CreatedAt, @UpdatedAt, @ProductName) Returning *;";
 
             var connection = await OpenConnectionAsync();
@@ -512,7 +512,7 @@ END";
             return new OrderItem()
             {
                 Id = reader.GetInt16(reader.GetOrdinal("id")),
-                OrderId = reader.GetInt16(reader.GetOrdinal("shop_order_id")),
+                OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
                 ProductId = reader.GetInt16(reader.GetOrdinal("product_id")),
                 ProductName = reader.GetString(reader.GetOrdinal("product_name")),
                 Quantity = reader.GetInt16(reader.GetOrdinal("quantity")),
@@ -555,7 +555,7 @@ END";
 
         private void AddOrderItemParameters(NpgsqlCommand command, OrderItem orderItem)
         {
-            command.Parameters.AddWithValue("@ShopOrderId", orderItem.OrderId);
+            command.Parameters.AddWithValue("@OrderId", orderItem.OrderId);
             command.Parameters.AddWithValue("@ProductId", orderItem.ProductId);
             command.Parameters.AddWithValue("@Quantity", orderItem.Quantity);
             command.Parameters.AddWithValue("@UnitPrice", orderItem.UnitPrice);
