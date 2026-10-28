@@ -19,7 +19,7 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
 
         public async Task<InfrastructureResponse<UserCheckoutInfo?>> GetByUserIdAsync(int userId)
         {
-            string query = @"SELECT * from UserCheckoutInfos where user_id = @UserId";
+            string query = @"SELECT * from user_checkout_infos where user_id = @UserId";
 
             var connection = await OpenConnectionAsync();
 
@@ -31,10 +31,16 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
 
             var reader = await command.ExecuteReaderAsync();
 
-            if(await reader.ReadAsync())
+            if(!await reader.ReadAsync())
             {
-                checkoutInfo = MapUserCheckoutInfo(reader);
+                return new InfrastructureResponse<UserCheckoutInfo?>()
+                {
+                    IsSuccess = false,
+                    Value = null
+                };
             }
+
+            checkoutInfo = MapUserCheckoutInfo(reader);
 
             return new InfrastructureResponse<UserCheckoutInfo?>()
             {
@@ -104,7 +110,7 @@ country, payer_name, billing_address1, billing_address2, billing_postal_code, cr
 
         public async Task<InfrastructureResponse<bool>> UpdateAsync(UserCheckoutInfo checkoutInfo)
         {
-            string query = @"Update UserCheckoutInfos 
+            string query = @"Update user_checkout_infos 
 Set user_id = @UserId,
 session_id = @SessionId,
 firstname = @FirstName,
@@ -116,7 +122,7 @@ billing_city = @BillingCity,
 billing_state = @BillingState,
 billing_country = @BillingCountry,
 updated_at = @UpdatedAt,
-address = @Address
+address = @Address,
 address2 = @Address2,
 city = @City,
 state= @State,
@@ -127,7 +133,7 @@ billing_address1 = @BillingAddress1,
 billing_address2 = @BillingAddress2,
 billing_postal_code = @BillingPostalCode,
 created_at = @CreatedAt,
-lastused_at = @LastUsedAt
+last_used_at = @LastUsedAt
 where id = @Id;";
 
             var connection =await OpenConnectionAsync();
@@ -201,7 +207,7 @@ Set lastused_at = @LastUsedAt where id = @Id;";
             {
                 Id = reader.GetInt16(reader.GetOrdinal("id")),
                 UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
-                SessionId = reader.GetString(reader.GetOrdinal("session_id")),
+                SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id")),
                 FirstName = reader.GetString(reader.GetOrdinal("firstname")),
                 LastName = reader.GetString(reader.GetOrdinal("lastname")),
                 Email = reader.GetString(reader.GetOrdinal("email")),
@@ -212,45 +218,45 @@ Set lastused_at = @LastUsedAt where id = @Id;";
                 State = reader.GetString(reader.GetOrdinal("state")),
                 ZipCode = reader.GetString(reader.GetOrdinal("zipcode")),
                 Country = reader.GetString(reader.GetOrdinal("country")),
-                PayerEmail = reader.GetString(reader.GetOrdinal("payer_email")),
-                PayerName = reader.GetString(reader.GetOrdinal("payer_name")),
-                BillingAddress1 = reader.GetString(reader.GetOrdinal("billing_address1")),
-                BillingAddress2 = reader.GetString(reader.GetOrdinal("billing_address2")),
-                BillingCity = reader.GetString(reader.GetOrdinal("billing_city")),
-                BillingState = reader.GetString(reader.GetOrdinal("billing_state")),
-                BillingPostalCode = reader.GetString(reader.GetOrdinal("billing_postal_code")),
-                BillingCountry = reader.GetString(reader.GetOrdinal("billing_country")),
+                PayerEmail = reader.IsDBNull(reader.GetOrdinal("payer_email")) ? null : reader.GetString(reader.GetOrdinal("payer_email")),
+                PayerName = reader.IsDBNull(reader.GetOrdinal("payer_name")) ? null : reader.GetString(reader.GetOrdinal("payer_name")),
+                BillingAddress1 = reader.IsDBNull(reader.GetOrdinal("billing_address1")) ? null : reader.GetString(reader.GetOrdinal("billing_address1")),
+                BillingAddress2 = reader.IsDBNull(reader.GetOrdinal("billing_address2")) ? null : reader.GetString(reader.GetOrdinal("billing_address2")),
+                BillingCity = reader.IsDBNull(reader.GetOrdinal("billing_city")) ? null : reader.GetString(reader.GetOrdinal("billing_city")),
+                BillingState = reader.IsDBNull(reader.GetOrdinal("billing_state")) ? null : reader.GetString(reader.GetOrdinal("billing_state")),
+                BillingPostalCode = reader.IsDBNull(reader.GetOrdinal("billing_postal_code")) ? null : reader.GetString(reader.GetOrdinal("billing_postal_code")),
+                BillingCountry = reader.IsDBNull(reader.GetOrdinal("billing_country")) ? null : reader.GetString(reader.GetOrdinal("billing_country")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                LastUsedAt = reader.GetDateTime(reader.GetOrdinal("lastused_at"))
+                LastUsedAt = reader.IsDBNull(reader.GetOrdinal("last_used_at")) ? null : reader.GetDateTime(reader.GetOrdinal("last_used_at"))
             };
         }
 
         private void AddUserCheckoutInfoParameters(NpgsqlCommand command, UserCheckoutInfo checkoutInfo)
         {
             command.Parameters.AddWithValue("@UserId", checkoutInfo.UserId);
-            command.Parameters.AddWithValue("@SessionId", checkoutInfo.SessionId);
+            command.Parameters.AddWithValue("@SessionId", (object?)checkoutInfo.SessionId ?? DBNull.Value);
             command.Parameters.AddWithValue("@FirstName", checkoutInfo.FirstName);
             command.Parameters.AddWithValue("@LastName", checkoutInfo.LastName);
             command.Parameters.AddWithValue("@Email", checkoutInfo.Email);
             command.Parameters.AddWithValue("@Phone", checkoutInfo.Phone);
-            command.Parameters.AddWithValue("@PayerEmail", checkoutInfo.PayerEmail);
-            command.Parameters.AddWithValue("@BillingCity", checkoutInfo.BillingCity);
-            command.Parameters.AddWithValue("@BillingState", checkoutInfo.BillingState);
-            command.Parameters.AddWithValue("@BillingCountry", checkoutInfo.BillingCountry);
-            command.Parameters.AddWithValue("@UpdatedAt", checkoutInfo.UpdatedAt);
+            command.Parameters.AddWithValue("@PayerEmail", (object?) checkoutInfo.PayerEmail ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingCity", (object?)checkoutInfo.BillingCity ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingState", (object?)checkoutInfo.BillingState ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingCountry", (object?)checkoutInfo.BillingCountry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@UpdatedAt", (object?)checkoutInfo.UpdatedAt ?? DBNull.Value);
             command.Parameters.AddWithValue("@Address", checkoutInfo.Address);
             command.Parameters.AddWithValue("@Address2", checkoutInfo.Address2);
             command.Parameters.AddWithValue("@City", checkoutInfo.City);
             command.Parameters.AddWithValue("@State", checkoutInfo.State);
             command.Parameters.AddWithValue("@ZipCode", checkoutInfo.ZipCode);
             command.Parameters.AddWithValue("@Country", checkoutInfo.Country);
-            command.Parameters.AddWithValue("@PayerName", checkoutInfo.PayerName);
-            command.Parameters.AddWithValue("@BillingAddress1", checkoutInfo.BillingAddress1);
-            command.Parameters.AddWithValue("@BillingAddress2", checkoutInfo.BillingAddress2);
-            command.Parameters.AddWithValue("@BillingPostalCode", checkoutInfo.BillingPostalCode);
-            command.Parameters.AddWithValue("@CreatedAt", checkoutInfo.CreatedAt);
-            command.Parameters.AddWithValue("@LastUsedAt", checkoutInfo.LastUsedAt);
+            command.Parameters.AddWithValue("@PayerName", (object?)checkoutInfo.PayerName ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingAddress1", (object?)checkoutInfo.BillingAddress1 ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingAddress2", (object?)checkoutInfo.BillingAddress2 ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingPostalCode", (object?)checkoutInfo.BillingPostalCode ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CreatedAt", (object?)checkoutInfo.CreatedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@LastUsedAt", (object?)checkoutInfo.LastUsedAt ?? DBNull.Value);
         }
     }
 }

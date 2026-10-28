@@ -155,7 +155,7 @@ namespace Berryfy.API.Controllers
         private ActionResult<ApiResponse<T>> Failure<T>(string? error)
         {
             var message = error ?? "An unexpected error occurred";
-
+ 
             var statusCode = error switch
             {
                 ShopCategoryErrors.NotFound or
