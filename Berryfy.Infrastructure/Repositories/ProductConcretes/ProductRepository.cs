@@ -54,7 +54,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SELECT
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
-                    p.created_at, p.updated_at, p.shop_id, p.shop_category_id
+                    p.created_at, p.updated_at, p.category_id
                 FROM Products p
                 WHERE p.id = @Id
                 ORDER BY p.id;";
@@ -162,11 +162,10 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     is_active = @IsActive,
                     sku = @SKU,
                     updated_at = @UpdatedAt,
-                    shop_id = @ShopId,
-                    shop_category_id = @ShopCategoryId
+                    category_id = @CategoryId
                 WHERE id = @Id
                 RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_threshold, is_active, sku, created_at, updated_at, shop_id, shop_category_id;";
+                    low_stock_threshold, is_active, sku, created_at, updated_at,category_id;";
 
             using var connection = await OpenConnectionAsync();
 
@@ -443,6 +442,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 SKU = reader.GetString(reader.GetOrdinal("sku")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
+                CategoryId = reader.GetInt16(reader.GetOrdinal("category_id"))
                 //ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
                 //ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
             };
@@ -462,6 +462,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             command.Parameters.AddWithValue("@SKU", product.SKU);
             command.Parameters.AddWithValue("@CreatedAt", product.CreatedAt);
             command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt);
+            command.Parameters.AddWithValue("@CategoryId", product.CategoryId);
             //command.Parameters.AddWithValue("@ShopId", product.ShopId);
             //command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
         }
