@@ -1,0 +1,2 @@
+﻿ALTER TABLE payments
+RENAME COLUMN provider_payment_methodid TO provider_payment_method;
