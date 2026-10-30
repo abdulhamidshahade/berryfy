@@ -298,7 +298,7 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<Payment>> CreateAsync(Payment payment)
         {
-            string query = @"Insert into Payments (user_id, order_id, transaction_id, status, method, provider, amount, currency,
+            string query = @"Insert into payments (user_id, order_id, transaction_id, status, method, provider, amount, currency,
                              provider_transaction_id, provider_payment_method, card_last4, card_brand, payer_email,
                              payer_name, billing_address1, billing_address2, billing_city, billing_state, billing_postal_code,
                              billing_country, processing_fee, net_amount, processed_at, completed_at, failed_at, refunded_at,
@@ -567,7 +567,7 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
         {
             return new Payment()
             {
-                Id = reader.GetInt16(reader.GetOrdinal("Id")),
+                Id = reader.GetInt16(reader.GetOrdinal("id")),
                 UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
                 OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
                 TransactionId = reader.GetString(reader.GetOrdinal("transaction_id")),
@@ -587,6 +587,18 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 BillingState = reader.IsDBNull(reader.GetOrdinal("billing_state")) ? null : reader.GetString(reader.GetOrdinal("billing_state")),
                 BillingPostalCode = reader.IsDBNull(reader.GetOrdinal("billing_postal_code")) ? null : reader.GetString(reader.GetOrdinal("billing_postal_code")),
                 BillingCountry = reader.IsDBNull(reader.GetOrdinal("billing_country")) ? null : reader.GetString(reader.GetOrdinal("billing_country")),
+                ProcessingFee = reader.IsDBNull(reader.GetOrdinal("processing_fee")) ? 0 : reader.GetDecimal(reader.GetOrdinal("processing_fee")),
+                NetAmount = reader.IsDBNull(reader.GetOrdinal("net_amount")) ? 0 : reader.GetDecimal(reader.GetOrdinal("net_amount")),
+                ProcessedAt = reader.IsDBNull(reader.GetOrdinal("processed_at")) ? null : reader.GetDateTime(reader.GetOrdinal("processed_at")),
+                CompletedAt = reader.IsDBNull(reader.GetOrdinal("completed_at")) ? null : reader.GetDateTime(reader.GetOrdinal("completed_at")),
+                FailedAt = reader.IsDBNull(reader.GetOrdinal("failed_at")) ? null : reader.GetDateTime(reader.GetOrdinal("failed_at")),
+                RefundedAt = reader.IsDBNull(reader.GetOrdinal("refunded_at")) ? null : reader.GetDateTime(reader.GetOrdinal("refunded_at")),
+                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? null : reader.GetString(reader.GetOrdinal("error_message")),
+                FailureReason = reader.IsDBNull(reader.GetOrdinal("failure_reason")) ? null : reader.GetString(reader.GetOrdinal("failure_reason")),
+                Metadata = reader.IsDBNull(reader.GetOrdinal("metadata")) ? null : reader.GetString(reader.GetOrdinal("metadata")),
+                Notes = reader.IsDBNull(reader.GetOrdinal("notes")) ? null : reader.GetString(reader.GetOrdinal("notes")),
+                //CreatedAt = reader.IsDBNull(reader.GetOrdinal("created_at")) ? null : reader.GetDateTime(reader.GetOrdinal("created_at")),
+                //UpdatedAt = reader.IsDBNull(reader.GetOrdinal("updated_at")) ? null : reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };        
         }
 
@@ -595,8 +607,8 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             command.Parameters.AddWithValue("@UserId", payment.UserId);
             command.Parameters.AddWithValue("@OrderId", payment.OrderId);
             command.Parameters.AddWithValue("@TransactionId", payment.TransactionId);
-            command.Parameters.AddWithValue("@Status", payment.Status);
-            command.Parameters.AddWithValue("@Method", payment.Method);
+            command.Parameters.AddWithValue("@Status", (int)payment.Status);
+            command.Parameters.AddWithValue("@Method", (int)payment.Method);
             command.Parameters.AddWithValue("@Provider", payment.Provider);
             command.Parameters.AddWithValue("@Amount", payment.Amount);
             command.Parameters.AddWithValue("@Currency", payment.Currency);
@@ -611,6 +623,19 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
             command.Parameters.AddWithValue("@BillingState", (object)payment.BillingState ?? DBNull.Value);
             command.Parameters.AddWithValue("@BillingPostalCode", (object)payment.BillingPostalCode ?? DBNull.Value);
             command.Parameters.AddWithValue("@BillingCountry", (object)payment.BillingCountry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProviderPaymentMethod", (object)payment.ProviderPaymentMethodId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProccessingFee", (object)payment.ProcessingFee ?? DBNull.Value);
+            command.Parameters.AddWithValue("@NetAmount", (object)payment.NetAmount ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProccessedAt", (object)payment.ProcessedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("CompletedAt", (object)payment.CompletedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@FailedAt", (object)payment.FailedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@RefundAt", (object)payment.RefundedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ErrorMessage", (object)payment.ErrorMessage ?? DBNull.Value);
+            command.Parameters.AddWithValue("@FailureReason", (object)payment.FailureReason ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Metadata", (object)payment.Metadata ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Notes", (object)payment.Notes ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CreatedAt", (object)payment.CreatedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@UpdatedAt", (object)payment.UpdatedAt ?? DBNull.Value);
         }
     }
 }
