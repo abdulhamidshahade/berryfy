@@ -109,36 +109,24 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest requestDto)
         {
-            try
+            var result = await _authService.ForgotPasswordAsync(requestDto);
+
+            if (result.Value)
             {
-                var result = await _authService.ForgotPasswordAsync(requestDto);
-
-                if (result.Value)
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new ApiResponse<object>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "If the email address exists in our system, you will receive a 6-digit password reset code."
-                    });
-                }
-
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while processing your request."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "If the email address exists in our system, you will receive a 6-digit password reset code."
                 });
             }
-            catch (Exception ex)
+
+            return StatusCode(500, new ApiResponse<object>
             {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while processing your request."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 500,
+                StatusMessage = "An error occurred while processing your request."
+            });
         }
 
         [HttpPost]
@@ -146,37 +134,25 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> VerifyPasswordResetCode([FromBody] EmailConfirmation requestDto)
         {
-            try
+            var result = await _authService.VerifyPasswordResetCodeAsync(requestDto);
+
+            if (result != null && !string.IsNullOrEmpty(result.Value?.ResetToken))
             {
-                var result = await _authService.VerifyPasswordResetCodeAsync(requestDto);
-
-                if (result != null && !string.IsNullOrEmpty(result.Value?.ResetToken))
+                return Ok(new ApiResponse<VerifyPasswordResetCodeResponse>
                 {
-                    return Ok(new ApiResponse<VerifyPasswordResetCodeResponse>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "Code verified. You can now set a new password.",
-                        Data = result.Value
-                    });
-                }
-
-                return BadRequest(new ApiResponse<VerifyPasswordResetCodeResponse>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Invalid or expired code. Please try again or request a new code."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "Code verified. You can now set a new password.",
+                    Data = result.Value
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<VerifyPasswordResetCodeResponse>
             {
-                return StatusCode(500, new ApiResponse<VerifyPasswordResetCodeResponse>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while verifying your code."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Invalid or expired code. Please try again or request a new code."
+            });
         }
 
         [HttpPost]
@@ -184,36 +160,24 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResendPasswordReset([FromBody] ForgotPasswordRequest requestDto)
         {
-            try
+            var result = await _authService.ResendPasswordResetCodeAsync(requestDto.Email);
+
+            if (result)
             {
-                var result = await _authService.ResendPasswordResetCodeAsync(requestDto.Email);
-
-                if (result)
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new ApiResponse<object>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "If the email address exists in our system, a new reset code has been sent."
-                    });
-                }
-
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while sending the reset code."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "If the email address exists in our system, a new reset code has been sent."
                 });
             }
-            catch (Exception ex)
+
+            return StatusCode(500, new ApiResponse<object>
             {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while sending the reset code."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 500,
+                StatusMessage = "An error occurred while sending the reset code."
+            });
         }
 
         [HttpPost]
@@ -221,36 +185,24 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmail([FromBody] EmailConfirmation requestDto)
         {
-            try
+            var result = await _authService.ConfirmEmailAsync(requestDto);
+
+            if (result.Value)
             {
-                var result = await _authService.ConfirmEmailAsync(requestDto);
-
-                if (result.Value)
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new ApiResponse<object>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "Email confirmed successfully. You can now sign in to your account."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to confirm email. The confirmation link may be invalid or expired."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "Email confirmed successfully. You can now sign in to your account."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<object>
             {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while confirming your email."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to confirm email. The confirmation link may be invalid or expired."
+            });
         }
 
         [HttpPost]
@@ -258,36 +210,24 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest requestDto)
         {
-            try
+            var result = await _authService.ResendConfirmationEmailAsync(requestDto.Email);
+
+            if (result.Value)
             {
-                var result = await _authService.ResendConfirmationEmailAsync(requestDto.Email);
-
-                if (result.Value)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "If the email address exists in our system, a new confirmation link has been sent."
-                    });
-                }
-
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while sending the confirmation email."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "If the email address exists in our system, a new confirmation link has been sent."
                 });
             }
-            catch (Exception ex)
+
+            return StatusCode(500, new ApiResponse<object>
             {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while sending the confirmation email."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 500,
+                StatusMessage = "An error occurred while sending the confirmation email."
+            });
         }
 
         [HttpPost]
@@ -295,36 +235,24 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest requestDto)
         {
-            try
+            var result = await _authService.ResetPasswordAsync(requestDto);
+
+            if (result.Value)
             {
-                var result = await _authService.ResetPasswordAsync(requestDto);
-
-                if (result.Value)
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new ApiResponse<object>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "Password has been reset successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to reset password. Please check your email and reset token."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "Password has been reset successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<object>
             {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while processing your request."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to reset password. Please check your email and reset token."
+            });
         }
 
         [HttpGet]
@@ -418,38 +346,25 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            try
-            {
-                var result = await _authService.RefreshTokenAsync(requestDto.Token);
+            var result = await _authService.RefreshTokenAsync(requestDto.Token);
 
-                if (string.IsNullOrEmpty(result.Token))
-                {
-                    return Unauthorized(new ApiResponse<object>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 401,
-                        StatusMessage = result.ErrorMessage ?? "Invalid or expired refresh token."
-                    });
-                }
-
-                return Ok(new ApiResponse<LoginResponse>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Token refreshed successfully.",
-                    Data = result
-                });
-            }
-            catch (Exception ex)
+            if (string.IsNullOrEmpty(result.Token))
             {
-                _logger.LogError(ex, "An error occurred while refreshing the token.");
-                return StatusCode(500, new ApiResponse<object>
+                return Unauthorized(new ApiResponse<object>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while refreshing the token."
+                    StatusCode = 401,
+                    StatusMessage = result.ErrorMessage ?? "Invalid or expired refresh token."
                 });
             }
+
+            return Ok(new ApiResponse<LoginResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Token refreshed successfully.",
+                Data = result
+            });
         }
 
         [HttpPost]
@@ -473,26 +388,14 @@ namespace Berryfy.API.Controllers
         [Route("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            try
+            var users = await _userService.GetAllUsers();
+            return Ok(new ApiResponse<List<User>>
             {
-                var users = await _userService.GetAllUsers();
-                return Ok(new ApiResponse<List<User>>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Users retrieved successfully.",
-                    Data = users.Value
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<List<User>>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while retrieving users."
-                });
-            }
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Users retrieved successfully.",
+                Data = users.Value
+            });
         }
 
         [HttpGet]
@@ -500,36 +403,24 @@ namespace Berryfy.API.Controllers
         [Route("users/{id}")]
         public async Task<IActionResult> GetUserById(int id)
         {
-            try
+            var user = await _userService.GetUserById(id);
+            if (user == null)
             {
-                var user = await _userService.GetUserById(id);
-                if (user == null)
-                {
-                    return NotFound(new ApiResponse<User>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "User not found."
-                    });
-                }
-
-                return Ok(new ApiResponse<User>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "User retrieved successfully.",
-                    Data = user.Value
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<User>
+                return NotFound(new ApiResponse<User>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while retrieving the user."
+                    StatusCode = 404,
+                    StatusMessage = "User not found."
                 });
             }
+
+            return Ok(new ApiResponse<User>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "User retrieved successfully.",
+                Data = user.Value
+            });
         }
 
         [HttpGet]
@@ -610,37 +501,25 @@ namespace Berryfy.API.Controllers
         [Route("users/{userId}/lock")]
         public async Task<IActionResult> LockUserAccount(int userId, [FromBody] LockUser requestDto)
         {
-            try
+            DateTime? lockoutEnd = requestDto.LockoutEnd;
+            var result = await _userService.LockUserAccountAsync(userId, lockoutEnd);
+
+            if (result.Value)
             {
-                DateTime? lockoutEnd = requestDto.LockoutEnd;
-                var result = await _userService.LockUserAccountAsync(userId, lockoutEnd);
-
-                if (result.Value)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User account locked successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to lock user account."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User account locked successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while locking the user account."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to lock user account."
+            });
         }
 
         [HttpPost]
@@ -648,36 +527,24 @@ namespace Berryfy.API.Controllers
         [Route("users/{userId}/unlock")]
         public async Task<IActionResult> UnlockUserAccount(int userId)
         {
-            try
+            var result = await _userService.UnlockUserAccountAsync(userId);
+
+            if (result.IsSuccess)
             {
-                var result = await _userService.UnlockUserAccountAsync(userId);
-
-                if (result.IsSuccess)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User account unlocked successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to unlock user account."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User account unlocked successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while unlocking the user account."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to unlock user account."
+            });
         }
 
         [HttpPost]
@@ -694,37 +561,24 @@ namespace Berryfy.API.Controllers
                     StatusMessage = "New password is required."
                 });
             }
+            var result = await _userService.ResetUserPasswordAsync(userId, requestDto.NewPassword);
 
-            try
+            if (result.Value)
             {
-                var result = await _userService.ResetUserPasswordAsync(userId, requestDto.NewPassword);
-
-                if (result.Value)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User password reset successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to reset user password."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User password reset successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while resetting the user password."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to reset user password."
+            });
         }
 
         [HttpPost]
@@ -732,36 +586,24 @@ namespace Berryfy.API.Controllers
         [Route("users/{userId}/verify-email")]
         public async Task<IActionResult> VerifyUserEmail(int userId)
         {
-            try
+            var result = await _userService.VerifyUserEmailAsync(userId);
+
+            if (result.IsSuccess)
             {
-                var result = await _userService.VerifyUserEmailAsync(userId);
-
-                if (result.IsSuccess)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User email verified successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to verify user email."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User email verified successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while verifying the user email."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to verify user email."
+            });
         }
 
         [HttpPut]
@@ -779,37 +621,24 @@ namespace Berryfy.API.Controllers
                     Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
                 });
             }
+            var result = await _userService.UpdateUserAsync(userId, updateUserDto);
 
-            try
+            if (result.IsSuccess)
             {
-                var result = await _userService.UpdateUserAsync(userId, updateUserDto);
-
-                if (result.IsSuccess)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User updated successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to update user."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User updated successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while updating the user."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to update user."
+            });
         }
 
         [HttpPost]
@@ -817,37 +646,25 @@ namespace Berryfy.API.Controllers
         [Route("users")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUser createUserDto)
         {
-            try
+            var user = await _userService.CreateUserAsync(createUserDto);
+
+            if (user.IsSuccess)
             {
-                var user = await _userService.CreateUserAsync(createUserDto);
-
-                if (user.IsSuccess)
+                return StatusCode(201, new ApiResponse<User>
                 {
-                    return StatusCode(201, new ApiResponse<User>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 201,
-                        StatusMessage = user.SuccessMessage,
-                        Data = user.Value
-                    });
-                }
-
-                return BadRequest(new ApiResponse<User>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = user.ErrorMessage
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    StatusMessage = user.SuccessMessage,
+                    Data = user.Value
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<User>
             {
-                return StatusCode(500, new ApiResponse<User>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while creating the user."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = user.ErrorMessage
+            });
         }
 
         [HttpDelete]
@@ -855,36 +672,24 @@ namespace Berryfy.API.Controllers
         [Route("users/{userId}")]
         public async Task<IActionResult> DeleteUser(int userId)
         {
-            try
+            var result = await _userService.DeleteUserAsync(userId);
+
+            if (result.IsSuccess)
             {
-                var result = await _userService.DeleteUserAsync(userId);
-
-                if (result.IsSuccess)
+                return Ok(new ApiResponse<bool>
                 {
-                    return Ok(new ApiResponse<bool>
-                    {
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        StatusMessage = "User deleted successfully."
-                    });
-                }
-
-                return BadRequest(new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 400,
-                    StatusMessage = "Failed to delete user."
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    StatusMessage = "User deleted successfully."
                 });
             }
-            catch (Exception ex)
+
+            return BadRequest(new ApiResponse<bool>
             {
-                return StatusCode(500, new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "An error occurred while deleting the user."
-                });
-            }
+                IsSuccess = false,
+                StatusCode = 400,
+                StatusMessage = "Failed to delete user."
+            });
         }
     }
 }
