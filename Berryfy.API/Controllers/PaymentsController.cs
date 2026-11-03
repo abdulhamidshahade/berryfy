@@ -35,99 +35,92 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> ProcessPayment([FromBody] CreatePayment createPaymentDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetCurrentUserId();
+            var sessionId = GetSessionId();
+
+            if (!userId.HasValue) return Unauthorized();
+            if (!createPaymentDto.OrderId.HasValue) return BadRequest(new { StatusMessage = "An order is required" });
+            var payableOrder = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
+            if (payableOrder == null) return NotFound();
+            if (payableOrder.Value.UserId != userId.Value) return Forbid();
+            if (payableOrder.Value.Status != OrderStatus.Pending || payableOrder.Value.IsPaid)
+                return Conflict(new { StatusMessage = "This order is not awaiting payment" });
+            if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Value.Total)
+                return BadRequest(new { StatusMessage = "Payment amount must match the order total" });
+            if (!string.Equals(createPaymentDto.Currency, "USD", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { StatusMessage = "Orders must be paid in USD" });
+
+            var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Value.Id);
+            if (previousPayment.IsSuccess && previousPayment.Value?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
+                return Conflict(new { StatusMessage = "Payment has already been submitted for this order" });
+
+            var result = await _paymentService.ProcessPaymentAsync(createPaymentDto, userId, sessionId);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+
+            if (createPaymentDto.OrderId.HasValue)
+            {
+                var order = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
+                if (order != null)
                 {
-                    return BadRequest(ModelState);
-                }
+                    var mappedOrder = OrderResponse.MapToOrder(order.Value);
 
-                var userId = GetCurrentUserId();
-                var sessionId = GetSessionId();
-
-                if (!userId.HasValue) return Unauthorized();
-                if (!createPaymentDto.OrderId.HasValue) return BadRequest(new { StatusMessage = "An order is required" });
-                var payableOrder = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
-                if (payableOrder == null) return NotFound();
-                if (payableOrder.Value.UserId != userId.Value) return Forbid();
-                if (payableOrder.Value.Status != OrderStatus.Pending || payableOrder.Value.IsPaid)
-                    return Conflict(new { StatusMessage = "This order is not awaiting payment" });
-                if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Value.Total)
-                    return BadRequest(new { StatusMessage = "Payment amount must match the order total" });
-                if (!string.Equals(createPaymentDto.Currency, "USD", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new { StatusMessage = "Orders must be paid in USD" });
-
-                var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Value.Id);
-                if (previousPayment.IsSuccess && previousPayment.Value?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
-                    return Conflict(new { StatusMessage = "Payment has already been submitted for this order" });
-
-                var result = await _paymentService.ProcessPaymentAsync(createPaymentDto, userId, sessionId);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
-
-                if (createPaymentDto.OrderId.HasValue)
-                {
-                    var order = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
-                    if (order != null)
+                    if (result.Value?.Success == true)
                     {
-                        var mappedOrder = OrderResponse.MapToOrder(order.Value);
-                        
-                        if (result.Value?.Success == true)
+                        if (order.Value.Status == OrderStatus.Pending)
                         {
-                            if (order.Value.Status == OrderStatus.Pending)
+                            var inventoryOk = await _orderService.DeductInventoryForPaidOrderAsync(order.Value.Id);
+                            if (!inventoryOk.Value)
                             {
-                                var inventoryOk = await _orderService.DeductInventoryForPaidOrderAsync(order.Value.Id);
-                                if (!inventoryOk.Value)
+                                _logger.LogCritical(
+                                    "Payment succeeded for order {OrderId} but inventory deduction failed. Manual reconciliation required.",
+                                    order.Value.Id);
+                                return StatusCode(StatusCodes.Status500InternalServerError, new
                                 {
-                                    _logger.LogCritical(
-                                        "Payment succeeded for order {OrderId} but inventory deduction failed. Manual reconciliation required.",
-                                        order.Value.Id);
-                                    return StatusCode(StatusCodes.Status500InternalServerError, new
-                                    {
-                                        IsSuccess = false,
-                                        StatusCode = 500,
-                                        StatusMessage =
-                                            "Payment was captured but inventory could not be finalized. Contact support with your order ID.",
-                                        OrderId = order.Value.Id,
-                                        Data = result.Value
-                                    });
-                                }
-                            }
-
-                            if (!_orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed).GetAwaiter().GetResult().Value)
-                                throw new InvalidOperationException("Could not finalize the order payment state");
-                            mappedOrder.isPaid = true;
-                            if (!_orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing).GetAwaiter().GetResult().Value)
-                                throw new InvalidOperationException("Could not finalize the order status");
-
-                            if (order.Value.CartId > 0)
-                            {
-                                var cart = await _cartService.GetCartByIdAsync(order.Value.CartId, CartStatus.PendingPayment);
-                                if (cart != null)
-                                {
-                                    var cartConverted = await _cartService.ConvertCartAsync(order.Value.CartId);
-                                    if (cartConverted.Value)
-                                    {
-                                        await _cartService.ClearCartAsync(order.Value.CartId, userId, null);
-                                    }
-                                }
+                                    IsSuccess = false,
+                                    StatusCode = 500,
+                                    StatusMessage =
+                                        "Payment was captured but inventory could not be finalized. Contact support with your order ID.",
+                                    OrderId = order.Value.Id,
+                                    Data = result.Value
+                                });
                             }
                         }
-                        else
+
+                        if (!_orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed).GetAwaiter().GetResult().Value)
+                            throw new InvalidOperationException("Could not finalize the order payment state");
+                        mappedOrder.isPaid = true;
+                        if (!_orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing).GetAwaiter().GetResult().Value)
+                            throw new InvalidOperationException("Could not finalize the order status");
+
+                        if (order.Value.CartId > 0)
                         {
-                            await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Failed);
+                            var cart = await _cartService.GetCartByIdAsync(order.Value.CartId, CartStatus.PendingPayment);
+                            if (cart != null)
+                            {
+                                var cartConverted = await _cartService.ConvertCartAsync(order.Value.CartId);
+                                if (cartConverted.Value)
+                                {
+                                    await _cartService.ClearCartAsync(order.Value.CartId, userId, null);
+                                }
+                            }
                         }
                     }
+                    else
+                    {
+                        await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Failed);
+                    }
                 }
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while processing payment", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -135,21 +128,14 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentById(int id)
         {
-            try
+            var result = await _paymentService.GetPaymentByIdAsync(id);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaymentByIdAsync(id);
-                if (!result.IsSuccess)
-                {
-                    return NotFound(result);
-                }
+                return NotFound(result);
+            }
 
-                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payment", Errors = new[] { ex.Message } });
-            }
+            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
+            return Ok(result);
         }
 
 
@@ -157,21 +143,14 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentByTransactionId(string transactionId)
         {
-            try
+            var result = await _paymentService.GetPaymentByTransactionIdAsync(transactionId);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaymentByTransactionIdAsync(transactionId);
-                if (!result.IsSuccess)
-                {
-                    return NotFound(result);
-                }
+                return NotFound(result);
+            }
 
-                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payment", Errors = new[] { ex.Message } });
-            }
+            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
+            return Ok(result);
         }
 
 
@@ -179,21 +158,14 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentByOrderId(int orderId)
         {
-            try
+            var result = await _paymentService.GetPaymentByOrderIdAsync(orderId);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-                if (!result.IsSuccess)
-                {
-                    return NotFound(result);
-                }
+                return NotFound(result);
+            }
 
-                if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payment", Errors = new[] { ex.Message } });
-            }
+            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
+            return Ok(result);
         }
 
 
@@ -201,20 +173,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetAllPayments()
         {
-            try
+            var result = await _paymentService.GetAllPaymentsAsync();
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetAllPaymentsAsync();
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payments", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -222,25 +187,18 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> GetPaymentsByUserId(int userId)
         {
-            try
+            if (!CanAccessUserResource(userId))
             {
-                if (!CanAccessUserResource(userId))
-                {
-                    return Forbid();
-                }
-
-                var result = await _paymentService.GetPaymentsByUserIdAsync(userId);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
+                return Forbid();
             }
-            catch (Exception ex)
+
+            var result = await _paymentService.GetPaymentsByUserIdAsync(userId);
+            if (!result.IsSuccess)
             {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving user payments", Errors = new[] { ex.Message } });
+                return BadRequest(result);
             }
+
+            return Ok(result);
         }
 
 
@@ -248,26 +206,19 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<IActionResult> GetMyPayments(int page = 1, int pageSize = 10)
         {
-            try
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                var userId = GetCurrentUserId();
-                if (!userId.HasValue)
-                {
-                    return Unauthorized(new { IsSuccess = false, StatusCode = 401, StatusMessage = "User not authenticated" });
-                }
-
-                var result = await _paymentService.GetPaginatedPaymentsByUserIdAsync(userId.Value, page, pageSize);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
+                return Unauthorized(new { IsSuccess = false, StatusCode = 401, StatusMessage = "User not authenticated" });
             }
-            catch (Exception ex)
+
+            var result = await _paymentService.GetPaginatedPaymentsByUserIdAsync(userId.Value, page, pageSize);
+            if (!result.IsSuccess)
             {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving your payments", Errors = new[] { ex.Message } });
+                return BadRequest(result);
             }
+
+            return Ok(result);
         }
 
 
@@ -275,20 +226,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetPaymentsByStatus(PaymentStatus status)
         {
-            try
+            var result = await _paymentService.GetPaymentsByStatusAsync(status);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaymentsByStatusAsync(status);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payments by status", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -296,20 +240,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetPaymentsByDateRange(DateTime startDate, DateTime endDate)
         {
-            try
+            var result = await _paymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payments by date range", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -317,20 +254,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetPaginatedPayments(int page = 1, int pageSize = 50)
         {
-            try
+            var result = await _paymentService.GetPaginatedPaymentsAsync(page, pageSize);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetPaginatedPaymentsAsync(page, pageSize);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving paginated payments", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -338,25 +268,18 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] UpdatePaymentStatus updateDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var result = await _paymentService.UpdatePaymentStatusAsync(id, updateDto.Status, updateDto.Notes);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
+                return BadRequest(ModelState);
             }
-            catch (Exception ex)
+
+            var result = await _paymentService.UpdatePaymentStatusAsync(id, updateDto.Status, updateDto.Notes);
+            if (!result.IsSuccess)
             {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while updating payment status", Errors = new[] { ex.Message } });
+                return BadRequest(result);
             }
+
+            return Ok(result);
         }
 
 
@@ -364,25 +287,18 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> RefundPayment(int id, [FromBody] RefundPayment refundDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var result = await _paymentService.RefundPaymentAsync(id, refundDto.RefundAmount, refundDto.Reason);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
+                return BadRequest(ModelState);
             }
-            catch (Exception ex)
+
+            var result = await _paymentService.RefundPaymentAsync(id, refundDto.RefundAmount, refundDto.Reason);
+            if (!result.IsSuccess)
             {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while processing refund", Errors = new[] { ex.Message } });
+                return BadRequest(result);
             }
+
+            return Ok(result);
         }
 
 
@@ -390,20 +306,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> DeletePayment(int id)
         {
-            try
+            var result = await _paymentService.DeletePaymentAsync(id);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.DeletePaymentAsync(id);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while deleting payment", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -411,20 +320,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetTotalPaymentCount()
         {
-            try
+            var result = await _paymentService.GetTotalPaymentCountAsync();
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetTotalPaymentCountAsync();
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving payment count", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -432,20 +334,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetTotalAmountByDateRange(DateTime startDate, DateTime endDate)
         {
-            try
+            var result = await _paymentService.GetTotalAmountByDateRangeAsync(startDate, endDate);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.GetTotalAmountByDateRangeAsync(startDate, endDate);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while retrieving total amount", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -453,20 +348,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> SearchPayments(string searchTerm, int page = 1, int pageSize = 50)
         {
-            try
+            var result = await _paymentService.SearchPaymentsAsync(searchTerm, page, pageSize);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.SearchPaymentsAsync(searchTerm, page, pageSize);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while searching payments", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
 
 
@@ -474,20 +362,13 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> VerifyPaymentWithProvider(string transactionId)
         {
-            try
+            var result = await _paymentService.VerifyPaymentWithProviderAsync(transactionId);
+            if (!result.IsSuccess)
             {
-                var result = await _paymentService.VerifyPaymentWithProviderAsync(transactionId);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(result);
-                }
+                return BadRequest(result);
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, StatusCode = 500, StatusMessage = "An error occurred while verifying payment", Errors = new[] { ex.Message } });
-            }
+            return Ok(result);
         }
     }
 }
