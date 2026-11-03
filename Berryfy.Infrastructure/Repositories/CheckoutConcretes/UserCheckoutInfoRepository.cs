@@ -42,7 +42,7 @@ namespace Berryfy.Infrastructure.Repositories.CheckoutConcretes
 
             checkoutInfo = MapUserCheckoutInfo(reader);
 
-            return new InfrastructureResponse<UserCheckoutInfo?>()
+            return new InfrastructureResponse<UserCheckoutInfo>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
