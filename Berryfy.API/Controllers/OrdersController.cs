@@ -32,55 +32,42 @@ namespace Berryfy.API.Controllers
         //[UserAndAbove]
         public async Task<ActionResult<ApiResponse<Order>>> CreateOrder([FromBody] CreateOrder request)
         {
-            try
+            if (request == null)
             {
-                if (request == null)
+                return BadRequest(new ApiResponse<Order>
                 {
-                    return BadRequest(new ApiResponse<Order>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Invalid request data"
-                    });
-                }
-
-                var userId = GetCurrentUserId();
-                if (!userId.HasValue) return Unauthorized();
-                var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active)
-                    ?? await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
-                if (cart == null) return NotFound();
-                if (cart.Value.UserId != userId.Value) return Forbid();
-
-                request.UserId = userId.Value;
-                var order = await _orderService.CreateOrderFromCartAsync(request.CartId, request);
-                if (order == null)
-                {
-                    return StatusCode(500, new ApiResponse<Order>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Order could not be created"
-                    });
-                }
-
-                return CreatedAtAction(nameof(GetOrderById), new { id = order.Value.Id }, new ApiResponse<Order>
-                {
-                    Data = order.Value,
-                    IsSuccess = true,
-                    StatusCode = 201,
-                    StatusMessage = "Order created successfully"
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Invalid request data"
                 });
             }
-            catch (Exception ex)
+
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue) return Unauthorized();
+            var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active)
+                ?? await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
+            if (cart == null) return NotFound();
+            if (cart.Value.UserId != userId.Value) return Forbid();
+
+            request.UserId = userId.Value;
+            var order = await _orderService.CreateOrderFromCartAsync(request.CartId, request);
+            if (order == null)
             {
                 return StatusCode(500, new ApiResponse<Order>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Error creating order",
-                    Errors = new List<string> { ex.Message }
+                    StatusMessage = "Order could not be created"
                 });
             }
+
+            return CreatedAtAction(nameof(GetOrderById), new { id = order.Value.Id }, new ApiResponse<Order>
+            {
+                Data = order.Value,
+                IsSuccess = true,
+                StatusCode = 201,
+                StatusMessage = "Order created successfully"
+            });
         }
 
 
@@ -88,39 +75,26 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<OrderResponse>>> GetOrderById(int id)
         {
-            try
+            var order = await _orderService.GetOrderByIdAsync(id);
+            if (order == null)
             {
-                var order = await _orderService.GetOrderByIdAsync(id);
-                if (order == null)
-                {
-                    return NotFound(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "Order not found"
-                    });
-                }
-
-                if (!CanAccessUserResource(order.Value.UserId)) return Forbid();
-
-                return Ok(new ApiResponse<OrderResponse>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order retrieved successfully",
-                    Data = order.Value
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<OrderResponse>
+                return NotFound(new ApiResponse<OrderResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error retrieving order",
-                    Errors = new List<string> { ex.Message }
+                    StatusCode = 404,
+                    StatusMessage = "Order not found"
                 });
             }
+
+            if (!CanAccessUserResource(order.Value.UserId)) return Forbid();
+
+            return Ok(new ApiResponse<OrderResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order retrieved successfully",
+                Data = order.Value
+            });
         }
 
 
@@ -128,33 +102,20 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<List<OrderResponse>>>> GetUserOrders(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
+            if (!CanAccessUserResource(userId))
             {
-                if (!CanAccessUserResource(userId))
-                {
-                    return Forbid();
-                }
-
-                var orders = await _orderService.GetUserOrdersAsync(userId, page, pageSize);
-
-                return Ok(new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "User orders retrieved successfully",
-                    Data = orders.Value
-                });
+                return Forbid();
             }
-            catch (Exception ex)
+
+            var orders = await _orderService.GetUserOrdersAsync(userId, page, pageSize);
+
+            return Ok(new ApiResponse<List<OrderResponse>>
             {
-                return StatusCode(500, new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error retrieving user orders",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "User orders retrieved successfully",
+                Data = orders.Value
+            });
         }
 
 
@@ -162,52 +123,39 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<CancellationResult>>> CancelOrder(int orderId, [FromBody] CancelOrderRequest request)
         {
-            try
+            if (string.IsNullOrWhiteSpace(request?.Reason))
             {
-                if (string.IsNullOrWhiteSpace(request?.Reason))
+                return BadRequest(new ApiResponse<CancellationResult>
                 {
-                    return BadRequest(new ApiResponse<CancellationResult>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Cancellation reason is required"
-                    });
-                }
-
-                var result = await _orderService.CancelOrderAsync(orderId, request.Reason);
-                if (!result.Value)
-                {
-                    return StatusCode(500, new ApiResponse<CancellationResult>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Could not cancel the order"
-                    });
-                }
-
-                return Ok(new ApiResponse<CancellationResult>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order cancelled successfully",
-                    Data = new CancellationResult
-                    {
-                        IsSuccess = true,
-                        InventoryRestored = true,
-                        CouponsReverted = true
-                    }
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Cancellation reason is required"
                 });
             }
-            catch (Exception ex)
+
+            var result = await _orderService.CancelOrderAsync(orderId, request.Reason);
+            if (!result.Value)
             {
                 return StatusCode(500, new ApiResponse<CancellationResult>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Error cancelling order",
-                    Errors = new List<string> { ex.Message }
+                    StatusMessage = "Could not cancel the order"
                 });
             }
+
+            return Ok(new ApiResponse<CancellationResult>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order cancelled successfully",
+                Data = new CancellationResult
+                {
+                    IsSuccess = true,
+                    InventoryRestored = true,
+                    CouponsReverted = true
+                }
+            });
         }
 
 
@@ -215,53 +163,40 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<RefundResult>>> RefundOrder(int orderId, [FromBody] RefundOrderRequest request)
         {
-            try
+            if (string.IsNullOrWhiteSpace(request?.Reason))
             {
-                if (string.IsNullOrWhiteSpace(request?.Reason))
+                return BadRequest(new ApiResponse<RefundResult>
                 {
-                    return BadRequest(new ApiResponse<RefundResult>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Refund reason is required"
-                    });
-                }
-
-                var result = await _orderService.RefundOrderAsync(orderId, request.Reason);
-                if (!result.Value)
-                {
-                    return StatusCode(500, new ApiResponse<RefundResult>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Could not refund the order"
-                    });
-                }
-
-                return Ok(new ApiResponse<RefundResult>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order refunded successfully",
-                    Data = new RefundResult
-                    {
-                        IsSuccess = true,
-                        PaymentRefunded = true,
-                        InventoryRestored = true,
-                        CouponsReverted = true
-                    }
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Refund reason is required"
                 });
             }
-            catch (Exception ex)
+
+            var result = await _orderService.RefundOrderAsync(orderId, request.Reason);
+            if (!result.Value)
             {
                 return StatusCode(500, new ApiResponse<RefundResult>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Error refunding order",
-                    Errors = new List<string> { ex.Message }
+                    StatusMessage = "Could not refund the order"
                 });
             }
+
+            return Ok(new ApiResponse<RefundResult>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order refunded successfully",
+                Data = new RefundResult
+                {
+                    IsSuccess = true,
+                    PaymentRefunded = true,
+                    InventoryRestored = true,
+                    CouponsReverted = true
+                }
+            });
         }
 
 
@@ -269,42 +204,29 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<OrderTotal>>> CalculateOrderTotals([FromQuery] int cartId)
         {
-            try
-            {
-                var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
+            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
                     ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
-                if (cart == null) return NotFound();
-                if (!CanAccessUserResource(cart.Value.UserId)) return Forbid();
+            if (cart == null) return NotFound();
+            if (!CanAccessUserResource(cart.Value.UserId)) return Forbid();
 
-                var totals = await _orderService.CalculateOrderTotalsAsync(cartId);
-                if (totals == null)
-                {
-                    return NotFound(new ApiResponse<OrderTotal>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "Cart not found"
-                    });
-                }
-
-                return Ok(new ApiResponse<OrderTotal>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order totals calculated successfully",
-                    Data = totals.Value
-                });
-            }
-            catch (Exception ex)
+            var totals = await _orderService.CalculateOrderTotalsAsync(cartId);
+            if (totals == null)
             {
-                return StatusCode(500, new ApiResponse<OrderTotal>
+                return NotFound(new ApiResponse<OrderTotal>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error calculating order totals",
-                    Errors = new List<string> { ex.Message }
+                    StatusCode = 404,
+                    StatusMessage = "Cart not found"
                 });
             }
+
+            return Ok(new ApiResponse<OrderTotal>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order totals calculated successfully",
+                Data = totals.Value
+            });
         }
 
 
@@ -312,49 +234,36 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<OrderResponse>>> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusRequest request)
         {
-            try
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+            if (order == null)
             {
-                var order = await _orderService.GetOrderByIdAsync(orderId);
-                if (order == null)
-                {
-                    return NotFound(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "Order not found"
-                    });
-                }
-
-                var mappedOrder = OrderResponse.MapToOrder(order.Value);
-                var result = await _orderService.UpdateOrderStatusAsync(mappedOrder, request.NewStatus);
-                if (!result.Value)
-                {
-                    return Conflict(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 409,
-                        StatusMessage = "Invalid order transition. Use cancellation or refund for returns; payment is required before fulfillment."
-                    });
-                }
-
-                return Ok(new ApiResponse<OrderResponse>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order status updated successfully",
-                    Data = _orderService.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<OrderResponse>
+                return NotFound(new ApiResponse<OrderResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error updating order status",
-                    Errors = new List<string> { ex.Message }
+                    StatusCode = 404,
+                    StatusMessage = "Order not found"
                 });
             }
+
+            var mappedOrder = OrderResponse.MapToOrder(order.Value);
+            var result = await _orderService.UpdateOrderStatusAsync(mappedOrder, request.NewStatus);
+            if (!result.Value)
+            {
+                return Conflict(new ApiResponse<OrderResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 409,
+                    StatusMessage = "Invalid order transition. Use cancellation or refund for returns; payment is required before fulfillment."
+                });
+            }
+
+            return Ok(new ApiResponse<OrderResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order status updated successfully",
+                Data = _orderService.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value
+            });
         }
 
 
@@ -362,47 +271,34 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<OrderResponse>>> GetOrderByReference(string referenceNumber)
         {
-            try
+            if (string.IsNullOrWhiteSpace(referenceNumber))
             {
-                if (string.IsNullOrWhiteSpace(referenceNumber))
-                {
-                    return BadRequest(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Reference number is required"
-                    });
-                }
-
-                var order = await _orderService.GetOrderByReferenceNumberAsync(referenceNumber);
-                if (order == null)
-                {
-                    return NotFound(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "Order not found"
-                    });
-                }
-
-                return Ok(new ApiResponse<OrderResponse>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order retrieved successfully",
-                    Data = OrderResponse.MapFromOrder(order.Value)
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<OrderResponse>
+                return BadRequest(new ApiResponse<OrderResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error retrieving order",
-                    Errors = new List<string> { ex.Message }
+                    StatusCode = 400,
+                    StatusMessage = "Reference number is required"
                 });
             }
+
+            var order = await _orderService.GetOrderByReferenceNumberAsync(referenceNumber);
+            if (order == null)
+            {
+                return NotFound(new ApiResponse<OrderResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Order not found"
+                });
+            }
+
+            return Ok(new ApiResponse<OrderResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order retrieved successfully",
+                Data = OrderResponse.MapFromOrder(order.Value)
+            });
         }
 
 
@@ -410,28 +306,15 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<List<OrderResponse>>>> GetOrdersByStatus(OrderStatus status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                var orders = await _orderService.GetOrdersByStatusAsync(status, page, pageSize);
+            var orders = await _orderService.GetOrdersByStatusAsync(status, page, pageSize);
 
-                return Ok(new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Orders retrieved successfully",
-                    Data = OrderResponse.MapFromOrder(orders.Value)
-                });
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<List<OrderResponse>>
             {
-                return StatusCode(500, new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error retrieving orders",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Orders retrieved successfully",
+                Data = OrderResponse.MapFromOrder(orders.Value)
+            });
         }
 
 
@@ -439,28 +322,15 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<List<OrderResponse>>>> GetAllOrdersForAdmin([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         {
-            try
-            {
-                var orders = await _orderService.GetAllOrdersAsync(page, pageSize);
+            var orders = await _orderService.GetAllOrdersAsync(page, pageSize);
 
-                return Ok(new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "All orders retrieved successfully",
-                    Data = orders.Value
-                });
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<List<OrderResponse>>
             {
-                return StatusCode(500, new ApiResponse<List<OrderResponse>>
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Error retrieving all orders",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "All orders retrieved successfully",
+                Data = orders.Value
+            });
         }
 
 
@@ -468,37 +338,24 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<ActionResult<ApiResponse<bool>>> ProcessOrder(int orderId)
         {
-            try
-            {
-                var result = await _orderService.ProcessOrderAsync(orderId);
-                if (!result.Value)
-                {
-                    return StatusCode(500, new ApiResponse<bool>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Could not process the order"
-                    });
-                }
-
-                return Ok(new ApiResponse<bool>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order processed successfully",
-                    Data = true
-                });
-            }
-            catch (Exception ex)
+            var result = await _orderService.ProcessOrderAsync(orderId);
+            if (!result.Value)
             {
                 return StatusCode(500, new ApiResponse<bool>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Error processing order",
-                    Errors = new List<string> { ex.Message }
+                    StatusMessage = "Could not process the order"
                 });
             }
+
+            return Ok(new ApiResponse<bool>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order processed successfully",
+                Data = true
+            });
         }
 
 
@@ -506,66 +363,53 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<OrderResponse>>> SyncOrderWithCart(int orderId)
         {
-            try
+            var userId = GetCurrentUserId();
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+
+            if (order == null)
             {
-                var userId = GetCurrentUserId();
-                var order = await _orderService.GetOrderByIdAsync(orderId);
-                
-                if (order == null)
+                return NotFound(new ApiResponse<OrderResponse>
                 {
-                    return NotFound(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        StatusMessage = "Order not found"
-                    });
-                }
-
-                if (!CanAccessUserResource(order.Value.UserId))
-                {
-                    return Forbid();
-                }
-
-                if (order.Value.CartId <= 0)
-                {
-                    return BadRequest(new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        StatusMessage = "Order does not have an associated cart"
-                    });
-                }
-
-                var result = await _orderService.SyncOrderWithCartAsync(orderId, order.Value.CartId);
-                if (!result.Value)
-                {
-                    return StatusCode(500, new ApiResponse<OrderResponse>
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        StatusMessage = "Failed to sync order with cart"
-                    });
-                }
-
-                var updatedOrder = await _orderService.GetOrderByIdAsync(orderId);
-                return Ok(new ApiResponse<OrderResponse>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "Order synced with cart successfully",
-                    Data = updatedOrder.Value
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Order not found"
                 });
             }
-            catch (Exception ex)
+
+            if (!CanAccessUserResource(order.Value.UserId))
+            {
+                return Forbid();
+            }
+
+            if (order.Value.CartId <= 0)
+            {
+                return BadRequest(new ApiResponse<OrderResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Order does not have an associated cart"
+                });
+            }
+
+            var result = await _orderService.SyncOrderWithCartAsync(orderId, order.Value.CartId);
+            if (!result.Value)
             {
                 return StatusCode(500, new ApiResponse<OrderResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Error syncing order with cart",
-                    Errors = new List<string> { ex.Message }
+                    StatusMessage = "Failed to sync order with cart"
                 });
             }
+
+            var updatedOrder = await _orderService.GetOrderByIdAsync(orderId);
+            return Ok(new ApiResponse<OrderResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order synced with cart successfully",
+                Data = updatedOrder.Value
+            });
         }
     }
 
