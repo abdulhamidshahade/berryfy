@@ -19,19 +19,22 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         public async Task<InfrastructureResponse<Category>> CreateAsync(Category category)
         {
             const string sql = @"
-                INSERT INTO global_categories (name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at)
-                VALUES (@Name, @Description, @ImageUrl, @Slug, @ParentCategoryId, @IsActive, @DisplayOrder, @CreatedAt, @UpdatedAt)
-                RETURNING id, name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at;";
+                INSERT INTO categories (name, description, image_url, is_active, created_at, updated_at)
+                VALUES (@Name, @Description, @ImageUrl, @IsActive, @CreatedAt, @UpdatedAt)
+                RETURNING id, name, description, image_url, is_active, created_at, updated_at;";
 
-            using var connection = await OpenConnectionAsync();
+            var now = DateTime.UtcNow;
+            if (category.CreatedAt == default) category.CreatedAt = now;
+            if (category.UpdatedAt == default) category.UpdatedAt = now;
 
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            
+
             AddCategoryParameters(command, category);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category createdCategory = null;
+            Category? createdCategory = null;
 
             if (await reader.ReadAsync())
             {
@@ -40,18 +43,17 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             return new InfrastructureResponse<Category>()
             {
-                IsSuccess = true,
-                Message = "Category created successfully",
-                Value = createdCategory
+                IsSuccess = createdCategory != null,
+                Message = createdCategory != null ? "Category created successfully" : "Failed to create category",
+                Value = createdCategory!
             };
         }
 
         public async Task<InfrastructureResponse<bool>> DeleteAsync(Category category)
         {
-            const string sql = "DELETE FROM global_categories WHERE id = @Id";
+            const string sql = "DELETE FROM categories WHERE id = @Id";
 
-            var connection = await OpenConnectionAsync();
-            
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", category.Id);
 
@@ -66,10 +68,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
-            const string sql = "SELECT COUNT(1) FROM global_categories WHERE id = @Id";
+            const string sql = "SELECT COUNT(1) FROM categories WHERE id = @Id";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
@@ -84,10 +85,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name)
         {
-            const string sql = "SELECT COUNT(1) FROM global_categories WHERE name = @Name";
+            const string sql = "SELECT COUNT(1) FROM categories WHERE LOWER(name) = LOWER(@Name)";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
 
@@ -102,12 +102,11 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Category>>> GetAllAsync()
         {
-            const string sql = @"SELECT gc.id, gc.name, gc.description, gc.image_url, gc.slug, gc.parent_category_id,
-                                gc.is_active, gc.display_order, gc.created_at, gc.updated_at
-                                FROM global_categories gc order by gc.id";
+            const string sql = @"SELECT c.id, c.name, c.description, c.image_url,
+                                c.is_active, c.created_at, c.updated_at
+                                FROM categories c ORDER BY c.id";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -127,22 +126,20 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<Category>> GetByIdAsync(int id)
         {
-            //using variables more good than select * --> using * is not too good
             const string sql = @"
                 SELECT
-                    gc.id, gc.name, gc.description, gc.image_url, gc.slug, 
-                    gc.parent_category_id, gc.is_active, gc.display_order, gc.created_at, gc.updated_at
-                FROM global_categories gc
-                WHERE gc.id = @Id;";
+                    c.id, c.name, c.description, c.image_url,
+                    c.is_active, c.created_at, c.updated_at
+                FROM categories c
+                WHERE c.id = @Id;";
 
-            using var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = null;
+            Category? category = null;
 
             if (await reader.ReadAsync())
             {
@@ -151,9 +148,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             return new InfrastructureResponse<Category>()
             {
-                IsSuccess = true,
-                Message = "Category retrieved successfully",
-                Value = category
+                IsSuccess = category != null,
+                Message = category != null ? "Category retrieved successfully" : "Category not found",
+                Value = category!
             };
         }
 
@@ -161,88 +158,83 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             const string sql = @"
                 SELECT
-                    gc.id, gc.name, gc.description, gc.image_url, gc.slug,
-                    gc.parent_category_id, gc.is_active, gc.display_order, gc.created_at, gc.updated_at
-                FROM global_categories gc
-                WHERE gc.name = @Name";
+                    c.id, c.name, c.description, c.image_url,
+                    c.is_active, c.created_at, c.updated_at
+                FROM categories c
+                WHERE LOWER(c.name) = LOWER(@Name)";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Category category = null;
+            Category? category = null;
 
             if (await reader.ReadAsync())
             {
                 category = MapCategory(reader);
             }
 
-            
-            
             return new InfrastructureResponse<Category>()
             {
-                IsSuccess = true,
-                Message = "Category retrieved successfully",
-                Value = category
+                IsSuccess = category != null,
+                Message = category != null ? "Category retrieved successfully" : "Category not found",
+                Value = category!
             };
-        } 
+        }
 
         public async Task<InfrastructureResponse<Category>> UpdateAsync(int id, Category category)
         {
             const string sql = @"
-                UPDATE global_categories
+                UPDATE categories
                 SET name = @Name,
                     description = @Description,
                     image_url = @ImageUrl,
-                    slug = @Slug,
-                    parent_category_id = @ParentCategoryId,
                     is_active = @IsActive,
-                    display_order = @DisplayOrder,
                     updated_at = @UpdatedAt
                 WHERE id = @Id
-                RETURNING id, name, description, image_url, slug, parent_category_id, is_active, display_order, created_at, updated_at;";
+                RETURNING id, name, description, image_url, is_active, created_at, updated_at;";
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            if (category.UpdatedAt == default) category.UpdatedAt = DateTime.UtcNow;
 
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
-            
+
             AddCategoryParameters(command, category);
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
 
+            Category? updatedCategory = null;
             if (await reader.ReadAsync())
             {
-                category = MapCategory(reader);
+                updatedCategory = MapCategory(reader);
             }
-            
+
             return new InfrastructureResponse<Category>()
             {
-                IsSuccess = true,
-                Message = "Category updated successfully",
-                Value = category
+                IsSuccess = updatedCategory != null,
+                Message = updatedCategory != null ? "Category updated successfully" : "Category not found",
+                Value = updatedCategory!
             };
         }
 
         private Category MapCategory(NpgsqlDataReader reader)
         {
+            var descOrd = reader.GetOrdinal("description");
+            var imgOrd = reader.GetOrdinal("image_url");
             return new Category()
             {
-                Id = reader.GetInt32(reader.GetOrdinal("id")),
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
                 Name = reader.GetString(reader.GetOrdinal("name")),
-                Description = reader.GetString(reader.GetOrdinal("description")),
-                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Description = reader.IsDBNull(descOrd) ? string.Empty : reader.GetString(descOrd),
+                ImageUrl = reader.IsDBNull(imgOrd) ? string.Empty : reader.GetString(imgOrd),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
         }
-
-        //19:46
 
         private async Task<NpgsqlConnection> OpenConnectionAsync()
         {
@@ -253,73 +245,71 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         private void AddCategoryParameters(NpgsqlCommand command, Category category)
         {
-            command.Parameters.AddWithValue("@Name", category.Name);
-            command.Parameters.AddWithValue("@Description", category.Description);
-            command.Parameters.AddWithValue("@ImageUrl", category.ImageUrl);
+            command.Parameters.AddWithValue("@Name", category.Name ?? string.Empty);
+            command.Parameters.AddWithValue("@Description", category.Description ?? string.Empty);
+            command.Parameters.AddWithValue("@ImageUrl", (object?)category.ImageUrl ?? DBNull.Value);
             command.Parameters.AddWithValue("@IsActive", category.IsActive);
-            command.Parameters.AddWithValue("@CreatedAt", category.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", category.UpdatedAt);
+            command.Parameters.AddWithValue("@CreatedAt", category.CreatedAt == default ? DateTime.UtcNow : category.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", category.UpdatedAt == default ? DateTime.UtcNow : category.UpdatedAt);
         }
 
         public async Task<InfrastructureResponse<List<Product>>> GetProductsByGlobalCategoryId(int globalCategoryId)
         {
-            string query = "Select * from products p where p.global_category_id = @GlobalCategoryId";
+            const string query = "SELECT * FROM products p WHERE p.category_id = @CategoryId ORDER BY p.id";
 
-            using var connection = await OpenConnectionAsync();
-
-            using var command = new NpgsqlCommand(query, connection);
-            command.Parameters.AddWithValue("@GlobalCategoryId", globalCategoryId);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@CategoryId", globalCategoryId);
 
             List<Product> products = new List<Product>();
 
-            using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            while(await reader.ReadAsync())
+            while (await reader.ReadAsync())
             {
-                products.Add(MapProduct(reader, new Product()));
+                products.Add(MapProduct(reader));
             }
 
             return new InfrastructureResponse<List<Product>>()
             {
                 IsSuccess = true,
-                Message = "Products that related to category retrived successfully.",
+                Message = "Products related to category retrieved successfully.",
                 Value = products
             };
         }
 
-
-        private Product MapProduct(NpgsqlDataReader reader, Product product)
+        private Product MapProduct(NpgsqlDataReader reader)
         {
-            product = new Product()
+            var descOrd = reader.GetOrdinal("description");
+            var imgOrd = reader.GetOrdinal("image_url");
+            var skuOrd = reader.GetOrdinal("sku");
+            var catOrd = reader.GetOrdinal("category_id");
+            return new Product()
             {
-                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
                 Name = reader.GetString(reader.GetOrdinal("name")),
-                Description = reader.GetString(reader.GetOrdinal("description")),
-                StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
-                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Description = reader.IsDBNull(descOrd) ? string.Empty : reader.GetString(descOrd),
+                StockQuantity = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("stock_quantity"))),
+                ImageUrl = reader.IsDBNull(imgOrd) ? string.Empty : reader.GetString(imgOrd),
                 Price = reader.GetDecimal(reader.GetOrdinal("price")),
-                ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
-                LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                ReservedStock = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("reserved_stock"))),
+                LowStockThreshold = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("low_stock_threshold"))),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
-                SKU = reader.GetString(reader.GetOrdinal("sku")),
+                SKU = reader.IsDBNull(skuOrd) ? string.Empty : reader.GetString(skuOrd),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                //ShopId = reader.GetInt32(reader.GetOrdinal("shop_id")),
-                //GlobalCategoryId = reader.IsDBNull(reader.GetOrdinal("global_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("global_category_id")),
-                //ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt32(reader.GetOrdinal("shop_category_id"))
+                CategoryId = reader.IsDBNull(catOrd) ? 0 : Convert.ToInt32(reader.GetValue(catOrd))
             };
-            return product;
         }
 
         public async Task<InfrastructureResponse<int>> GetProductCountByGlobalCategoryIdAsync(int globalCategoryId)
         {
-            string query = "select count(*) from products where global_category_id = @GlobalCategoryId;";
+            const string query = "SELECT COUNT(*) FROM products WHERE category_id = @CategoryId;";
 
-            using var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
-            using var command = new NpgsqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@GlobalCategoryId", globalCategoryId);
+            command.Parameters.AddWithValue("@CategoryId", globalCategoryId);
 
             var result = await command.ExecuteScalarAsync();
 
