@@ -19,9 +19,9 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
 
         public async Task<ApplicationResponse<CategoryResponse>> GetByIdAsync(int id)
         {
-            var category = _categoryRepository.GetByIdAsync(id).GetAwaiter().GetResult();
+            var category = await _categoryRepository.GetByIdAsync(id);
 
-            if (!category.IsSuccess)
+            if (!category.IsSuccess || category.Value == null)
             {
                 return new ApplicationResponse<CategoryResponse>
                 {
@@ -30,10 +30,17 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
+            var response = CategoryResponse.MapFromCategory(category.Value);
+            var products = await _categoryRepository.GetProductsByGlobalCategoryId(response.Id);
+            if (products.IsSuccess && products.Value != null)
+            {
+                response.Products = Berryfy.Application.Dtos.ProductDtos.Responses.ProductResponse.MapFromProduct(products.Value);
+            }
+
             return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = CategoryResponse.MapFromCategory(category.Value)
+                Value = response
             };
         }
 
@@ -48,8 +55,8 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
-            var category = _categoryRepository.GetByNameAsync(name).GetAwaiter().GetResult().Value;
-            
+            var category = (await _categoryRepository.GetByNameAsync(name)).Value;
+
             if (category == null)
             {
                 return new ApplicationResponse<CategoryResponse>
@@ -59,20 +66,38 @@ namespace Berryfy.Application.Services.Concretes.ProductServiceConcretes
                 };
             }
 
+            var response = CategoryResponse.MapFromCategory(category);
+            var products = await _categoryRepository.GetProductsByGlobalCategoryId(response.Id);
+            if (products.IsSuccess && products.Value != null)
+            {
+                response.Products = Berryfy.Application.Dtos.ProductDtos.Responses.ProductResponse.MapFromProduct(products.Value);
+            }
+
             return new ApplicationResponse<CategoryResponse>
             {
                 IsSuccess = true,
-                Value = CategoryResponse.MapFromCategory(category)
+                Value = response
             };
         }
 
         public async Task<ApplicationResponse<IEnumerable<CategoryResponse>>> GetAllAsync()
         {
-            var categories = _categoryRepository.GetAllAsync().GetAwaiter().GetResult().Value;
+            var categories = (await _categoryRepository.GetAllAsync()).Value;
+            var responses = categories.Select(CategoryResponse.MapFromCategory).ToList();
+
+            foreach (var resp in responses)
+            {
+                var products = await _categoryRepository.GetProductsByGlobalCategoryId(resp.Id);
+                if (products.IsSuccess && products.Value != null)
+                {
+                    resp.Products = Berryfy.Application.Dtos.ProductDtos.Responses.ProductResponse.MapFromProduct(products.Value);
+                }
+            }
+
             return new ApplicationResponse<IEnumerable<CategoryResponse>>
             {
                 IsSuccess = true,
-                Value = categories.Select(CategoryResponse.MapFromCategory)
+                Value = responses
             };
         }
 
