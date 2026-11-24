@@ -140,9 +140,9 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
                 };
             }
 
-            var isCouponExists = _couponRepository.GetByCodeAsync(request.Code).GetAwaiter().GetResult().Value;
+            var isCouponExists = (await _couponRepository.GetByCodeAsync(request.Code)).Value;
 
-            if(isCouponExists != null && isCouponExists.Id != request.Id)
+            if (isCouponExists != null && isCouponExists.Id != id)
             {
                 return new ApplicationResponse<CouponResponse>
                 {
