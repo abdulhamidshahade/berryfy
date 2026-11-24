@@ -9,7 +9,7 @@ namespace Berryfy.API.Controllers
 {
     [ApiController]
     [Route("api/role-managements")]
-    [SuperAdminOnly]
+    [AdminAndAbove]
     public class RoleManagementsController : BaseController
     {
         private readonly IRoleManagementService _roleManagementService;
@@ -19,6 +19,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPost("roles")]
+        [SuperAdminOnly]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
         {
             var result = await _roleManagementService.CreateRoleAsync(request.roleName);
@@ -44,6 +45,7 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpDelete("roles/{roleName}")]
+        [SuperAdminOnly]
         public async Task<IActionResult> DeleteRole(string roleName)
         {
             var result = await _roleManagementService.DeleteRoleAsync(roleName);
@@ -70,6 +72,12 @@ namespace Berryfy.API.Controllers
         [HttpPost("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRoleToUser(int userId, string roleName)
         {
+            if (string.Equals(roleName, Berryfy.Domain.Constants.RoleConstants.SuperAdmin, StringComparison.OrdinalIgnoreCase) &&
+                !User.IsInRole(Berryfy.Domain.Constants.RoleConstants.SuperAdmin))
+            {
+                return Forbid();
+            }
+
             var result = await _roleManagementService.AssignRoleToUserAsync(userId, roleName);
 
             if (result.Value)
@@ -95,6 +103,12 @@ namespace Berryfy.API.Controllers
         [HttpDelete("users/{userId}/roles/{roleName}")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string roleName)
         {
+            if (string.Equals(roleName, Berryfy.Domain.Constants.RoleConstants.SuperAdmin, StringComparison.OrdinalIgnoreCase) &&
+                !User.IsInRole(Berryfy.Domain.Constants.RoleConstants.SuperAdmin))
+            {
+                return Forbid();
+            }
+
             var result = await _roleManagementService.RemoveRoleFromUserAsync(userId, roleName);
 
             if (result.Value)
@@ -132,7 +146,6 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpGet("roles")]
-        [SuperAdminOnly]
         public async Task<IActionResult> GetAllRoles()
         {
             var roles = await _roleManagementService.GetAllRolesAsync();
@@ -207,7 +220,7 @@ namespace Berryfy.API.Controllers
         {
             var user = await _roleManagementService.GetUserByIdAsync(userId);
 
-            if (user == null)
+            if (user == null || !user.IsSuccess || user.Value == null)
             {
                 return NotFound(new ApiResponse<UserWithRolesResponse>
                 {
@@ -242,7 +255,8 @@ namespace Berryfy.API.Controllers
         }
 
         [HttpPut("roles")]
-        public async Task<IActionResult> UpdateRole(UpdateRoleRequest request)
+        [SuperAdminOnly]
+        public async Task<IActionResult> UpdateRole([FromBody] UpdateRoleRequest request)
         {
             var result = await _roleManagementService.UpdateRoleAsync(request.oldRoleName, request.newRoleName);
 
