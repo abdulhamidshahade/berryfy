@@ -28,14 +28,14 @@ namespace Berryfy.API.Controllers
         {
             var categories = await _categoryService.GetAllAsync();
 
-            if (categories == null)
+            if (categories == null || !categories.IsSuccess)
             {
                 return StatusCode(400, new ApiResponse<IEnumerable<CategoryResponse>>
                 {
-                    IsSuccess = categories.IsSuccess,
+                    IsSuccess = false,
                     StatusCode = StatusCodes.Status400BadRequest,
-                    StatusMessage = categories.ErrorMessage,
-                    Data = categories.Value
+                    StatusMessage = categories?.ErrorMessage ?? "Failed to retrieve categories",
+                    Data = null
                 });
             }
 
@@ -55,10 +55,9 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetById(int id)
         {
-
             var category = await _categoryService.GetByIdAsync(id);
 
-            if (!category.IsSuccess)
+            if (!category.IsSuccess || category.Value == null)
             {
                 return NotFound(new ApiResponse<CategoryResponse>
                 {
@@ -87,7 +86,7 @@ namespace Berryfy.API.Controllers
         {
             var category = await _categoryService.GetByNameAsync(name);
 
-            if (category == null)
+            if (category == null || !category.IsSuccess || category.Value == null)
             {
                 return NotFound(new ApiResponse<CategoryResponse>
                 {
@@ -115,26 +114,25 @@ namespace Berryfy.API.Controllers
         {
             var createdCategory = await _categoryService.CreateAsync(categoryRequest);
 
-            if (!createdCategory.IsSuccess)
+            if (!createdCategory.IsSuccess || createdCategory.Value == null)
             {
-                return new ApiResponse<CategoryResponse>
+                return BadRequest(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error creating category",
-                    Errors = new List<string> { "An unexpected error occurred" },
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = createdCategory.ErrorMessage ?? "Error creating category",
+                    Errors = new List<string> { createdCategory.ErrorMessage ?? "An unexpected error occurred" },
                     Data = null
-                };
-
+                });
             }
             var response = new ApiResponse<CategoryResponse>
             {
                 IsSuccess = createdCategory.IsSuccess,
                 StatusCode = StatusCodes.Status201Created,
-                StatusMessage = createdCategory.SuccessMessage,
+                StatusMessage = createdCategory.SuccessMessage ?? "Category created successfully",
                 Data = createdCategory.Value
             };
-            return response;
+            return StatusCode(StatusCodes.Status201Created, response);
         }
 
         [HttpPut]
@@ -144,17 +142,16 @@ namespace Berryfy.API.Controllers
         {
             var updatedCategory = await _categoryService.UpdateAsync(id, request);
 
-            if (!updatedCategory.IsSuccess)
+            if (!updatedCategory.IsSuccess || updatedCategory.Value == null)
             {
-                return new ApiResponse<CategoryResponse>
+                return BadRequest(new ApiResponse<CategoryResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error updating category",
-                    Errors = new List<string> { "An unexpected error occurred" },
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = updatedCategory.ErrorMessage ?? "Error updating category",
+                    Errors = new List<string> { updatedCategory.ErrorMessage ?? "An unexpected error occurred" },
                     Data = null
-                };
-
+                });
             }
 
             var response = new ApiResponse<CategoryResponse>
