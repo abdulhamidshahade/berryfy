@@ -115,19 +115,20 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                if (!_userRepository.UnlockUserAsync(userId).GetAwaiter().GetResult().Value)
+                if (!(await _userRepository.UnlockUserAsync(userId)).Value)
                 {
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "Error unlocking user account"
                     };
                 }
 
-                //await _userRepository.ResetAccessFailedCountAsync(userId);
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = true,
+                    Value = true,
                     SuccessMessage = "User account unlocked successfully"
                 };
             }
@@ -137,6 +138,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
+                    Value = false,
                     ErrorMessage = "Error unlocking user account"
                 };
             }
@@ -146,22 +148,26 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
+                var user = (await _userRepository.GetByIdAsync(userId)).Value;
                 if (user == null)
                 {
                     _logger.LogWarning("User with ID {UserId} not found for password reset", userId);
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "User not found"
                     };
                 }
 
                 var passwordHash = _passwordHasher.HashPassword(user, newPassword);
+                var updated = (await _userRepository.UpdatePasswordHashAsync(user.Id, passwordHash)).Value;
                 return new ApplicationResponse<bool>
                 {
-                    IsSuccess = true,
-                    SuccessMessage = "Password reset successfully"
+                    IsSuccess = updated,
+                    Value = updated,
+                    SuccessMessage = updated ? "Password reset successfully" : null,
+                    ErrorMessage = updated ? null : "Failed to update password"
                 };
             }
             catch (Exception ex)
@@ -170,6 +176,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
+                    Value = false,
                     ErrorMessage = "Error resetting password"
                 };
             }
@@ -177,10 +184,11 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
         public async Task<ApplicationResponse<bool>> VerifyUserEmailAsync(int userId)
         {
-            var result = _userRepository.ConfirmEmailAsync(userId).GetAwaiter().GetResult().Value;
+            var result = (await _userRepository.ConfirmEmailAsync(userId)).Value;
             return new ApplicationResponse<bool>
             {
                 IsSuccess = result,
+                Value = result,
                 SuccessMessage = "Email verified successfully"
             };
         }
@@ -189,12 +197,13 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
+                var user = (await _userRepository.GetByIdAsync(userId)).Value;
                 if (user == null)
                 {
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "User not found"
                     };
                 }
@@ -208,10 +217,11 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 user.EmailConfirmed = updateUserDto.EmailConfirmed;
                 user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-                var result = _userRepository.UpdateAsync(user).GetAwaiter().GetResult().Value;
+                var result = (await _userRepository.UpdateAsync(user)).Value;
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = result,
+                    Value = result,
                     SuccessMessage = "User updated successfully"
                 };
             }
@@ -221,6 +231,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
+                    Value = false,
                     ErrorMessage = "Error updating user"
                 };
             }
@@ -297,20 +308,23 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
         public async Task<ApplicationResponse<bool>> DeleteUserAsync(int userId)
         {
+            var deleted = (await _userRepository.DeleteAsync(userId)).Value;
             return new ApplicationResponse<bool>
             {
-                IsSuccess = _userRepository.DeleteAsync(userId).GetAwaiter().GetResult().Value,
+                IsSuccess = deleted,
+                Value = deleted,
                 SuccessMessage = "User deleted successfully"
             };
         }
 
         public async Task<ApplicationResponse<User>> GetUserByEmail(string email)
         {
+            var user = (await _userRepository.GetByNormalizedEmailAsync(EmailNormalizer.NormalizeEmail(email))).Value
+                ?? (await _userRepository.GetByEmailAsync(email)).Value;
             return new ApplicationResponse<User>
             {
-                IsSuccess = true,
-                Value = _userRepository.GetByNormalizedEmailAsync(EmailNormalizer.NormalizeEmail(email)).GetAwaiter().GetResult().Value
-                    ?? _userRepository.GetByEmailAsync(email).GetAwaiter().GetResult().Value
+                IsSuccess = user != null,
+                Value = user!
             };
         }
 
@@ -319,13 +333,13 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
             return new ApplicationResponse<bool>
             {
                 IsSuccess = true,
-                Value = _userRepository.IsUsernameTakenAsync(username).GetAwaiter().GetResult().Value
+                Value = (await _userRepository.IsUsernameTakenAsync(username)).Value
             };
         }
 
         private static string NormalizeName(string value)
         {
-            return value.Trim().ToUpperInvariant();
+            return value.Trim().ToLowerInvariant();
         }
 
         public async Task<ApplicationResponse<bool>> RevokeRefreshTokenAsync(int userId)
