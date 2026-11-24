@@ -145,7 +145,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 _logger.LogWarning("User not found for email: {Email}", normalizedEmail);
                 return new ApplicationResponse<LoginResponse>()
                 {
-                    Value = new LoginResponse { User = null, Token = string.Empty },
+                    Value = new LoginResponse { User = null, Token = string.Empty, ErrorMessage = "Invalid email or password." },
                     IsSuccess = false,
                 };
             }
@@ -155,6 +155,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 return new ApplicationResponse<LoginResponse>()
                 {
                     Value = new LoginResponse { Token = string.Empty, ErrorMessage = "Account is locked. Please try again later." },
+                    ErrorMessage = "Account is locked. Please try again later.",
                     IsSuccess = false
                 };
             }
@@ -168,7 +169,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                 _logger.LogWarning("Invalid password for email: {Email}", normalizedEmail);
                 return new ApplicationResponse<LoginResponse>()
                 {
-                    Value = new LoginResponse { User = null, Token = string.Empty },
+                    Value = new LoginResponse { User = null, Token = string.Empty, ErrorMessage = "Invalid email or password." },
                     IsSuccess = false
                 };
             }
@@ -184,6 +185,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
                         Token = string.Empty,
                         ErrorMessage = "Email not confirmed. Please check your email and confirm your account."
                     },
+                    ErrorMessage = "Email not confirmed. Please check your email and confirm your account.",
                     IsSuccess = false
                 };
             }
