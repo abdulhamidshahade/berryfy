@@ -15,16 +15,19 @@ namespace Berryfy.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IUserService _userService;
+        private readonly IRoleManagementService _roleManagementService;
         private readonly ICartService _cartService;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(IAuthService authService,
                               IUserService userService,
+                              IRoleManagementService roleManagementService,
                               ICartService cartService,
                               ILogger<AuthController> logger)
         {
             _authService = authService;
             _userService = userService;
+            _roleManagementService = roleManagementService;
             _cartService = cartService;
             _logger = logger;
         }
@@ -60,20 +63,19 @@ namespace Berryfy.API.Controllers
         [HttpPost]
         [Route("login")]
         [AllowAnonymous]
-        public async Task<IActionResult> Login(LoginRequest requestDto)
+        public async Task<IActionResult> Login([FromBody] LoginRequest requestDto)
         {
-
             var loginResult = await _authService.Login(requestDto);
 
-            if (loginResult.Value.Token != string.Empty)
+            if (loginResult.IsSuccess && !string.IsNullOrEmpty(loginResult.Value?.Token))
             {
-                var user = _userService.GetUserByEmail(requestDto.Email).GetAwaiter().GetResult().Value;
-                if (user != null)
+                var userId = loginResult.Value.User?.Id;
+                if (userId.HasValue && userId.Value > 0)
                 {
                     var sessionId = GetSessionId();
                     if (!string.IsNullOrWhiteSpace(sessionId))
                     {
-                        await _cartService.MergeCartAsync(user.Id, sessionId);
+                        await _cartService.MergeCartAsync(userId.Value, sessionId);
                     }
                 }
 
@@ -100,7 +102,7 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 401,
-                StatusMessage = loginResult.Value.ErrorMessage,
+                StatusMessage = loginResult.Value?.ErrorMessage ?? "Invalid email or password.",
             });
         }
 
@@ -109,23 +111,13 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest requestDto)
         {
-            var result = await _authService.ForgotPasswordAsync(requestDto);
+            await _authService.ForgotPasswordAsync(requestDto);
 
-            if (result.Value)
+            return Ok(new ApiResponse<object>
             {
-                return Ok(new ApiResponse<object>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "If the email address exists in our system, you will receive a 6-digit password reset code."
-                });
-            }
-
-            return StatusCode(500, new ApiResponse<object>
-            {
-                IsSuccess = false,
-                StatusCode = 500,
-                StatusMessage = "An error occurred while processing your request."
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "If the email address exists in our system, you will receive a 6-digit password reset code."
             });
         }
 
@@ -136,7 +128,7 @@ namespace Berryfy.API.Controllers
         {
             var result = await _authService.VerifyPasswordResetCodeAsync(requestDto);
 
-            if (result != null && !string.IsNullOrEmpty(result.Value?.ResetToken))
+            if (result != null && result.IsSuccess && !string.IsNullOrEmpty(result.Value?.ResetToken))
             {
                 return Ok(new ApiResponse<VerifyPasswordResetCodeResponse>
                 {
@@ -187,7 +179,7 @@ namespace Berryfy.API.Controllers
         {
             var result = await _authService.ConfirmEmailAsync(requestDto);
 
-            if (result.Value)
+            if (result.IsSuccess && result.Value)
             {
                 return Ok(new ApiResponse<object>
                 {
@@ -201,7 +193,7 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = "Failed to confirm email. The confirmation link may be invalid or expired."
+                StatusMessage = result.ErrorMessage ?? "Failed to confirm email. The confirmation link may be invalid or expired."
             });
         }
 
@@ -210,23 +202,14 @@ namespace Berryfy.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest requestDto)
         {
-            var result = await _authService.ResendConfirmationEmailAsync(requestDto.Email);
+            await _authService.ResendConfirmationEmailAsync(requestDto.Email);
 
-            if (result.Value)
+            return Ok(new ApiResponse<bool>
             {
-                return Ok(new ApiResponse<bool>
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    StatusMessage = "If the email address exists in our system, a new confirmation link has been sent."
-                });
-            }
-
-            return StatusCode(500, new ApiResponse<object>
-            {
-                IsSuccess = false,
-                StatusCode = 500,
-                StatusMessage = "An error occurred while sending the confirmation email."
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "If the email address exists in our system, a new confirmation link has been sent.",
+                Data = true
             });
         }
 
@@ -372,8 +355,19 @@ namespace Berryfy.API.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            var revoked = await _userService.RevokeRefreshTokenAsync(GetCurrentUserId().Value);
-            
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    IsSuccess = false,
+                    StatusCode = 401,
+                    StatusMessage = "User not authenticated"
+                });
+            }
+
+            var revoked = await _userService.RevokeRefreshTokenAsync(userId.Value);
+
             return Ok(new ApiResponse<object>
             {
                 IsSuccess = true,
@@ -388,8 +382,8 @@ namespace Berryfy.API.Controllers
         [Route("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _userService.GetAllUsers();
-            return Ok(new ApiResponse<List<User>>
+            var users = await _roleManagementService.GetAllUsersAsync();
+            return Ok(new ApiResponse<List<UserWithRolesResponse>>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -403,10 +397,10 @@ namespace Berryfy.API.Controllers
         [Route("users/{id}")]
         public async Task<IActionResult> GetUserById(int id)
         {
-            var user = await _userService.GetUserById(id);
-            if (user == null)
+            var user = await _roleManagementService.GetUserByIdAsync(id);
+            if (user == null || !user.IsSuccess || user.Value == null)
             {
-                return NotFound(new ApiResponse<User>
+                return NotFound(new ApiResponse<UserWithRolesResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 404,
@@ -414,7 +408,7 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ApiResponse<User>
+            return Ok(new ApiResponse<UserWithRolesResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
@@ -428,9 +422,9 @@ namespace Berryfy.API.Controllers
         [AllRoles]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = GetCurrentUserId();
 
-            if (string.IsNullOrEmpty(userId))
+            if (!userId.HasValue)
             {
                 return Unauthorized(new ApiResponse<object>
                 {
@@ -440,9 +434,9 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            var currentUser = await _userService.GetUserById(int.Parse(userId));
+            var currentUser = await _roleManagementService.GetUserByIdAsync(userId.Value);
 
-            if (currentUser == null)
+            if (currentUser == null || !currentUser.IsSuccess || currentUser.Value == null)
             {
                 return NotFound(new ApiResponse<object>
                 {
@@ -452,12 +446,12 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            return Ok(new ApiResponse<object>
+            return Ok(new ApiResponse<UserWithRolesResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "User retrieved successfully",
-                Data = currentUser
+                Data = currentUser.Value
             });
         }
 
@@ -648,18 +642,19 @@ namespace Berryfy.API.Controllers
         {
             var user = await _userService.CreateUserAsync(createUserDto);
 
-            if (user.IsSuccess)
+            if (user.IsSuccess && user.Value != null)
             {
-                return StatusCode(201, new ApiResponse<User>
+                var roles = await _roleManagementService.GetUserRolesAsync(user.Value.Id);
+                return StatusCode(201, new ApiResponse<UserWithRolesResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 201,
                     StatusMessage = user.SuccessMessage,
-                    Data = user.Value
+                    Data = UserWithRolesResponse.MapFromUser(user.Value, roles.Value)
                 });
             }
 
-            return BadRequest(new ApiResponse<User>
+            return BadRequest(new ApiResponse<UserWithRolesResponse>
             {
                 IsSuccess = false,
                 StatusCode = 400,
