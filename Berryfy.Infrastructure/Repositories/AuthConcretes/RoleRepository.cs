@@ -350,7 +350,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
         {
             const string sql = @"
                 SELECT u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
-                       u.email_confirmed, u.firstname, u.lastname
+                       u.email_confirmed, u.firstname, u.lastname, u.lockout_end, u.access_failed_count
                 FROM users u
                 JOIN user_roles ur ON ur.user_id = u.id
                 JOIN roles r ON r.id = ur.role_id
@@ -379,7 +379,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
         {
             const string sql = @"
                 SELECT u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
-                       u.email_confirmed, u.firstname, u.lastname
+                       u.email_confirmed, u.firstname, u.lastname, u.lockout_end, u.access_failed_count
                 FROM users u
                 JOIN user_roles ur ON ur.user_id = u.id
                 WHERE ur.role_id = @RoleId
@@ -466,9 +466,9 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
                 };
             }
 
-            var totalRoles = reader.GetInt32(reader.GetOrdinal("total_roles"));
-            var totalUsers = reader.GetInt32(reader.GetOrdinal("total_users"));
-            var usersWithRoles = reader.GetInt32(reader.GetOrdinal("users_with_roles"));
+            var totalRoles = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("total_roles")));
+            var totalUsers = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("total_users")));
+            var usersWithRoles = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("users_with_roles")));
             return new InfrastructureResponse<(int TotalRoles, int TotalUsers, int UsersWithRoles, int UsersWithoutRoles)>()
             {
                 IsSuccess = true,
