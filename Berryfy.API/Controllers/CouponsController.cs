@@ -28,15 +28,15 @@ namespace Berryfy.API.Controllers
         {
             var coupons = await _couponService.GetAllAsync();
 
-            if (coupons == null)
+            if (coupons == null || !coupons.IsSuccess)
             {
-                return new ApiResponse<IEnumerable<CouponResponse>>
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<IEnumerable<CouponResponse>>
                 {
                     IsSuccess = false,
                     StatusCode = StatusCodes.Status500InternalServerError,
                     StatusMessage = "Error retrieving coupons",
                     Errors = new List<string> { "An unexpected error occurred" }
-                };
+                });
             }
             var response = new ApiResponse<IEnumerable<CouponResponse>>
             {
@@ -56,16 +56,15 @@ namespace Berryfy.API.Controllers
         {
             var coupon = await _couponService.GetByIdAsync(id);
 
-            if (coupon == null)
+            if (coupon == null || !coupon.IsSuccess || coupon.Value == null)
             {
-                return new ApiResponse<CouponResponse>
+                return NotFound(new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error retrieving coupon",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusMessage = coupon?.ErrorMessage ?? "Coupon not found",
+                    Errors = new List<string> { coupon?.ErrorMessage ?? "Coupon not found" }
+                });
             }
             var response = new ApiResponse<CouponResponse>
             {
@@ -85,16 +84,15 @@ namespace Berryfy.API.Controllers
         {
             var coupon = await _couponService.GetByCodeAsync(code);
 
-            if (coupon == null)
+            if (coupon == null || !coupon.IsSuccess || coupon.Value == null)
             {
-                return new ApiResponse<CouponResponse>
+                return NotFound(new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error retrieving coupon",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusMessage = coupon?.ErrorMessage ?? "Coupon not found",
+                    Errors = new List<string> { coupon?.ErrorMessage ?? "Coupon not found" }
+                });
             }
             var response = new ApiResponse<CouponResponse>
             {
@@ -113,16 +111,15 @@ namespace Berryfy.API.Controllers
         {
             var createdCoupon = await _couponService.CreateAsync(couponDto);
 
-            if (createdCoupon == null)
+            if (createdCoupon == null || !createdCoupon.IsSuccess || createdCoupon.Value == null)
             {
-                return new ApiResponse<CouponResponse>
+                return BadRequest(new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error creating coupon",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = createdCoupon?.ErrorMessage ?? "Error creating coupon",
+                    Errors = new List<string> { createdCoupon?.ErrorMessage ?? "An unexpected error occurred" }
+                });
             }
             var response = new ApiResponse<CouponResponse>
             {
@@ -131,9 +128,7 @@ namespace Berryfy.API.Controllers
                 StatusMessage = "Coupon created successfully",
                 Data = createdCoupon.Value
             };
-            return response;
-
-
+            return StatusCode(StatusCodes.Status201Created, response);
         }
 
 
@@ -144,16 +139,15 @@ namespace Berryfy.API.Controllers
         {
             var updatedCoupon = await _couponService.UpdateAsync(id, couponDto);
 
-            if (updatedCoupon == null)
+            if (updatedCoupon == null || !updatedCoupon.IsSuccess || updatedCoupon.Value == null)
             {
-                return new ApiResponse<CouponResponse>
+                return BadRequest(new ApiResponse<CouponResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error updating coupon",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = updatedCoupon?.ErrorMessage ?? "Error updating coupon",
+                    Errors = new List<string> { updatedCoupon?.ErrorMessage ?? "An unexpected error occurred" }
+                });
             }
             var response = new ApiResponse<CouponResponse>
             {
@@ -264,7 +258,7 @@ namespace Berryfy.API.Controllers
         {
             var entity = await _userCouponService.AddCouponToUserAsync(userId, addCouponToUser.CouponId);
 
-            if (entity != null)
+            if (entity != null && entity.IsSuccess && entity.Value != null)
             {
                 return Ok(new ApiResponse<UserCouponResponse>
                 {
@@ -278,7 +272,7 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = "An error occurred while apply coupon to user"
+                StatusMessage = entity?.ErrorMessage ?? "An error occurred while applying coupon to user"
             });
         }
 
@@ -304,7 +298,7 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 400,
-                StatusMessage = "En error occurred while disabling the coupon",
+                StatusMessage = "An error occurred while disabling the coupon",
                 Data = false
             });
         }
@@ -312,12 +306,17 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [Route("users/{userId}/coupons")]
-        //[UserAndAbove]
+        [UserAndAbove]
         public async Task<ActionResult<ApiResponse<List<CouponResponse>>>> GetCouponsByUserId(int userId)
         {
+            if (!CanAccessUserResource(userId))
+            {
+                return Forbid();
+            }
+
             var coupons = await _userCouponService.GetCouponsByUserIdAsync(userId);
 
-            if (coupons.Value.Count != 0)
+            if (coupons != null && coupons.IsSuccess && coupons.Value != null)
             {
                 return Ok(new ApiResponse<List<CouponResponse>>
                 {
@@ -331,7 +330,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 404,
-                StatusMessage = "There is no coupons found by user"
+                StatusMessage = "There is no coupons found by user",
+                Data = new List<CouponResponse>()
             });
         }
 
@@ -343,7 +343,7 @@ namespace Berryfy.API.Controllers
         {
             var users = await _userCouponService.GetUsersByCouponIdAsync(couponId);
 
-            if (users.Value.Count != 0)
+            if (users != null && users.IsSuccess && users.Value != null)
             {
                 return Ok(new ApiResponse<List<UserResponse>>
                 {
@@ -357,7 +357,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = false,
                 StatusCode = 404,
-                StatusMessage = "There is no users found by coupon"
+                StatusMessage = "There is no users found by coupon",
+                Data = new List<UserResponse>()
             });
         }
 
