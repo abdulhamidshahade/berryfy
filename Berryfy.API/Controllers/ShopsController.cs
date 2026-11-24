@@ -19,19 +19,20 @@ namespace Berryfy.API.Controllers
 
         [HttpGet]
         [Route("{id}")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public async Task<ActionResult<ApiResponse<ShopResponse>>> GetById(int id)
         {
             var shop = await _shopService.GetShopAsync(id);
 
-            if (shop == null)
+            if (shop == null || !shop.IsSuccess || shop.Value == null)
             {
-                return new ApiResponse<ShopResponse>
+                return NotFound(new ApiResponse<ShopResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error retrieving shop",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
+                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusMessage = shop?.ErrorMessage ?? "Shop not found",
+                    Errors = new List<string> { shop?.ErrorMessage ?? "Shop not found" }
+                });
             }
 
             var response = new ApiResponse<ShopResponse>
@@ -52,16 +53,15 @@ namespace Berryfy.API.Controllers
         {
             var updatedShop = await _shopService.UpdateShopAsync(id, shopDto);
 
-            if (updatedShop == null)
+            if (updatedShop == null || !updatedShop.IsSuccess || updatedShop.Value == null)
             {
-                return new ApiResponse<ShopResponse>
+                return BadRequest(new ApiResponse<ShopResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error updating shop",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = updatedShop?.ErrorMessage ?? "Error updating shop",
+                    Errors = new List<string> { updatedShop?.ErrorMessage ?? "An unexpected error occurred" }
+                });
             }
 
             var response = new ApiResponse<ShopResponse>
