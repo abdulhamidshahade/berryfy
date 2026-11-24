@@ -10,6 +10,7 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
         public string Description { get; set; }
         public string ImageUrl { get; set; }
         public bool IsActive { get; set; }
+        public List<ProductResponse> Products { get; set; } = new List<ProductResponse>();
 
         public static Category MapToCategory(CategoryResponse response)
         {
@@ -18,12 +19,18 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
                 Id = response.Id,
                 Name = response.Name,
                 Description = response.Description,
-                ImageUrl = response.ImageUrl
+                ImageUrl = response.ImageUrl,
+                IsActive = response.IsActive
             };
         }
 
         public static CategoryResponse MapFromCategory(Category category)
         {
+            if (category == null)
+            {
+                return null!;
+            }
+
             return new CategoryResponse
             {
                 Id = category.Id,
@@ -31,6 +38,7 @@ namespace Berryfy.Application.Dtos.CategoryDtos.Responses
                 Description = category.Description,
                 ImageUrl = category.ImageUrl,
                 IsActive = category.IsActive,
+                Products = new List<ProductResponse>()
             };
         }
     }
