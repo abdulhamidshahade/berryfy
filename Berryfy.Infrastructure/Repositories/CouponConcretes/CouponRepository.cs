@@ -80,10 +80,10 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
             const string sql = @"
                 INSERT INTO coupons (
                     code, description, discount_amount, minimum_order_amount, is_active,
-                    created_at, updated_at, type, value, is_for_new_users_only, shop_id)
+                    created_at, updated_at, type, value, is_for_new_users_only)
                 VALUES (
                     @Code, @Description, @DiscountAmount, @MinimumOrderAmount, @IsActive,
-                    @CreatedAt, @UpdatedAt, @Type, @Value, @IsForNewUsersOnly, @ShopId)
+                    @CreatedAt, @UpdatedAt, @Type, @Value, @IsForNewUsersOnly)
                 RETURNING id;";
 
             var now = DateTime.UtcNow;
@@ -111,7 +111,6 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                     discount_amount = @DiscountAmount,
                     minimum_order_amount = @MinimumOrderAmount,
                     is_active = @IsActive,
-                    shop_id = @ShopId,
                     updated_at = @UpdatedAt,
                     type = @Type,
                     value = @Value,
@@ -135,11 +134,12 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
                 };
             }
 
+            var updated = await GetByIdAsync(id);
             return new InfrastructureResponse<Coupon?>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = GetByIdAsync(id).GetAwaiter().GetResult().Value
+                Value = updated.Value
             };
         }
 
@@ -184,7 +184,7 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
         {
             command.Parameters.AddWithValue("@Code", coupon.Code);
             command.Parameters.AddWithValue("@Description", coupon.Description ?? string.Empty);
-            command.Parameters.AddWithValue("@DiscountAmount", coupon.DiscountAmount);
+            command.Parameters.AddWithValue("@DiscountAmount", (object?)coupon.DiscountAmount ?? DBNull.Value);
             command.Parameters.AddWithValue("@MinimumOrderAmount", coupon.MinimumOrderAmount);
             command.Parameters.AddWithValue("@IsActive", coupon.IsActive);
             command.Parameters.AddWithValue("@CreatedAt", coupon.CreatedAt);
