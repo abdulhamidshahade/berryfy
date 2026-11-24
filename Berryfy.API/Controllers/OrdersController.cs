@@ -29,7 +29,7 @@ namespace Berryfy.API.Controllers
 
 
         [HttpPost]
-        //[UserAndAbove]
+        [UserAndAbove]
         public async Task<ActionResult<ApiResponse<Order>>> CreateOrder([FromBody] CreateOrder request)
         {
             if (request == null)
@@ -44,14 +44,26 @@ namespace Berryfy.API.Controllers
 
             var userId = GetCurrentUserId();
             if (!userId.HasValue) return Unauthorized();
-            var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active)
-                ?? await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
-            if (cart == null) return NotFound();
+
+            var cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.Active);
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
+            {
+                cart = await _cartService.GetCartByIdAsync(request.CartId, CartStatus.PendingPayment);
+            }
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
+            {
+                return NotFound(new ApiResponse<Order>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Cart not found"
+                });
+            }
             if (cart.Value.UserId != userId.Value) return Forbid();
 
             request.UserId = userId.Value;
             var order = await _orderService.CreateOrderFromCartAsync(request.CartId, request);
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return StatusCode(500, new ApiResponse<Order>
                 {
@@ -76,7 +88,7 @@ namespace Berryfy.API.Controllers
         public async Task<ActionResult<ApiResponse<OrderResponse>>> GetOrderById(int id)
         {
             var order = await _orderService.GetOrderByIdAsync(id);
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return NotFound(new ApiResponse<OrderResponse>
                 {
@@ -204,13 +216,24 @@ namespace Berryfy.API.Controllers
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<OrderTotal>>> CalculateOrderTotals([FromQuery] int cartId)
         {
-            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)
-                    ?? await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
-            if (cart == null) return NotFound();
+            var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
+            {
+                cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
+            }
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
+            {
+                return NotFound(new ApiResponse<OrderTotal>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Cart not found"
+                });
+            }
             if (!CanAccessUserResource(cart.Value.UserId)) return Forbid();
 
             var totals = await _orderService.CalculateOrderTotalsAsync(cartId);
-            if (totals == null)
+            if (totals == null || !totals.IsSuccess || totals.Value == null)
             {
                 return NotFound(new ApiResponse<OrderTotal>
                 {
@@ -235,7 +258,7 @@ namespace Berryfy.API.Controllers
         public async Task<ActionResult<ApiResponse<OrderResponse>>> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusRequest request)
         {
             var order = await _orderService.GetOrderByIdAsync(orderId);
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return NotFound(new ApiResponse<OrderResponse>
                 {
@@ -257,12 +280,13 @@ namespace Berryfy.API.Controllers
                 });
             }
 
+            var refreshedOrder = await _orderService.GetOrderByIdAsync(orderId);
             return Ok(new ApiResponse<OrderResponse>
             {
                 IsSuccess = true,
                 StatusCode = 200,
                 StatusMessage = "Order status updated successfully",
-                Data = _orderService.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value
+                Data = refreshedOrder.Value
             });
         }
 
@@ -282,7 +306,7 @@ namespace Berryfy.API.Controllers
             }
 
             var order = await _orderService.GetOrderByReferenceNumberAsync(referenceNumber);
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return NotFound(new ApiResponse<OrderResponse>
                 {
@@ -359,14 +383,86 @@ namespace Berryfy.API.Controllers
         }
 
 
+        [HttpPut("{orderId}/mark-paid")]
+        [AdminAndAbove]
+        public async Task<ActionResult<ApiResponse<bool>>> MarkOrderAsPaid(int orderId)
+        {
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+            if (order == null || !order.IsSuccess || order.Value == null)
+            {
+                return NotFound(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Order not found",
+                    Data = false
+                });
+            }
+
+            if (order.Value.Status == OrderStatus.Pending && !order.Value.IsPaid)
+            {
+                var inventoryOk = await _orderService.DeductInventoryForPaidOrderAsync(orderId);
+                if (!inventoryOk.Value)
+                {
+                    return StatusCode(500, new ApiResponse<bool>
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        StatusMessage = "Could not deduct inventory for order",
+                        Data = false
+                    });
+                }
+            }
+
+            var mappedOrder = OrderResponse.MapToOrder(order.Value);
+            var paidResult = await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed);
+            if (!paidResult.Value)
+            {
+                return StatusCode(500, new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    StatusMessage = "Could not mark order as paid",
+                    Data = false
+                });
+            }
+
+            mappedOrder.isPaid = true;
+            if (mappedOrder.Status == OrderStatus.Pending)
+            {
+                await _orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing);
+            }
+
+            if (order.Value.CartId > 0)
+            {
+                var cart = await _cartService.GetCartByIdAsync(order.Value.CartId, CartStatus.PendingPayment);
+                if (cart != null && cart.IsSuccess && cart.Value != null)
+                {
+                    var converted = await _cartService.ConvertCartAsync(order.Value.CartId);
+                    if (converted.Value)
+                    {
+                        await _cartService.ClearCartAsync(order.Value.CartId, order.Value.UserId, null);
+                    }
+                }
+            }
+
+            return Ok(new ApiResponse<bool>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Order marked as paid successfully",
+                Data = true
+            });
+        }
+
+
         [HttpPut("{orderId}/sync-with-cart")]
         [UserAndAbove]
         public async Task<ActionResult<ApiResponse<OrderResponse>>> SyncOrderWithCart(int orderId)
         {
-            var userId = GetCurrentUserId();
             var order = await _orderService.GetOrderByIdAsync(orderId);
 
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return NotFound(new ApiResponse<OrderResponse>
                 {
