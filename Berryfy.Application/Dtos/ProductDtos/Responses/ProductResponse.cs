@@ -18,11 +18,18 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
+        public int CategoryId { get; set; }
         public int ShopId { get; set; }
         public int? ShopCategoryId { get; set; }
+        public List<CategoryResponse> ProductCategories { get; set; } = new List<CategoryResponse>();
 
         public static ProductResponse MapFromProduct(Product product)
         {
+            if (product == null)
+            {
+                return null!;
+            }
+
             return new ProductResponse
             {
                 Id = product.Id,
@@ -35,8 +42,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
                 LowStockThreshold = product.LowStockThreshold,
                 IsActive = product.IsActive,
                 SKU = product.SKU,
-                //ShopId = product.ShopId,
-                //ShopCategoryId = product.ShopCategoryId
+                CategoryId = product.CategoryId
             };
         }
 
@@ -59,8 +65,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Responses
                 LowStockThreshold = response.LowStockThreshold,
                 IsActive = response.IsActive,
                 SKU = response.SKU,
-                //ShopId = response.ShopId,
-                //ShopCategoryId = response.ShopCategoryId
+                CategoryId = response.CategoryId
             };
         }
 
