@@ -34,9 +34,15 @@ namespace Berryfy.Application.Dtos.OrderDtos.Responses
         public string? ShippingCountry { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public List<OrderItemResponse> OrderItems { get; set; } = new List<OrderItemResponse>();
 
         public static Order MapToOrder(OrderResponse response)
         {
+            if (response == null)
+            {
+                return null!;
+            }
+
             return new Order
             {
                 Id = response.Id,
@@ -62,12 +68,18 @@ namespace Berryfy.Application.Dtos.OrderDtos.Responses
                 ShippingPostalCode = response.ShippingPostalCode,
                 ShippingCountry = response.ShippingCountry,
                 CreatedAt = response.CreatedAt,
-                UpdatedAt = response.UpdatedAt
+                UpdatedAt = response.UpdatedAt,
+                OrderItems = response.OrderItems?.Select(OrderItemResponse.MapToOrderItem).ToList() ?? new List<OrderItem>()
             };
         }
 
         public static OrderResponse MapFromOrder(Order order)
         {
+            if (order == null)
+            {
+                return null!;
+            }
+
             return new OrderResponse
             {
                 Id = order.Id,
@@ -93,7 +105,8 @@ namespace Berryfy.Application.Dtos.OrderDtos.Responses
                 ShippingPostalCode = order.ShippingPostalCode,
                 ShippingCountry = order.ShippingCountry,
                 CreatedAt = order.CreatedAt,
-                UpdatedAt = order.UpdatedAt
+                UpdatedAt = order.UpdatedAt,
+                OrderItems = order.OrderItems?.Select(OrderItemResponse.MapFromOrderItem).ToList() ?? new List<OrderItemResponse>()
             };
         }
 
