@@ -47,11 +47,12 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             {
                 var addedCouponToUser = await AddCouponToUserAsync(userId, couponId);
 
-                if (addedCouponToUser == null)
+                if (addedCouponToUser == null || !addedCouponToUser.IsSuccess)
                 {
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "Failed to add coupon to user"
                     };
                 }
@@ -60,28 +61,31 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return new ApplicationResponse<bool>
             {
                 IsSuccess = true,
+                Value = true,
                 SuccessMessage = "Coupon added to all users successfully"
             };
         }
 
         public async Task<ApplicationResponse<bool>> AddCouponToNewUsersAsync(int couponId)
         {
-            if (couponId <= 0 || ! _couponService.ExistsByIdAsync(couponId).GetAwaiter().GetResult().Value) return new ApplicationResponse<bool>
+            if (couponId <= 0 || !(await _couponService.ExistsByIdAsync(couponId)).Value) return new ApplicationResponse<bool>
             {
                 IsSuccess = false,
+                Value = false,
                 ErrorMessage = "Invalid coupon ID"
             };
-            var users = _userService.GetAllUsers().GetAwaiter().GetResult().Value;
+            var users = (await _userService.GetAllUsers()).Value;
             foreach (var userId in users.Select(u => u.Id).Distinct())
             {
-                if (_orderRepository.UserHasPaidOrderAsync(userId).GetAwaiter().GetResult().Value) continue;
+                if ((await _orderRepository.UserHasPaidOrderAsync(userId)).Value) continue;
                 var addedCoupon = await AddCouponToUserAsync(userId, couponId);
 
-                if (addedCoupon == null)
+                if (addedCoupon == null || !addedCoupon.IsSuccess)
                 {
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "Failed to add coupon to user"
                     };
                 }
@@ -90,6 +94,7 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return new ApplicationResponse<bool>
             {
                 IsSuccess = true,
+                Value = true,
                 SuccessMessage = "Coupon added to new users successfully"
             };
         }
@@ -129,15 +134,16 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
         public async Task<ApplicationResponse<bool>> AddCouponToUsersAsync(List<int> userIds, int couponId)
         {
-            foreach( var userId in userIds)
+            foreach (var userId in userIds)
             {
                 var addedCoupon = await AddCouponToUserAsync(userId, couponId);
 
-                if(addedCoupon == null)
+                if (addedCoupon == null || !addedCoupon.IsSuccess)
                 {
                     return new ApplicationResponse<bool>
                     {
                         IsSuccess = false,
+                        Value = false,
                         ErrorMessage = "Failed to add coupon to user"
                     };
                 }
@@ -146,32 +152,35 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
             return new ApplicationResponse<bool>
             {
                 IsSuccess = true,
+                Value = true,
                 SuccessMessage = "Coupon added to users successfully"
             };
         }
 
         public async Task<ApplicationResponse<bool>> DisableCouponToUser(int userId, int couponId)
         {
-            var userExists = _userService.IsUserExistsByIdAsync(userId).GetAwaiter().GetResult().Value;
-            var couponExists = _couponService.GetByIdAsync(couponId).GetAwaiter().GetResult().Value;
+            var userExists = (await _userService.IsUserExistsByIdAsync(userId)).Value;
+            var couponExists = (await _couponService.GetByIdAsync(couponId)).Value;
 
             if (!userExists || couponExists == null)
             {
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
+                    Value = false,
                     ErrorMessage = "User or coupon not found"
                 };
             }
 
             List<CouponResponse> userHasCoupons = CouponResponse.MapFromCoupon(
-                (_userCouponRepository.GetCouponsByUserIdAsync(userId).GetAwaiter().GetResult().Value));
+                (await _userCouponRepository.GetCouponsByUserIdAsync(userId)).Value);
 
             if (!userHasCoupons.Any(i => i.Code == couponExists.Code))
             {
                 return new ApplicationResponse<bool>
                 {
                     IsSuccess = false,
+                    Value = false,
                     ErrorMessage = "Coupon not found for user"
                 };
             }
@@ -180,7 +189,8 @@ namespace Berryfy.Application.Services.Concretes.CouponServiceConcretes
 
             return new ApplicationResponse<bool>
             {
-                IsSuccess = true,
+                IsSuccess = disabledCoupon.Value,
+                Value = disabledCoupon.Value,
                 SuccessMessage = "Coupon disabled for user successfully"
             };
         }
