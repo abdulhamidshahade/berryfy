@@ -33,6 +33,7 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
                 ProductId = cartItem.ProductId,
                 Quantity = cartItem.Quantity,
                 UnitPrice = cartItem.UnitPrice,
+                Product = cartItem.Product != null ? ProductResponse.MapFromProduct(cartItem.Product) : null!
             };
         }
     }
