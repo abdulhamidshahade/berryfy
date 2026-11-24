@@ -27,8 +27,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 FROM products p
                 ORDER BY p.id;";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
             
@@ -55,29 +54,28 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
                     p.created_at, p.updated_at, p.category_id
-                FROM Products p
+                FROM products p
                 WHERE p.id = @Id
                 ORDER BY p.id;";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = new Product();
+            Product? product = null;
 
-            if(await reader.ReadAsync())
+            if (await reader.ReadAsync())
             {
                 product = MapProduct(reader);
             }
 
             return new InfrastructureResponse<Product>()
             {
-                IsSuccess = true,
-                Message = "Product retrieved successfully",
-                Value = product
+                IsSuccess = product != null,
+                Message = product != null ? "Product retrieved successfully" : "Product not found",
+                Value = product!
             };
         }
 
@@ -88,35 +86,34 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
                     p.created_at, p.updated_at, p.category_id
-                FROM Products p
-                WHERE p.name = @Name
+                FROM products p
+                WHERE LOWER(p.name) = LOWER(@Name)
                 ORDER BY p.id;";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            Product product = new Product();
+            Product? product = null;
 
-            if(await reader.ReadAsync())
+            if (await reader.ReadAsync())
             {
                 product = MapProduct(reader);
             }
 
             return new InfrastructureResponse<Product>()
             {
-                IsSuccess = true,
-                Message = "Product retrieved successfully",
-                Value = product
+                IsSuccess = product != null,
+                Message = product != null ? "Product retrieved successfully" : "Product not found",
+                Value = product!
             };
         }
 
         public async Task<InfrastructureResponse<Product>> CreateAsync(Product product)
         {
-           string sql = @"
+            const string sql = @"
                 INSERT INTO products (name, description, stock_quantity, image_url, price, reserved_stock,
                     low_stock_threshold, is_active, sku, created_at, updated_at, category_id)
                 VALUES (@Name, @Description, @StockQuantity, @ImageUrl, @Price, @ReservedStock,
@@ -124,16 +121,18 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 RETURNING id, name, description, stock_quantity, image_url, price,
                 reserved_stock, low_stock_threshold, is_active, sku, created_at, updated_at, category_id;";
 
-            await using var connection = await OpenConnectionAsync();
+            var now = DateTime.UtcNow;
+            if (product.CreatedAt == default) product.CreatedAt = now;
+            if (product.UpdatedAt == default) product.UpdatedAt = now;
 
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
 
             AddProductParameters(command, product);
 
-            
-            using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Product createdProduct = new Product();
+            Product? createdProduct = null;
 
             if (await reader.ReadAsync())
             {
@@ -142,9 +141,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             return new InfrastructureResponse<Product>()
             {
-                IsSuccess = true,
-                Message = "Product created successfully",
-                Value = createdProduct
+                IsSuccess = createdProduct != null,
+                Message = createdProduct != null ? "Product created successfully" : "Failed to create product",
+                Value = createdProduct!
             };
         }
 
@@ -165,17 +164,18 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     category_id = @CategoryId
                 WHERE id = @Id
                 RETURNING id, name, description, stock_quantity, image_url, price, reserved_stock,
-                    low_stock_threshold, is_active, sku, created_at, updated_at,category_id;";
+                    low_stock_threshold, is_active, sku, created_at, updated_at, category_id;";
 
-            using var connection = await OpenConnectionAsync();
+            if (product.UpdatedAt == default) product.UpdatedAt = DateTime.UtcNow;
 
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             AddProductParameters(command, product);
             command.Parameters.AddWithValue("@Id", id);
 
             await using var reader = await command.ExecuteReaderAsync();
             
-            if(await reader.ReadAsync())
+            if (await reader.ReadAsync())
             {
                 Product updatedProduct = MapProduct(reader);
                 return new InfrastructureResponse<Product>()
@@ -185,18 +185,20 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                     Value = updatedProduct
                 };
             }
-            else
+
+            return new InfrastructureResponse<Product>()
             {
-                throw new Exception($"Product with ID {id} not found.");
-            }
+                IsSuccess = false,
+                Message = $"Product with ID {id} not found.",
+                Value = null!
+            };
         }
 
         public async Task<InfrastructureResponse<bool>> DeleteAsync(Product product)
         {
-            const string sql = "DELETE FROM Products WHERE id = @Id";
+            const string sql = "DELETE FROM products WHERE id = @Id";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", product.Id);
 
@@ -211,10 +213,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByIdAsync(int id)
         {
-            const string sql = "SELECT COUNT(1) FROM Products WHERE id = @Id";
+            const string sql = "SELECT COUNT(1) FROM products WHERE id = @Id";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
@@ -229,10 +230,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByNameAsync(string name)
         {
-            const string sql = "SELECT COUNT(1) FROM Products WHERE name = @Name";
+            const string sql = "SELECT COUNT(1) FROM products WHERE LOWER(name) = LOWER(@Name)";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Name", name);
 
@@ -247,10 +247,9 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         public async Task<InfrastructureResponse<int>> GetTotalCountAsync()
         {
-            const string sql = "SELECT COUNT(1) FROM Products";
+            const string sql = "SELECT COUNT(1) FROM products";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             var count = await command.ExecuteScalarAsync();
             return new InfrastructureResponse<int>()
@@ -267,7 +266,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
         {
             var sql = @"
                 SELECT
-                    p.Id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
+                    p.id, p.name, p.description, p.stock_quantity, p.image_url, p.price,
                     p.reserved_stock, p.low_stock_threshold, p.is_active, p.sku,
                     p.created_at, p.updated_at, p.category_id
                 FROM products p
@@ -280,7 +279,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM global_categories gc WHERE gc.id = p.global_category_id AND LOWER(gc.name) = LOWER(@CategoryName) UNION ALL SELECT 1 FROM shop_categories sc WHERE sc.id = p.shop_category_id AND LOWER(sc.name) = LOWER(@CategoryName))";
+                sql += "AND EXISTS (SELECT 1 FROM categories c WHERE c.id = p.category_id AND (LOWER(c.name) = LOWER(@CategoryName) OR CAST(c.id AS TEXT) = @CategoryName)) ";
             }
 
             if (minPrice.HasValue)
@@ -300,17 +299,16 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             string orderByClause = sortBy?.ToLower() switch
             {
-                "price-low" => "ORDER BY p.price ASC",
-                "price-high" => "ORDER BY p.price DESC",
+                "price-low" or "price_asc" => "ORDER BY p.price ASC",
+                "price-high" or "price_desc" => "ORDER BY p.price DESC",
                 "newest" => "ORDER BY p.created_at DESC",
                 _ => "ORDER BY p.name ASC" 
             };
             sql += orderByClause + " ";
 
-            sql += "OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+            sql += "LIMIT @PageSize OFFSET @Offset";
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -332,7 +330,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
             {
                 command.Parameters.AddWithValue("@IsActive", isActive.Value);
             }
-            command.Parameters.AddWithValue("@Offset", (pageNumber - 1) * pageSize);
+            command.Parameters.AddWithValue("@Offset", Math.Max(0, (pageNumber - 1) * pageSize));
             command.Parameters.AddWithValue("@PageSize", pageSize);
 
             await using var reader = await command.ExecuteReaderAsync();
@@ -368,7 +366,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                sql += "AND EXISTS (SELECT 1 FROM global_categories gc WHERE gc.id = p.global_category_id AND LOWER(gc.name) = LOWER(@CategoryName) UNION ALL SELECT 1 FROM shop_categories sc WHERE sc.id = p.shop_category_id AND LOWER(sc.name) = LOWER(@CategoryName))";
+                sql += "AND EXISTS (SELECT 1 FROM categories c WHERE c.id = p.category_id AND (LOWER(c.name) = LOWER(@CategoryName) OR CAST(c.id AS TEXT) = @CategoryName)) ";
             }
 
             if (minPrice.HasValue)
@@ -386,8 +384,7 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
                 sql += "AND p.is_active = @IsActive ";
             }
 
-            var connection = await OpenConnectionAsync();
-
+            await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -428,43 +425,43 @@ namespace Berryfy.Infrastructure.Repositories.ProductConcretes
 
         private Product MapProduct(NpgsqlDataReader reader)
         {
-            Product product = new Product()
+            var descOrd = reader.GetOrdinal("description");
+            var imgOrd = reader.GetOrdinal("image_url");
+            var skuOrd = reader.GetOrdinal("sku");
+            var catOrd = reader.GetOrdinal("category_id");
+
+            return new Product()
             {
-                Id = reader.GetInt16(reader.GetOrdinal("id")),
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
                 Name = reader.GetString(reader.GetOrdinal("name")),
-                Description = reader.GetString(reader.GetOrdinal("description")),
-                StockQuantity = reader.GetInt16(reader.GetOrdinal("stock_quantity")),
-                ImageUrl = reader.GetString(reader.GetOrdinal("image_url")),
+                Description = reader.IsDBNull(descOrd) ? string.Empty : reader.GetString(descOrd),
+                StockQuantity = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("stock_quantity"))),
+                ImageUrl = reader.IsDBNull(imgOrd) ? string.Empty : reader.GetString(imgOrd),
                 Price = reader.GetDecimal(reader.GetOrdinal("price")),
-                ReservedStock = reader.GetInt16(reader.GetOrdinal("reserved_stock")),
-                LowStockThreshold = reader.GetInt16(reader.GetOrdinal("low_stock_threshold")),
+                ReservedStock = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("reserved_stock"))),
+                LowStockThreshold = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("low_stock_threshold"))),
                 IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
-                SKU = reader.GetString(reader.GetOrdinal("sku")),
+                SKU = reader.IsDBNull(skuOrd) ? string.Empty : reader.GetString(skuOrd),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at")),
-                CategoryId = reader.GetInt16(reader.GetOrdinal("category_id"))
-                //ShopId = reader.GetInt16(reader.GetOrdinal("shop_id")),
-                //ShopCategoryId = reader.IsDBNull(reader.GetOrdinal("shop_category_id")) ? null : reader.GetInt16(reader.GetOrdinal("shop_category_id"))
+                CategoryId = reader.IsDBNull(catOrd) ? 0 : Convert.ToInt32(reader.GetValue(catOrd))
             };
-            return product;
         }
 
         private void AddProductParameters(NpgsqlCommand command, Product product)
         {
-            command.Parameters.AddWithValue("@Name", product.Name);
-            command.Parameters.AddWithValue("@Description", (object?)product.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Name", product.Name ?? string.Empty);
+            command.Parameters.AddWithValue("@Description", product.Description ?? string.Empty);
             command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
-            command.Parameters.AddWithValue("@ImageUrl", (object?)product.ImageUrl ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ImageUrl", product.ImageUrl ?? string.Empty);
             command.Parameters.AddWithValue("@Price", product.Price);
             command.Parameters.AddWithValue("@ReservedStock", product.ReservedStock);
             command.Parameters.AddWithValue("@LowStockThreshold", product.LowStockThreshold);
             command.Parameters.AddWithValue("@IsActive", product.IsActive);
-            command.Parameters.AddWithValue("@SKU", product.SKU);
-            command.Parameters.AddWithValue("@CreatedAt", product.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt);
-            command.Parameters.AddWithValue("@CategoryId", product.CategoryId);
-            //command.Parameters.AddWithValue("@ShopId", product.ShopId);
-            //command.Parameters.AddWithValue("@ShopCategoryId", (object?)product.ShopCategoryId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@SKU", product.SKU ?? string.Empty);
+            command.Parameters.AddWithValue("@CreatedAt", product.CreatedAt == default ? DateTime.UtcNow : product.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", product.UpdatedAt == default ? DateTime.UtcNow : product.UpdatedAt);
+            command.Parameters.AddWithValue("@CategoryId", product.CategoryId > 0 ? product.CategoryId : DBNull.Value);
         }
 
         //public async Task<InfrastructureResponse<ShopCategory>> GetShopCategoryByProduct(int productId)
