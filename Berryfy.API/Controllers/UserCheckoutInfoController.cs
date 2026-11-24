@@ -40,8 +40,8 @@ namespace Berryfy.API.Controllers
             {
                 IsSuccess = true,
                 StatusCode = 200,
-                StatusMessage = info == null ? "No saved checkout information" : "Checkout information retrieved",
-                Data = info.Value
+                StatusMessage = info?.Value == null ? "No saved checkout information" : "Checkout information retrieved",
+                Data = info?.Value
             });
         }
 
