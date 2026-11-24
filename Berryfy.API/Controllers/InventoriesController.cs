@@ -75,12 +75,23 @@ namespace Berryfy.API.Controllers
                     request.ReferenceId,
                     request.ReferenceType);
 
+            if (!success.Value)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Failed to release reserved stock",
+                    Data = false
+                });
+            }
+
             return Ok(new ApiResponse<bool>
             {
-                IsSuccess = success.Value,
-                StatusCode = success.Value ? 200 : 400,
-                StatusMessage = success.Value ? "Reserved stock released successfully" : "Failed to release reserved stock",
-                Data = success.Value
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Reserved stock released successfully",
+                Data = true
             });
         }
 
@@ -95,12 +106,23 @@ namespace Berryfy.API.Controllers
                     request.ReferenceId,
                     request.ReferenceType);
 
+            if (!success.Value)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Failed to confirm stock deduction",
+                    Data = false
+                });
+            }
+
             return Ok(new ApiResponse<bool>
             {
-                IsSuccess = success.Value,
-                StatusCode = success.Value ? 200 : 400,
-                StatusMessage = success.Value ? "Stock deduction confirmed successfully" : "Failed to confirm stock deduction",
-                Data = success.Value
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Stock deduction confirmed successfully",
+                Data = true
             });
         }
 
@@ -112,14 +134,25 @@ namespace Berryfy.API.Controllers
                     request.ProductId,
                     request.Quantity,
                     request.Notes,
-                    request.PerformedByUserId);
+                    request.PerformedByUserId ?? GetCurrentUserId());
+
+            if (!success.Value)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Failed to add stock",
+                    Data = false
+                });
+            }
 
             return Ok(new ApiResponse<bool>
             {
-                IsSuccess = success.Value,
-                StatusCode = success.Value ? 200 : 400,
-                StatusMessage = success.Value ? "Stock added successfully" : "Failed to add stock",
-                Data = success.Value
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Stock added successfully",
+                Data = true
             });
         }
 
@@ -132,14 +165,25 @@ namespace Berryfy.API.Controllers
                     request.ProductId,
                     request.NewQuantity,
                     request.Notes,
-                    request.PerformedByUserId);
+                    request.PerformedByUserId ?? GetCurrentUserId());
+
+            if (!success.Value)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Failed to adjust stock",
+                    Data = false
+                });
+            }
 
             return Ok(new ApiResponse<bool>
             {
-                IsSuccess = success.Value,
-                StatusCode = success.Value ? 200 : 400,
-                StatusMessage = success.Value ? "Stock adjusted successfully" : "Failed to adjust stock",
-                Data = success.Value
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Stock adjusted successfully",
+                Data = true
             });
         }
 
@@ -149,7 +193,7 @@ namespace Berryfy.API.Controllers
         public async Task<ActionResult<ApiResponse<Product>>> GetProductWithStock(int productId)
         {
             var product = await _inventoryService.GetProductWithStockInfoAsync(productId);
-            if (product == null)
+            if (product == null || !product.IsSuccess || product.Value == null)
             {
                 return NotFound(new ApiResponse<Product>
                 {
