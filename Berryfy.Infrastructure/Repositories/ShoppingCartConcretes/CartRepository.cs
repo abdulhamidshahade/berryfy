@@ -198,6 +198,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             cc.id AS Cc_Id,
             cc.coupon_id AS Cc_CouponId,
+            cc.user_id AS Cc_UserId,
             cc.discount_amount AS Cc_DiscountAmount,
             cc.created_at AS Cc_CreatedAt,
             cc.updated_at AS Cc_UpdatedAt,
@@ -339,6 +340,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Id = cartCouponId,
                             CartId = cartId,
                             CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            UserId = reader.IsDBNull(Ordinal("Cc_UserId")) ? null : reader.GetInt32(Ordinal("Cc_UserId")),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
                             CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
                             UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt")),
@@ -356,11 +358,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                         {
                             Id = reader.GetInt32(Ordinal("Cp_Id")),
                             Code = reader.GetString(Ordinal("Cp_Code")),
-                            Description = NullableString("Cp_Description"),
-                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            Description = NullableString("Cp_Description") ?? string.Empty,
+                            DiscountAmount = reader.IsDBNull(Ordinal("Cp_DiscountAmount"))
+                                ? (decimal?)null
+                                : reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type =
-                                (CouponType)reader.GetInt16(Ordinal("Cp_Type")),
+                            Type = (CouponType)Convert.ToInt32(reader.GetValue(Ordinal("Cp_Type"))),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
                             IsForNewUsersOnly = reader.GetBoolean(
@@ -426,6 +429,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             cc.id AS Cc_Id,
             cc.coupon_id AS Cc_CouponId,
+            cc.user_id AS Cc_UserId,
             cc.discount_amount AS Cc_DiscountAmount,
             cc.created_at AS Cc_CreatedAt,
             cc.updated_at AS Cc_UpdatedAt,
@@ -567,6 +571,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Id = cartCouponId,
                             CartId = cartId,
                             CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            UserId = reader.IsDBNull(Ordinal("Cc_UserId")) ? null : reader.GetInt32(Ordinal("Cc_UserId")),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
                             CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
                             UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt")),
@@ -584,11 +589,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                         {
                             Id = reader.GetInt32(Ordinal("Cp_Id")),
                             Code = reader.GetString(Ordinal("Cp_Code")),
-                            Description = NullableString("Cp_Description"),
-                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            Description = NullableString("Cp_Description") ?? string.Empty,
+                            DiscountAmount = reader.IsDBNull(Ordinal("Cp_DiscountAmount"))
+                                ? (decimal?)null
+                                : reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type = (CouponType)
-                                reader.GetInt16(Ordinal("Cp_Type")),
+                            Type = (CouponType)Convert.ToInt32(reader.GetValue(Ordinal("Cp_Type"))),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
                             IsForNewUsersOnly = reader.GetBoolean(
@@ -805,6 +811,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
             cc.id AS Cc_Id,
             cc.coupon_id AS Cc_CouponId,
+            cc.user_id AS Cc_UserId,
             cc.discount_amount AS Cc_DiscountAmount,
             cc.created_at AS Cc_CreatedAt,
             cc.updated_at AS Cc_UpdatedAt,
@@ -946,6 +953,7 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                             Id = cartCouponId,
                             CartId = cartId,
                             CouponId = reader.GetInt32(Ordinal("Cc_CouponId")),
+                            UserId = reader.IsDBNull(Ordinal("Cc_UserId")) ? null : reader.GetInt32(Ordinal("Cc_UserId")),
                             DiscountAmount = reader.GetDecimal(Ordinal("Cc_DiscountAmount")),
                             CreatedAt = reader.GetDateTime(Ordinal("Cc_CreatedAt")),
                             UpdatedAt = reader.GetDateTime(Ordinal("Cc_UpdatedAt")),
@@ -963,11 +971,12 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
                         {
                             Id = reader.GetInt32(Ordinal("Cp_Id")),
                             Code = reader.GetString(Ordinal("Cp_Code")),
-                            Description = NullableString("Cp_Description"),
-                            DiscountAmount = reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
+                            Description = NullableString("Cp_Description") ?? string.Empty,
+                            DiscountAmount = reader.IsDBNull(Ordinal("Cp_DiscountAmount"))
+                                ? (decimal?)null
+                                : reader.GetDecimal(Ordinal("Cp_DiscountAmount")),
                             MinimumOrderAmount = reader.GetDecimal(Ordinal("Cp_MinimumOrderAmount")),
-                            Type =
-                                (CouponType)reader.GetInt16(Ordinal("Cp_Type")),
+                            Type = (CouponType)Convert.ToInt32(reader.GetValue(Ordinal("Cp_Type"))),
                             Value = reader.GetDecimal(Ordinal("Cp_Value")),
                             IsActive = reader.GetBoolean(Ordinal("Cp_IsActive")),
                             IsForNewUsersOnly = reader.GetBoolean(
@@ -994,11 +1003,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart =  GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartByUserIdAsync(userId, CartStatus.Active)).Value
+                    ?? (await GetCartByUserIdAsync(userId, CartStatus.PendingPayment)).Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartBySessionIdAsync(sessionId, CartStatus.Active)).Value
+                    ?? (await GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment)).Value;
             }
 
             if (cart == null)
@@ -1063,11 +1074,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart = GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartByUserIdAsync(userId, CartStatus.Active)).Value
+                    ?? (await GetCartByUserIdAsync(userId, CartStatus.PendingPayment)).Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartBySessionIdAsync(sessionId, CartStatus.Active)).Value
+                    ?? (await GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment)).Value;
             }
 
             if (cart == null || cart.Id != cartId)
@@ -1132,11 +1145,13 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
             Cart? cart = null;
             if (userId.HasValue)
             {
-                cart = GetCartByUserIdAsync(userId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartByUserIdAsync(userId, CartStatus.Active)).Value
+                    ?? (await GetCartByUserIdAsync(userId, CartStatus.PendingPayment)).Value;
             }
             else if (!string.IsNullOrEmpty(sessionId))
             {
-                cart = GetCartBySessionIdAsync(sessionId, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await GetCartBySessionIdAsync(sessionId, CartStatus.Active)).Value
+                    ?? (await GetCartBySessionIdAsync(sessionId, CartStatus.PendingPayment)).Value;
             }
 
             if (cart == null)
@@ -1365,52 +1380,58 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         public async Task<bool> ClearItemsRelatedToCartId(int cartId)
         {
-            string query = @"delete from cart_items where cart_id = @CartId;";
+            const string query = @"DELETE FROM cart_items WHERE cart_id = @CartId;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CartId", cartId);
 
             var rowEffected = await command.ExecuteNonQueryAsync();
 
-            return (int)rowEffected != 0;
+            return rowEffected >= 0;
         }
 
         public async Task<bool> ClearCouponsRelatedToCouponId(int cartId)
         {
-            string query = @"delete from cart_coupons where cart_id = @CartId;";
+            const string query = @"DELETE FROM cart_coupons WHERE cart_id = @CartId;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CartId", cartId);
 
-            var rowEffected = await command.ExecuteScalarAsync();
+            var rowEffected = await command.ExecuteNonQueryAsync();
 
-            return (int)rowEffected != 0;
+            return rowEffected >= 0;
         }
 
-        public Task<bool> ClearCouponsRelatedToCartId(int cartId)
+        public async Task<bool> ClearCouponsRelatedToCartId(int cartId)
         {
-            throw new NotImplementedException();
+            const string query = @"DELETE FROM cart_coupons WHERE cart_id = @CartId;";
+
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@CartId", cartId);
+
+            var rowEffected = await command.ExecuteNonQueryAsync();
+
+            return rowEffected >= 0;
         }
 
         public async Task<InfrastructureResponse<List<CartItem>>> GetItemsRelatedToCartId(int cartId)
         {
-            string query = @"select * from cart_items where cart_id = @CartId;";
+            const string query = @"SELECT * FROM cart_items WHERE cart_id = @CartId;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CartId", cartId);
 
             List<CartItem> items = new List<CartItem>();
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -1426,15 +1447,17 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         private CartItem MapCartItem(NpgsqlDataReader reader)
         {
+            var userIdOrd = reader.GetOrdinal("user_id");
+            var sessionIdOrd = reader.GetOrdinal("session_id");
             return new CartItem()
             {
-                Id = reader.GetInt32(reader.GetOrdinal("id")),
-                ShoppingCartId = reader.GetInt32(reader.GetOrdinal("cart_id")),
-                ProductId = reader.GetInt32(reader.GetOrdinal("product_id")),
-                UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
-                Quantity = reader.GetInt32(reader.GetOrdinal("quantity")),
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
+                ShoppingCartId = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("cart_id"))),
+                ProductId = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("product_id"))),
+                UserId = reader.IsDBNull(userIdOrd) ? null : Convert.ToInt32(reader.GetValue(userIdOrd)),
+                Quantity = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("quantity"))),
                 UnitPrice = reader.GetDecimal(reader.GetOrdinal("unit_price")),
-                SessionId = reader.IsDBNull(reader.GetOrdinal("session_id")) ? null : reader.GetString(reader.GetOrdinal("session_id")),
+                SessionId = reader.IsDBNull(sessionIdOrd) ? null : reader.GetString(sessionIdOrd),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
             };
@@ -1442,35 +1465,37 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         private async Task<InfrastructureResponse<int>> AddCartCouponAsync(CartCoupon cartCoupon)
         {
-            string query = @"Insert into cart_coupons (cart_id, coupon_id, user_id, discount_amount, applied_at, session_id, created_at, updated_at)
-                            values (@CartId, @CouponId, @UserId, @DiscountAmount, @AppliedAt, @SessionId, @CreatedAt, @UpdatedAt)
-                            returning id;";
+            const string query = @"
+                INSERT INTO cart_coupons (cart_id, coupon_id, user_id, discount_amount, applied_at, session_id, created_at, updated_at)
+                VALUES (@CartId, @CouponId, @UserId, @DiscountAmount, @AppliedAt, @SessionId, @CreatedAt, @UpdatedAt)
+                RETURNING id;";
 
-            using var connection = await OpenConnectionAsync();
-
-            using var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CartId", cartCoupon.CartId);
             command.Parameters.AddWithValue("@CouponId", cartCoupon.CouponId);
-            command.Parameters.AddWithValue("@UserId", cartCoupon.UserId);
+            command.Parameters.AddWithValue("@UserId", (object?)cartCoupon.UserId ?? DBNull.Value);
             command.Parameters.AddWithValue("@DiscountAmount", cartCoupon.DiscountAmount);
-            command.Parameters.AddWithValue("@AppliedAt", cartCoupon.AppliedAt);
+            command.Parameters.AddWithValue("@AppliedAt", cartCoupon.AppliedAt == default ? DateTime.UtcNow : cartCoupon.AppliedAt);
             command.Parameters.AddWithValue("@SessionId", (object?)cartCoupon.SessionId ?? DBNull.Value);
-            command.Parameters.AddWithValue("@CreatedAt", cartCoupon.CreatedAt);
-            command.Parameters.AddWithValue("@UpdatedAt", cartCoupon.UpdatedAt);
+            command.Parameters.AddWithValue("@CreatedAt", cartCoupon.CreatedAt == default ? DateTime.UtcNow : cartCoupon.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", cartCoupon.UpdatedAt == default ? DateTime.UtcNow : cartCoupon.UpdatedAt);
 
             var rowEffected = await command.ExecuteScalarAsync();
+            var newId = rowEffected != null ? Convert.ToInt32(rowEffected) : 0;
+            cartCoupon.Id = newId;
 
             return new InfrastructureResponse<int>()
             {
-                IsSuccess = true,
-                Value = Convert.ToInt16(rowEffected)
+                IsSuccess = newId > 0,
+                Value = newId
             };
         }
 
         public async Task<InfrastructureResponse<bool>> AddCartCouponsAsync(Cart cart)
         {
-            foreach(var item in cart.CartCoupons)
+            foreach (var item in cart.CartCoupons.Where(c => c.Id == 0))
             {
                 await AddCartCouponAsync(item);
             }
@@ -1484,20 +1509,19 @@ namespace Berryfy.Infrastructure.Repositories.ShoppingCartConcretes
 
         public async Task<InfrastructureResponse<bool>> RemoveCouponFromCartAsync(int cartId, int couponId)
         {
-            string query = @"Delete from cart_coupons where cart_id = @CartId and coupon_id = @CouponId;";
+            const string query = @"DELETE FROM cart_coupons WHERE cart_id = @CartId AND coupon_id = @CouponId;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@CartId", cartId);
             command.Parameters.AddWithValue("@CouponId", couponId);
 
-            var rowEffected = await command.ExecuteScalarAsync();
+            var rowEffected = await command.ExecuteNonQueryAsync();
 
             return new InfrastructureResponse<bool>
             {
-                IsSuccess = true,
-                Value = Convert.ToInt16(rowEffected) > 0
+                IsSuccess = rowEffected > 0,
+                Value = rowEffected > 0
             };
         }
     }
