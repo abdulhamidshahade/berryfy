@@ -127,16 +127,18 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                 ShippingCountry = orderDto.ShippingCountry,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
-                CancalledAt= null,
+                CompletedAt = null,
+                CancalledAt = null,
             };
 
-            order = _orderRepository.CreateOrderAsync(order).GetAwaiter().GetResult().Value;
+            order = (await _orderRepository.CreateOrderAsync(order)).Value;
 
             if (order == null)
             {
                 return new ApplicationResponse<Order?> { IsSuccess = false, Value = null };
             }
+
+            order.OrderItems ??= new List<OrderItem>();
 
             foreach (var cartItem in cart.CartItems)
             {
@@ -151,7 +153,11 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
                     DiscountAmount = 0
                 };
 
-                await _orderRepository.CreateOrderItemAsync(orderItem);
+                var createdItem = await _orderRepository.CreateOrderItemAsync(orderItem);
+                if (createdItem.Value != null)
+                {
+                    order.OrderItems.Add(createdItem.Value);
+                }
             }
 
             var cartStatusUpdated = _cartService.UpdateCartStatusAsync(cartId, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
@@ -217,15 +223,19 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
 
         public async Task<ApplicationResponse<OrderResponse?>> GetOrderByIdAsync(int orderId)
         {
-            var order = _orderRepository.GetOrderByIdAsync(orderId).GetAwaiter().GetResult().Value;
+            var order = (await _orderRepository.GetOrderByIdAsync(orderId)).Value;
+            if (order == null)
+            {
+                return new ApplicationResponse<OrderResponse?> { IsSuccess = false, Value = null, ErrorMessage = "Order not found" };
+            }
 
             return new ApplicationResponse<OrderResponse?> { IsSuccess = true, Value = OrderResponse.MapFromOrder(order) };
         }
 
         public async Task<ApplicationResponse<Order?>> GetOrderByReferenceNumberAsync(string referenceNumber)
         {
-            var order = _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber).GetAwaiter().GetResult().Value;
-            return new ApplicationResponse<Order?> { IsSuccess = true, Value = order };
+            var order = (await _orderRepository.GetOrderByReferenceNumberAsync(referenceNumber)).Value;
+            return new ApplicationResponse<Order?> { IsSuccess = order != null, Value = order };
         }
 
         public async Task<ApplicationResponse<List<Order>>> GetOrdersByStatusAsync(OrderStatus status, int page = 1, int pageSize = 10)
@@ -280,17 +290,20 @@ namespace Berryfy.Application.Services.Concretes.OrderServiceConcretes
             };
         }
 
-        public Task<ApplicationResponse<bool>> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus)
+        public async Task<ApplicationResponse<bool>> UpdateOrderPaymentStatusAsync(Order order, PaymentStatus paymentStatus)
         {
-            return _orderRepository.UpdateOrderPaymentStatusAsync(order.Id, paymentStatus).GetAwaiter().GetResult().Value
-                ? Task.FromResult(new ApplicationResponse<bool> { IsSuccess = true, Value = true })
-                : Task.FromResult(new ApplicationResponse<bool> { IsSuccess = true, Value = false });
+            var updated = (await _orderRepository.UpdateOrderPaymentStatusAsync(order.Id, paymentStatus)).Value;
+            if (updated)
+            {
+                order.isPaid = paymentStatus == PaymentStatus.Completed;
+            }
+            return new ApplicationResponse<bool> { IsSuccess = updated, Value = updated };
         }
 
         public async Task<ApplicationResponse<Order>> GetOrderByCartIdAsync(int cartId)
         {
-            var order = _orderRepository.GetOrderByCartIdAsync(cartId).GetAwaiter().GetResult().Value;
-            return new ApplicationResponse<Order> { IsSuccess = true, Value = order };
+            var order = (await _orderRepository.GetOrderByCartIdAsync(cartId)).Value;
+            return new ApplicationResponse<Order> { IsSuccess = order != null, Value = order! };
         }
 
         public async Task<ApplicationResponse<bool>> SyncOrderWithCartAsync(int orderId, int cartId)
