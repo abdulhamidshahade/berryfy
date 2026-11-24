@@ -75,7 +75,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         public async Task<InfrastructureResponse<User?>> GetByNormalizedEmailAsync(string normalizedEmail)
         {
-            const string sql = "SELECT * FROM users WHERE normalized_email = @NormalizedEmail LIMIT 1";
+            const string sql = "SELECT * FROM users WHERE LOWER(normalized_email) = LOWER(@NormalizedEmail) LIMIT 1";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@NormalizedEmail", normalizedEmail);
@@ -193,7 +193,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         public async Task<InfrastructureResponse<bool>> ExistsByEmailAsync(string email)
         {
-            const string sql = "SELECT COUNT(1) FROM users WHERE normalized_email = @NormalizedEmail";
+            const string sql = "SELECT COUNT(1) FROM users WHERE LOWER(normalized_email) = LOWER(@NormalizedEmail)";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@NormalizedEmail", email);
@@ -207,7 +207,7 @@ namespace Berryfy.Infrastructure.Repositories.AuthConcretes
 
         public async Task<InfrastructureResponse<bool>> IsUsernameTakenAsync(string userName)
         {
-            const string sql = "SELECT COUNT(1) FROM users WHERE normalized_user_name = @NormalizedUserName";
+            const string sql = "SELECT COUNT(1) FROM users WHERE LOWER(normalized_user_name) = LOWER(@NormalizedUserName)";
             await using var connection = await OpenConnectionAsync();
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@NormalizedUserName", Normalize(userName));
