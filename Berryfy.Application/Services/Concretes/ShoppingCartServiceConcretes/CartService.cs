@@ -352,9 +352,7 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                 }
 
                 var product = _productService.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
-                var mappedProduct = ProductResponse.MapToProduct(product);
-
-                if (mappedProduct == null)
+                if (product == null)
                 {
                     _logger.LogWarning("Product not found: {ProductId}", productId);
                     return new ApplicationResponse<CartResponse>
@@ -363,6 +361,8 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                         ErrorMessage = "Product not found."
                     };
                 }
+
+                var mappedProduct = ProductResponse.MapToProduct(product);
 
                 if (!mappedProduct.IsActive)
                 {
@@ -481,7 +481,11 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
             {
                 _logger.LogError(ex, "Error adding item to cart: CartId={CartId}, ProductId={ProductId}, Quantity={Quantity}",
                     cartId, productId, quantity);
-                return null;
+                return new ApplicationResponse<CartResponse>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to add item to cart."
+                };
             }
         }
         public async Task<ApplicationResponse<CartResponse>> UpdateItemQuantityAsync(int cartId, int? userId, string? sessionId, int productId, int quantity)
@@ -807,12 +811,10 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 var updatedCart = await _cartRepository.UpdateCartAsync(cart);
 
-                await _inventoryService.ReleaseItemsRelatedToCartId(cartId);
                 await _cartRepository.ClearItemsRelatedToCartId(cartId);
                 await _userCouponService.ReleaseCouponsRelatedToCartId(cartId);
-                //await _cartRepository.ClearCouponsRelatedToCartId(cartId);
 
-                var success = updatedCart != null;
+                var success = updatedCart != null && updatedCart.IsSuccess;
 
                 if (success)
                 {
@@ -825,7 +827,8 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 return new ApplicationResponse<bool>
                 {
-                    IsSuccess = success
+                    IsSuccess = success,
+                    Value = success
                 };
             }
             catch (Exception ex)
@@ -901,7 +904,8 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 return new ApplicationResponse<bool>
                 {
-                    IsSuccess = true
+                    IsSuccess = true,
+                    Value = true
                 };
             }
             catch (Exception ex)
@@ -1196,11 +1200,9 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 cart.CartCoupons.Add(cartCoupon);
 
-                //var updatedCart = _cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
-                var updatedCart = _cartRepository.AddCartCouponsAsync(cart);
+                var updatedCart = await _cartRepository.AddCartCouponsAsync(cart);
 
-
-                if (updatedCart == null)
+                if (updatedCart == null || !updatedCart.IsSuccess)
                 {
                     return new ApplicationResponse<CartResponse>
                     {
@@ -1209,10 +1211,12 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     };
                 }
 
+                var refreshedCart = (await _cartRepository.GetCartByIdAsync(cartId, cart.Status)).Value ?? cart;
+
                 return new ApplicationResponse<CartResponse>
                 {
                     IsSuccess = true,
-                    //Value = CartResponse.MapFromCart(updatedCart)
+                    Value = CartResponse.MapFromCart(refreshedCart)
                 };
             }
             catch (Exception ex)
@@ -1255,10 +1259,9 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
 
                 cart.CartCoupons.Remove(cartCoupon);
 
-                var updatedCart = _cartRepository.RemoveCouponFromCartAsync(cartId, couponId); //_cartRepository.UpdateCartAsync(cart).GetAwaiter().GetResult().Value;
+                var updatedCart = await _cartRepository.RemoveCouponFromCartAsync(cartId, couponId);
 
-
-                if (updatedCart == null)
+                if (updatedCart == null || !updatedCart.IsSuccess)
                 {
                     return new ApplicationResponse<CartResponse>
                     {
@@ -1267,10 +1270,12 @@ namespace Berryfy.Application.Services.Concretes.ShoppingCartServiceConcretes
                     };
                 }
 
+                var refreshedCart = (await _cartRepository.GetCartByIdAsync(cartId, cart.Status)).Value ?? cart;
+
                 return new ApplicationResponse<CartResponse>
                 {
                     IsSuccess = true,
-                    Value = null
+                    Value = CartResponse.MapFromCart(refreshedCart)
                 };
             }
             catch (Exception ex)
