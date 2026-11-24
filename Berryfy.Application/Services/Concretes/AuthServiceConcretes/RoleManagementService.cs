@@ -324,10 +324,14 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
         {
             try
             {
-                var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult().Value;
+                var user = (await _userRepository.GetByIdAsync(userId)).Value;
                 if (user == null)
                 {
-                    return null;
+                    return new ApplicationResponse<UserWithRolesResponse>()
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "User not found"
+                    };
                 }
 
                 var roles = await _roleRepository.GetUserRolesAsync(user.Id);
@@ -470,7 +474,7 @@ namespace Berryfy.Application.Services.Concretes.AuthServiceConcretes
 
             return new ApplicationResponse<BulkAssignmentResult>()
             {
-                IsSuccess = true,
+                IsSuccess = result.FailedAssignments == 0 && result.SuccessfulAssignments > 0,
                 Value = result
             };
         }
