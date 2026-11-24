@@ -18,8 +18,11 @@ namespace Berryfy.Application.Dtos.ShoppingCartDtos.Responses
             {
                 Id = cartCoupon.Id,
                 CouponId = cartCoupon.CouponId,
+                UserId = cartCoupon.UserId ?? 0,
                 AppliedAt = cartCoupon.AppliedAt,
                 CartId = cartCoupon.CartId,
+                DiscountAmount = cartCoupon.DiscountAmount,
+                Description = cartCoupon.Coupon?.Description ?? string.Empty
             };
         }
     }
