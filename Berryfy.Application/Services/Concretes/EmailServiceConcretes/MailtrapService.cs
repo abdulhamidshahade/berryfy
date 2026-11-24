@@ -1,54 +1,62 @@
 ﻿using Berryfy.Application.Dtos.EmailDtos.Requests;
 using Berryfy.Application.Services.Interfaces.EmailServiceInterfaces;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
-using Mailtrap;
-using Mailtrap.Emails.Models;
-using Mailtrap.Emails.Requests;
+using System.Text.Json;
 
 namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
 {
     public class MailtrapService : IMailService
     {
-        private readonly string ApiToken;
+        private static readonly HttpClient HttpClient = new();
+        private const string MailtrapSendEndpoint = "https://send.api.mailtrap.io/api/send";
+        private readonly string _apiToken;
+        private readonly string _fromEmail;
 
         public MailtrapService(IConfiguration config)
         {
-            ApiToken = config.GetSection("Mailtrap:ApiToken").Value;
+            _apiToken = config["Mailtrap:ApiToken"] ?? string.Empty;
+            _fromEmail = config["Mailtrap:From"] ?? config["ResendSettings:From"] ?? "support@berryfy.org";
         }
-        public async Task SendEmailAsync(SendEmailRequestDto request)
-        {
-            using var mailtrapClientFactory = new MailtrapClientFactory(ApiToken);
-            var clinet = mailtrapClientFactory.CreateClient();
 
-            var emailRequest = new SendEmailRequest
+        private async Task SendViaMailtrapAsync(string toEmail, string subject, string htmlBody)
+        {
+            if (string.IsNullOrWhiteSpace(_apiToken))
             {
-                From = new EmailAddress("support@berryfy.org"),
-                To = new List<EmailAddress> { new EmailAddress(request.Recipient) },
-                Subject = request.Subject,
-                HtmlBody = request.Body,
+                throw new InvalidOperationException("Mailtrap:ApiToken is not configured.");
+            }
+
+            var payload = new
+            {
+                from = new { email = _fromEmail, name = "Berryfy" },
+                to = new[] { new { email = toEmail } },
+                subject,
+                html = htmlBody
             };
 
-            await clinet.Email().Send(emailRequest);
+            using var request = new HttpRequestMessage(HttpMethod.Post, MailtrapSendEndpoint);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiToken);
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            using var response = await HttpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Mailtrap API error ({(int)response.StatusCode}): {errorBody}");
+            }
+        }
+
+        public async Task SendEmailAsync(SendEmailRequestDto request)
+        {
+            await SendViaMailtrapAsync(request.Recipient, request.Subject, request.Body);
         }
 
         public async Task SendEmailConfirmationAsync(string email, string confirmationCode, string userName)
         {
-            using var mailtrapClientFactory = new MailtrapClientFactory(ApiToken);
-            var clinet = mailtrapClientFactory.CreateClient();
-
             var digits = confirmationCode.ToCharArray();
 
-            var emailRequest = new SendEmailRequest
-            {
-                From = new EmailAddress("support@berryfy.org"),
-                To = new List<EmailAddress> { new EmailAddress(email) },
-                Subject = "Email Confirmation",
-                HtmlBody = $@"
+            var htmlBody = $@"
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -116,24 +124,16 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
                         </div>
                     </div>
                 </body>
-                </html>"
-            };
+                </html>";
 
-            await clinet.Email().Send(emailRequest);
+            await SendViaMailtrapAsync(email, "Email Confirmation", htmlBody);
         }
+
         public async Task SendPasswordResetCodeAsync(string email, string code, string userName)
         {
-            using var mailtrapClientFactory = new MailtrapClientFactory(ApiToken);
-            var clinet = mailtrapClientFactory.CreateClient();
-
             var digits = code.ToCharArray();
 
-            var emailRequest = new SendEmailRequest
-            {
-                From = new EmailAddress("support@berryfy.org"),
-                To = new List<EmailAddress> { new EmailAddress(email) },
-                Subject = "Password Reset Code",
-                HtmlBody = $@"
+            var htmlBody = $@"
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -184,26 +184,15 @@ namespace Berryfy.Application.Services.Concretes.EmailServiceConcretes
                         </div>
                     </div>
                 </body>
-                </html>"
-            };
+                </html>";
 
-            await clinet.Email().Send(emailRequest);
+            await SendViaMailtrapAsync(email, "Password Reset Code", htmlBody);
         }
 
         public async Task SendPasswordResetEmailAsync(string email, string resetToken, string resetUrl)
         {
-            var mailtrapClientFactory = new MailtrapClientFactory(ApiToken);
-            var client = mailtrapClientFactory.CreateClient();
-
-            var emailRequest = new SendEmailRequest
-            {
-                From = new EmailAddress("support@berryfy.org"),
-                To = new List<EmailAddress> { new EmailAddress(email) },
-                Subject = "Password Reset Request",
-                HtmlBody = $"<p>You requested a password reset. Click the link below to reset your password:</p><a href='{resetUrl}?token={resetToken}'>Reset Password</a>"
-            };
-
-            await client.Email().Send(emailRequest);
+            var htmlBody = $"<p>You requested a password reset. Click the link below to reset your password:</p><a href='{resetUrl}?token={resetToken}'>Reset Password</a>";
+            await SendViaMailtrapAsync(email, "Password Reset Request", htmlBody);
         }
     }
 }
