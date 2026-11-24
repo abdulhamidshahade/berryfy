@@ -87,26 +87,24 @@ namespace Berryfy.API.Controllers
                 });
             }
 
-            CartResponse cart = null;
+            CartResponse? cart = null;
 
             if (status.HasValue)
             {
-                // If specific status requested, get that cart
-                cart = _cartService.GetCartByUserIdAsync(userId.Value, status).GetAwaiter().GetResult().Value;
+                cart = (await _cartService.GetCartByUserIdAsync(userId.Value, status)).Value;
             }
             else
             {
-                // If no status specified, check for PendingPayment first, then Active
-                cart = _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
+                cart = (await _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.PendingPayment)).Value;
                 if (cart == null)
                 {
-                    cart = _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.Active).GetAwaiter().GetResult().Value;
+                    cart = (await _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.Active)).Value;
                 }
             }
 
             if (cart == null)
             {
-                cart = _cartService.CreateCartAsync(userId, null).GetAwaiter().GetResult().Value;
+                cart = (await _cartService.CreateCartAsync(userId, null)).Value;
                 if (cart == null)
                 {
                     return StatusCode(500, new ApiResponse<CartResponse>
@@ -144,15 +142,15 @@ namespace Berryfy.API.Controllers
 
             // Priority: PendingPayment > Active > Create new
             var cart = await _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.PendingPayment);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 cart = await _cartService.GetCartByUserIdAsync(userId.Value, CartStatus.Active);
             }
 
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 cart = await _cartService.CreateCartAsync(userId, null);
-                if (cart == null)
+                if (cart == null || !cart.IsSuccess || cart.Value == null)
                 {
                     return StatusCode(500, new ApiResponse<CartResponse>
                     {
@@ -188,10 +186,10 @@ namespace Berryfy.API.Controllers
             }
 
             var cart = await _cartService.GetCartBySessionIdAsync(sessionId, CartStatus.Active);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 cart = await _cartService.CreateCartAsync(null, sessionId);
-                if (cart == null)
+                if (cart == null || !cart.IsSuccess || cart.Value == null)
                 {
                     return StatusCode(500, new ApiResponse<CartResponse>
                     {
@@ -215,18 +213,18 @@ namespace Berryfy.API.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<CartResponse>>> GetCartByCartId(int id, [FromQuery] CartStatus? status = null)
         {
-            CartResponse cart = null;
+            CartResponse? cart = null;
 
             if (status.HasValue)
             {
-                cart = _cartService.GetCartByIdAsync(id, status.Value).GetAwaiter().GetResult().Value;
+                cart = (await _cartService.GetCartByIdAsync(id, status.Value)).Value;
             }
             else
             {
-                cart = _cartService.GetCartByIdAsync(id, CartStatus.Active).GetAwaiter().GetResult().Value;
+                cart = (await _cartService.GetCartByIdAsync(id, CartStatus.Active)).Value;
                 if (cart == null)
                 {
-                    cart = _cartService.GetCartByIdAsync(id, CartStatus.PendingPayment).GetAwaiter().GetResult().Value;
+                    cart = (await _cartService.GetCartByIdAsync(id, CartStatus.PendingPayment)).Value;
                 }
             }
 
@@ -238,6 +236,16 @@ namespace Berryfy.API.Controllers
                     StatusCode = 404,
                     StatusMessage = "Cart not found"
                 });
+            }
+
+            var userId = GetCurrentUserId();
+            var sessionId = GetSessionId();
+            var canAccess = cart.UserId.HasValue
+                ? CanAccessUserResource(cart.UserId)
+                : !string.IsNullOrEmpty(sessionId) && cart.SessionId == sessionId;
+            if (!canAccess)
+            {
+                return Forbid();
             }
 
             return Ok(new ApiResponse<CartResponse>
@@ -267,7 +275,7 @@ namespace Berryfy.API.Controllers
             }
 
             var cart = await _cartService.CreateCartAsync(userId, sessionId);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 return StatusCode(500, new ApiResponse<CartResponse>
                 {
@@ -318,13 +326,13 @@ namespace Berryfy.API.Controllers
                 itemRequest.ProductId,
                 itemRequest.Quantity);
 
-            if (updatedCart == null)
+            if (updatedCart == null || !updatedCart.IsSuccess || updatedCart.Value == null)
             {
                 return StatusCode(500, new ApiResponse<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    StatusMessage = "Failed to add item to cart"
+                    StatusMessage = updatedCart?.ErrorMessage ?? "Failed to add item to cart"
                 });
             }
 
@@ -355,11 +363,14 @@ namespace Berryfy.API.Controllers
             {
                 var removed = await _cartService.RemoveItemAsync(cartId, GetCurrentUserId(), GetSessionId(), itemRequest.ProductId);
                 if (!removed.Value) return BadRequest();
+                var refreshed = (await _cartService.GetCartByIdAsync(cartId, CartStatus.Active)).Value
+                    ?? (await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment)).Value;
                 return Ok(new ApiResponse<CartResponse>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    StatusMessage = "Item removed successfully"
+                    StatusMessage = "Item removed successfully",
+                    Data = refreshed!
                 });
             }
 
@@ -370,13 +381,13 @@ namespace Berryfy.API.Controllers
                 itemRequest.ProductId,
                 itemRequest.Quantity);
 
-            if (updatedCart == null)
+            if (updatedCart == null || !updatedCart.IsSuccess || updatedCart.Value == null)
             {
-                return StatusCode(500, new ApiResponse<CartResponse>
+                return BadRequest(new ApiResponse<CartResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Failed to update item quantity"
+                    StatusCode = 400,
+                    StatusMessage = updatedCart?.ErrorMessage ?? "Failed to update item quantity"
                 });
             }
 
@@ -467,7 +478,7 @@ namespace Berryfy.API.Controllers
         public async Task<ActionResult<ApiResponse<CartItemResponse>>> GetCartItem(int cartId, int productId)
         {
             var item = await _cartService.GetItemAsync(cartId, productId);
-            if (item == null)
+            if (item == null || !item.IsSuccess || item.Value == null)
             {
                 return NotFound(new ApiResponse<CartItemResponse>
                 {
@@ -502,13 +513,13 @@ namespace Berryfy.API.Controllers
             }
 
             var cart = await _cartService.ApplyCouponAsync(cartId, GetCurrentUserId(), request.CouponCode);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 return BadRequest(new ApiResponse<CartResponse>
                 {
                     IsSuccess = false,
                     StatusCode = 400,
-                    StatusMessage = "Failed to apply coupon"
+                    StatusMessage = cart?.ErrorMessage ?? "Failed to apply coupon"
                 });
             }
 
@@ -526,13 +537,13 @@ namespace Berryfy.API.Controllers
         public async Task<ActionResult<ApiResponse<CartResponse>>> RemoveCoupon(int cartId, int couponId)
         {
             var cart = await _cartService.RemoveCouponAsync(cartId, GetCurrentUserId(), GetSessionId(), couponId);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
-                return StatusCode(500, new ApiResponse<CartResponse>
+                return BadRequest(new ApiResponse<CartResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = 500,
-                    StatusMessage = "Failed to remove coupon"
+                    StatusCode = 400,
+                    StatusMessage = cart?.ErrorMessage ?? "Failed to remove coupon"
                 });
             }
 
@@ -562,12 +573,12 @@ namespace Berryfy.API.Controllers
 
             // Try Active status first, then PendingPayment
             var cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.Active);
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 cart = await _cartService.GetCartByIdAsync(cartId, CartStatus.PendingPayment);
             }
 
-            if (cart == null)
+            if (cart == null || !cart.IsSuccess || cart.Value == null)
             {
                 return NotFound(new ApiResponse<object>
                 {
@@ -607,14 +618,14 @@ namespace Berryfy.API.Controllers
                 createOrderDto,
                 GetCurrentUserId());
 
-            if (!checkoutResult.IsSuccess)
+            if (!checkoutResult.IsSuccess || checkoutResult.Value?.Order == null)
             {
                 return StatusCode(500, new ApiResponse<object>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
                     StatusMessage = checkoutResult.ErrorMessage ?? "Failed to process checkout",
-                    Errors = checkoutResult.Value.Warnings
+                    Errors = checkoutResult.Value?.Warnings ?? new List<string>()
                 });
             }
 
@@ -627,6 +638,7 @@ namespace Berryfy.API.Controllers
                 {
                     id = checkoutResult.Value.Order.Id,
                     orderNumber = checkoutResult.Value.Order.ReferenceNumber,
+                    referenceNumber = checkoutResult.Value.Order.ReferenceNumber,
                     total = checkoutResult.Value.Order.Total,
                     status = checkoutResult.Value.Order.Status.ToString(),
                     warnings = checkoutResult.Value.Warnings
@@ -651,7 +663,7 @@ namespace Berryfy.API.Controllers
             }
 
             var order = await _orderService.GetOrderByIdAsync(orderId);
-            if (order == null)
+            if (order == null || !order.IsSuccess || order.Value == null)
             {
                 return NotFound(new ApiResponse<CartResponse>
                 {
