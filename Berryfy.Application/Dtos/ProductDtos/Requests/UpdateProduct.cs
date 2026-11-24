@@ -17,6 +17,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Requests
         public bool IsActive { get; set; } = true;
 
         public string SKU { get; set; }
+        public int? CategoryId { get; set; }
         public int ShopId { get; set; }
         public int? ShopCategoryId { get; set; }
 
@@ -34,8 +35,7 @@ namespace Berryfy.Application.Dtos.ProductDtos.Requests
                 LowStockThreshold = request.LowStockThreshold,
                 IsActive = request.IsActive,
                 SKU = request.SKU,
-                //ShopId = request.ShopId,
-                //ShopCategoryId = request.ShopCategoryId,
+                CategoryId = request.CategoryId ?? request.ShopCategoryId ?? 0
             };
         }
     }
