@@ -114,17 +114,23 @@ namespace Berryfy.Infrastructure.Repositories.ShopConcretes
 
         private Shop MapToShop(NpgsqlDataReader reader)
         {
+            string GetStr(string col)
+            {
+                int ord = reader.GetOrdinal(col);
+                return reader.IsDBNull(ord) ? string.Empty : reader.GetString(ord);
+            }
+
             return new Shop
             {
-                Id = reader.GetInt32(reader.GetOrdinal("id")),
-                Name = reader.GetString(reader.GetOrdinal("name")),
-                LogoUrl = reader.GetString(reader.GetOrdinal("logo_url")),
-                Description = reader.GetString(reader.GetOrdinal("description")),
-                Email = reader.GetString(reader.GetOrdinal("email")),
-                Phone = reader.GetString(reader.GetOrdinal("phone")),
-                Address = reader.GetString(reader.GetOrdinal("address")),
-                Currency = reader.GetString(reader.GetOrdinal("currency")),
-                Language = reader.GetString(reader.GetOrdinal("language"))
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
+                Name = GetStr("name"),
+                LogoUrl = GetStr("logo_url"),
+                Description = GetStr("description"),
+                Email = GetStr("email"),
+                Phone = GetStr("phone"),
+                Address = GetStr("address"),
+                Currency = GetStr("currency"),
+                Language = GetStr("language")
             };
         }
         private void AddShopParameters(NpgsqlCommand command, Shop shop)
