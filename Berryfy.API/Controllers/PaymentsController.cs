@@ -1,6 +1,8 @@
 using Berryfy.Application.Authorization.Attributes;
+using Berryfy.Application.Dtos;
 using Berryfy.Application.Dtos.OrderDtos.Responses;
 using Berryfy.Application.Dtos.PaymentDtos.Requests;
+using Berryfy.Application.Dtos.PaymentDtos.Responses;
 using Berryfy.Application.Services.Interfaces.OrderServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.PaymentServiceInterfaces;
 using Berryfy.Application.Services.Interfaces.ShoppingCartServiceInterfaces;
@@ -44,35 +46,86 @@ namespace Berryfy.API.Controllers
             var sessionId = GetSessionId();
 
             if (!userId.HasValue) return Unauthorized();
-            if (!createPaymentDto.OrderId.HasValue) return BadRequest(new { StatusMessage = "An order is required" });
+            if (!createPaymentDto.OrderId.HasValue)
+            {
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "An order is required"
+                });
+            }
+
             var payableOrder = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
-            if (payableOrder == null) return NotFound();
+            if (payableOrder == null || !payableOrder.IsSuccess || payableOrder.Value == null)
+            {
+                return NotFound(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = "Order not found"
+                });
+            }
             if (payableOrder.Value.UserId != userId.Value) return Forbid();
             if (payableOrder.Value.Status != OrderStatus.Pending || payableOrder.Value.IsPaid)
-                return Conflict(new { StatusMessage = "This order is not awaiting payment" });
-            if (createPaymentDto.Amount <= 0 || createPaymentDto.Amount != payableOrder.Value.Total)
-                return BadRequest(new { StatusMessage = "Payment amount must match the order total" });
+            {
+                return Conflict(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 409,
+                    StatusMessage = "This order is not awaiting payment"
+                });
+            }
+            if (createPaymentDto.Amount <= 0 || Math.Round(createPaymentDto.Amount, 2) != Math.Round(payableOrder.Value.Total, 2))
+            {
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Payment amount must match the order total"
+                });
+            }
             if (!string.Equals(createPaymentDto.Currency, "USD", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { StatusMessage = "Orders must be paid in USD" });
+            {
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = "Orders must be paid in USD"
+                });
+            }
 
             var previousPayment = await _paymentService.GetPaymentByOrderIdAsync(payableOrder.Value.Id);
-            if (previousPayment.IsSuccess && previousPayment.Value?.Status is PaymentStatus.Completed or PaymentStatus.Processing)
-                return Conflict(new { StatusMessage = "Payment has already been submitted for this order" });
+            if (previousPayment.IsSuccess && previousPayment.Value != null &&
+                previousPayment.Value.Status is PaymentStatus.Completed or PaymentStatus.Processing)
+            {
+                return Conflict(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 409,
+                    StatusMessage = "Payment has already been submitted for this order"
+                });
+            }
 
             var result = await _paymentService.ProcessPaymentAsync(createPaymentDto, userId, sessionId);
-            if (!result.IsSuccess)
+            if (!result.IsSuccess || result.Value == null)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to process payment"
+                });
             }
 
             if (createPaymentDto.OrderId.HasValue)
             {
                 var order = await _orderService.GetOrderByIdAsync(createPaymentDto.OrderId.Value);
-                if (order != null)
+                if (order != null && order.IsSuccess && order.Value != null)
                 {
                     var mappedOrder = OrderResponse.MapToOrder(order.Value);
 
-                    if (result.Value?.Success == true)
+                    if (result.Value.Success)
                     {
                         if (order.Value.Status == OrderStatus.Pending)
                         {
@@ -82,28 +135,29 @@ namespace Berryfy.API.Controllers
                                 _logger.LogCritical(
                                     "Payment succeeded for order {OrderId} but inventory deduction failed. Manual reconciliation required.",
                                     order.Value.Id);
-                                return StatusCode(StatusCodes.Status500InternalServerError, new
+                                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<PaymentResponseDto>
                                 {
                                     IsSuccess = false,
                                     StatusCode = 500,
                                     StatusMessage =
                                         "Payment was captured but inventory could not be finalized. Contact support with your order ID.",
-                                    OrderId = order.Value.Id,
                                     Data = result.Value
                                 });
                             }
                         }
 
-                        if (!_orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed).GetAwaiter().GetResult().Value)
+                        var paymentStatusUpdated = await _orderService.UpdateOrderPaymentStatusAsync(mappedOrder, PaymentStatus.Completed);
+                        if (!paymentStatusUpdated.Value)
                             throw new InvalidOperationException("Could not finalize the order payment state");
                         mappedOrder.isPaid = true;
-                        if (!_orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing).GetAwaiter().GetResult().Value)
+                        var orderStatusUpdated = await _orderService.UpdateOrderStatusAsync(mappedOrder, OrderStatus.Processing);
+                        if (!orderStatusUpdated.Value)
                             throw new InvalidOperationException("Could not finalize the order status");
 
                         if (order.Value.CartId > 0)
                         {
                             var cart = await _cartService.GetCartByIdAsync(order.Value.CartId, CartStatus.PendingPayment);
-                            if (cart != null)
+                            if (cart != null && cart.IsSuccess && cart.Value != null)
                             {
                                 var cartConverted = await _cartService.ConvertCartAsync(order.Value.CartId);
                                 if (cartConverted.Value)
@@ -120,7 +174,13 @@ namespace Berryfy.API.Controllers
                 }
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<PaymentResponseDto>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = result.Value.Message ?? result.SuccessMessage ?? "Payment processed",
+                Data = result.Value
+            });
         }
 
 
@@ -129,13 +189,24 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> GetPaymentById(int id)
         {
             var result = await _paymentService.GetPaymentByIdAsync(id);
-            if (!result.IsSuccess)
+            if (!result.IsSuccess || result.Value == null)
             {
-                return NotFound(result);
+                return NotFound(new ApiResponse<PaymentResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = result.ErrorMessage ?? "Payment not found"
+                });
             }
 
-            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-            return Ok(result);
+            if (!CanAccessUserResource(result.Value.UserId)) return Forbid();
+            return Ok(new ApiResponse<PaymentResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -144,13 +215,24 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> GetPaymentByTransactionId(string transactionId)
         {
             var result = await _paymentService.GetPaymentByTransactionIdAsync(transactionId);
-            if (!result.IsSuccess)
+            if (!result.IsSuccess || result.Value == null)
             {
-                return NotFound(result);
+                return NotFound(new ApiResponse<PaymentResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = result.ErrorMessage ?? "Payment not found"
+                });
             }
 
-            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-            return Ok(result);
+            if (!CanAccessUserResource(result.Value.UserId)) return Forbid();
+            return Ok(new ApiResponse<PaymentResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -159,13 +241,24 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> GetPaymentByOrderId(int orderId)
         {
             var result = await _paymentService.GetPaymentByOrderIdAsync(orderId);
-            if (!result.IsSuccess)
+            if (!result.IsSuccess || result.Value == null)
             {
-                return NotFound(result);
+                return NotFound(new ApiResponse<PaymentResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    StatusMessage = result.ErrorMessage ?? "Payment not found"
+                });
             }
 
-            if (!CanAccessUserResource(result.Value?.UserId)) return Forbid();
-            return Ok(result);
+            if (!CanAccessUserResource(result.Value.UserId)) return Forbid();
+            return Ok(new ApiResponse<PaymentResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -176,10 +269,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetAllPaymentsAsync();
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -195,10 +299,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetPaymentsByUserIdAsync(userId);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve user payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "User payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -209,16 +324,32 @@ namespace Berryfy.API.Controllers
             var userId = GetCurrentUserId();
             if (!userId.HasValue)
             {
-                return Unauthorized(new { IsSuccess = false, StatusCode = 401, StatusMessage = "User not authenticated" });
+                return Unauthorized(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 401,
+                    StatusMessage = "User not authenticated"
+                });
             }
 
             var result = await _paymentService.GetPaginatedPaymentsByUserIdAsync(userId.Value, page, pageSize);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -229,10 +360,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetPaymentsByStatusAsync(status);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -243,10 +385,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -257,10 +410,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetPaginatedPaymentsAsync(page, pageSize);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -276,10 +440,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.UpdatePaymentStatusAsync(id, updateDto.Status, updateDto.Notes);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to update payment status"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<PaymentResponseDto>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment status updated successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -295,10 +470,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.RefundPaymentAsync(id, refundDto.RefundAmount, refundDto.Reason);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to refund payment"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<PaymentResponseDto>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment refunded successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -309,10 +495,22 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.DeletePaymentAsync(id);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to delete payment",
+                    Data = false
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<bool>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment deleted successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -323,10 +521,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetTotalPaymentCountAsync();
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<int>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve payment count"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<int>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Total payment count retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -337,10 +546,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.GetTotalAmountByDateRangeAsync(startDate, endDate);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<decimal>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to retrieve total amount"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<decimal>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Total payment amount retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -351,10 +571,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.SearchPaymentsAsync(searchTerm, page, pageSize);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<IEnumerable<PaymentResponse>>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to search payments"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<IEnumerable<PaymentResponse>>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payments retrieved successfully",
+                Data = result.Value
+            });
         }
 
 
@@ -365,10 +596,21 @@ namespace Berryfy.API.Controllers
             var result = await _paymentService.VerifyPaymentWithProviderAsync(transactionId);
             if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new ApiResponse<PaymentResponseDto>
+                {
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    StatusMessage = result.ErrorMessage ?? "Failed to verify payment"
+                });
             }
 
-            return Ok(result);
+            return Ok(new ApiResponse<PaymentResponseDto>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                StatusMessage = "Payment verified successfully",
+                Data = result.Value
+            });
         }
     }
 }
