@@ -255,20 +255,19 @@ namespace Berryfy.Infrastructure.Repositories.CouponConcretes
 
         public async Task<InfrastructureResponse<bool>> ReleaseCouponsRelatedToCartId(int cartId)
         {
-            string query = @"Delete from user_coupons where cart_id = @CartId;";
+            const string query = @"DELETE FROM cart_coupons WHERE cart_id = @CartId;";
 
-            var connection = await OpenConnectionAsync();
-
-            using var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CartId", cartId);
 
-            var rowEffected = await command.ExecuteReaderAsync();
+            var rowEffected = await command.ExecuteNonQueryAsync();
 
             return new InfrastructureResponse<bool>()
             {
                 IsSuccess = true,
-                Value = Convert.ToInt16(rowEffected) > 0
+                Value = rowEffected > 0
             };
         }
 
