@@ -13,7 +13,7 @@ using Berryfy.Domain.Entities;
 
 namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 {
-    class PaymentRepository : IPaymentRepository
+    public class PaymentRepository : IPaymentRepository
     {
         private readonly string _connectionString;
 
@@ -24,20 +24,17 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<Payment?>> GetByIdAsync(int id)
         {
-            string sql = @"SELECT * from payments p
-                           Where p.id = @Id
-                           Limit 1;";
+            const string sql = @"SELECT * FROM payments p
+                                 WHERE p.id = @Id
+                                 LIMIT 1;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
-
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Payment payment = new Payment();
-
+            Payment? payment = null;
             if (await reader.ReadAsync())
             {
                 payment = MapPayment(reader);
@@ -45,28 +42,25 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             return new InfrastructureResponse<Payment?>()
             {
-                IsSuccess = true,
-                Message = "The process completed successfully",
+                IsSuccess = payment != null,
+                Message = payment != null ? "The process completed successfully" : "Payment not found",
                 Value = payment
             };
         }
 
         public async Task<InfrastructureResponse<Payment?>> GetByTransactionIdAsync(string transactionId)
         {
-            string sql = @"SELECT * from payments p
-                           Where p.transaction_id = @TransactionId
-                           Limit 1;";
+            const string sql = @"SELECT * FROM payments p
+                                 WHERE p.transaction_id = @TransactionId
+                                 LIMIT 1;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
-
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@TransactionId", transactionId);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Payment payment = null;
-
+            Payment? payment = null;
             if (await reader.ReadAsync())
             {
                 payment = MapPayment(reader);
@@ -74,32 +68,36 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             return new InfrastructureResponse<Payment?>()
             {
-                IsSuccess = true,
-                Message = "The process completed successfully",
+                IsSuccess = payment != null,
+                Message = payment != null ? "The process completed successfully" : "Payment not found",
                 Value = payment
             };
         }
 
         public async Task<InfrastructureResponse<Payment?>> GetByOrderIdAsync(int orderId)
         {
-            string query = @"Select p.* from
-                          payments p
-                          where p.order_id = @OrderId
-                          order by case
-                          When p.status in (completed, PartiallyRefunded, Refunded) then 1
-                         else 0 End Desc, case when p.Status = Processing then 1 else 0 end,
-                         p.created_at desc, p.id desc limit 1;";
+            const string query = @"
+                SELECT p.* FROM payments p
+                WHERE p.order_id = @OrderId
+                ORDER BY
+                    CASE WHEN p.status IN (@CompletedStatus, @PartiallyRefundedStatus, @RefundedStatus) THEN 1 ELSE 0 END DESC,
+                    CASE WHEN p.status = @ProcessingStatus THEN 1 ELSE 0 END DESC,
+                    p.created_at DESC,
+                    p.id DESC
+                LIMIT 1;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@OrderId", orderId);
+            command.Parameters.AddWithValue("@CompletedStatus", (int)PaymentStatus.Completed);
+            command.Parameters.AddWithValue("@PartiallyRefundedStatus", (int)PaymentStatus.PartiallyRefunded);
+            command.Parameters.AddWithValue("@RefundedStatus", (int)PaymentStatus.Refunded);
+            command.Parameters.AddWithValue("@ProcessingStatus", (int)PaymentStatus.Processing);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Payment payment = new Payment();
-
+            Payment? payment = null;
             if (await reader.ReadAsync())
             {
                 payment = MapPayment(reader);
@@ -107,26 +105,22 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             return new InfrastructureResponse<Payment?>()
             {
-                IsSuccess = true,
-                Message = "The process completed successfully",
+                IsSuccess = payment != null,
+                Message = payment != null ? "The process completed successfully" : "Payment not found",
                 Value = payment
             };
         }
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetAllAsync()
         {
-            string sql = @"SELECT p.*
-                           Order by created_at desc;";
+            const string sql = @"SELECT p.* FROM payments p
+                                 ORDER BY p.created_at DESC;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
-
-
-            var reader = await command.ExecuteReaderAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -142,22 +136,19 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByUserIdAsync(int userId)
         {
-            string sql = @"SELECT p.*
-                           Where p.user_id = @UserId
-                           Order by id asc";
+            const string sql = @"SELECT p.* FROM payments p
+                                 WHERE p.user_id = @UserId
+                                 ORDER BY p.created_at DESC, p.id DESC;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
-
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
-            { 
+            {
                 payments.Add(MapPayment(reader));
             }
 
@@ -171,20 +162,17 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByStatusAsync(PaymentStatus status)
         {
-            string sql = @"SELECT p.* from payments p
-                           Where p.Status = @Status
-                           Order by created_at desc";
+            const string sql = @"SELECT p.* FROM payments p
+                                 WHERE p.status = @Status
+                                 ORDER BY p.created_at DESC;";
 
-            var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@Status", (int)status);
 
-            var command = new NpgsqlCommand(sql, connection);
-
-            command.Parameters.AddWithValue("@Status", status);
-
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -200,21 +188,19 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            string sql = @"SELECT p.* from payments p
-                           Where created_at >= @StartDate and created_at <= @EndDate
-                           Order by created_at desc";
+            const string sql = @"SELECT p.* FROM payments p
+                                 WHERE p.created_at >= @StartDate AND p.created_at <= @EndDate
+                                 ORDER BY p.created_at DESC;";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
 
             command.Parameters.AddWithValue("@StartDate", startDate);
             command.Parameters.AddWithValue("@EndDate", endDate);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -230,24 +216,21 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetPaginatedAsync(int pageNumber, int pageSize)
         {
-            string query = @"select p.* from Payments
-                             order by p.created_at desc
-                             offset @offset
-                             limit @pageSize;";
+            const string query = @"SELECT p.* FROM payments p
+                                   ORDER BY p.created_at DESC
+                                   OFFSET @offset
+                                   LIMIT @pageSize;";
 
-            var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
-            var command = new NpgsqlCommand(query, connection);
-
-            int offset = (pageNumber - 1) * pageSize;
-
+            int offset = Math.Max(0, (pageNumber - 1) * pageSize);
             command.Parameters.AddWithValue("@offset", offset);
             command.Parameters.AddWithValue("@pageSize", pageSize);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -263,26 +246,23 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> GetPaginatedByUserIdAsync(int userId, int pageNumber, int pageSize)
         {
-            string query = @"select p.* from Payments
-                             where user_id = @UserId
-                             order by p.created_at desc
-                             offset @offset
-                             limit @pageSize;";
+            const string query = @"SELECT p.* FROM payments p
+                                   WHERE p.user_id = @UserId
+                                   ORDER BY p.created_at DESC
+                                   OFFSET @offset
+                                   LIMIT @pageSize;";
 
-            var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
-            var command = new NpgsqlCommand(query, connection);
-
-            int offset = (pageNumber - 1) * pageSize;
-
+            int offset = Math.Max(0, (pageNumber - 1) * pageSize);
             command.Parameters.AddWithValue("@UserId", userId);
             command.Parameters.AddWithValue("@offset", offset);
             command.Parameters.AddWithValue("@pageSize", pageSize);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -298,27 +278,32 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<Payment>> CreateAsync(Payment payment)
         {
-            string query = @"Insert into payments (user_id, order_id, transaction_id, status, method, provider, amount, currency,
-                             provider_transaction_id, provider_payment_method, card_last4, card_brand, payer_email,
-                             payer_name, billing_address1, billing_address2, billing_city, billing_state, billing_postal_code,
-                             billing_country, processing_fee, net_amount, processed_at, completed_at, failed_at, refunded_at,
-                             error_message, failure_reason, metadata, notes, created_at, updated_at)
-                             Values (@userId, @orderId, @TransactionId, @Status, @Method, @Provider, @Amount, @Currency,
-                                     @ProviderTransactionId, @ProviderPaymentMethod, @CardLast4, @CardBrand, @PayerEmail,
-                                     @PayerName, @BillingAddress1, @BillingAddress2, @BillingCity, @BillingState, @BillingPostalCode,
-                                     @BillingCountry, @ProccessingFee, @NetAmount, @ProccessedAt, @CompletedAt, @FailedAt, @RefundAt,
-                                     @ErrorMessage, @FailureReason, @Metadata, @Notes, @CreatedAt, @UpdatedAt)
-                             Returning *;";
+            const string query = @"
+                INSERT INTO payments (
+                    user_id, order_id, transaction_id, status, method, provider, amount, currency,
+                    provider_transaction_id, provider_payment_method, card_last4, card_brand, payer_email,
+                    payer_name, billing_address1, billing_address2, billing_city, billing_state, billing_postal_code,
+                    billing_country, processing_fee, net_amount, processed_at, completed_at, failed_at, refunded_at,
+                    error_message, failure_reason, metadata, notes, created_at, updated_at)
+                VALUES (
+                    @UserId, @OrderId, @TransactionId, @Status, @Method, @Provider, @Amount, @Currency,
+                    @ProviderTransactionId, @ProviderPaymentMethod, @CardLast4, @CardBrand, @PayerEmail,
+                    @PayerName, @BillingAddress1, @BillingAddress2, @BillingCity, @BillingState, @BillingPostalCode,
+                    @BillingCountry, @ProcessingFee, @NetAmount, @ProcessedAt, @CompletedAt, @FailedAt, @RefundedAt,
+                    @ErrorMessage, @FailureReason, @Metadata, @Notes, @CreatedAt, @UpdatedAt)
+                RETURNING *;";
 
-            var connection = await OpenConnectionAsync();
+            var now = DateTime.UtcNow;
+            if (payment.CreatedAt == default) payment.CreatedAt = now;
+            if (payment.UpdatedAt == default) payment.UpdatedAt = now;
 
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
             AddPaymentParameters(command, payment);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Payment paymentt = new Payment();
-
+            Payment? paymentt = null;
             if (await reader.ReadAsync())
             {
                 paymentt = MapPayment(reader);
@@ -326,86 +311,87 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
             return new InfrastructureResponse<Payment>()
             {
-                IsSuccess = true,
-                Message = "The process completed successfully",
-                Value = paymentt
+                IsSuccess = paymentt != null,
+                Message = paymentt != null ? "The process completed successfully" : "Failed to create payment",
+                Value = paymentt!
             };
         }
 
         public async Task<InfrastructureResponse<Payment>> UpdateAsync(Payment payment)
         {
-            string query = @"Update Payments 
-                             Set user_id = @UserId,
-                                 order_id = @OrderId,
-                                 transaction_id = @TransactionId,
-                                 status = @Status,
-                                 method = @Method,
-                                 provider = @Provider,
-                                 amount = @Amount,
-                                 currency = @Currency,
-                                 provider_transaction_id = @ProviderTransactionId,
-                                 provider_payment_method = @ProviderPaymentMethod,
-                                 card_last4 = @CardLast4,
-                                 card_brand = @CardBrand,
-                                 payer_email = @PayerEmail,
-                                 payer_name = @PayerName,
-                                 billing_address1 = @BillingAddress1,
-                                 billing_address2 = @BillingAddress2,
-                                 billing_city = @BillingCity,
-                                 billing_state = @BillingState,
-                                 billing_postal_code = @BillingPostalCode,
-                                 billing_country = @BillingCountry,
-                                 processing_fee = @ProcessingFee,
-                                 net_amount = @NetAmount,
-                                 processed_at = @ProcessedAt,
-                                 completed_at = @CompletedAt,
-                                 failed_at = @FailedAt,
-                                 refund_at = @RefundAt,
-                                 error_message = @ErrorMessage,
-                                 failure_reason = @FailureReason,
-                                 metadata = @Metadata,
-                                 notes = @Notes,
-                                 created_at = @CreatedAt,
-                                 updated_at = @UpdatedAt
-                            WHERE id = @Id
-                            Returning *;";
-            var connection = await OpenConnectionAsync();
+            const string query = @"
+                UPDATE payments
+                SET user_id = @UserId,
+                    order_id = @OrderId,
+                    transaction_id = @TransactionId,
+                    status = @Status,
+                    method = @Method,
+                    provider = @Provider,
+                    amount = @Amount,
+                    currency = @Currency,
+                    provider_transaction_id = @ProviderTransactionId,
+                    provider_payment_method = @ProviderPaymentMethod,
+                    card_last4 = @CardLast4,
+                    card_brand = @CardBrand,
+                    payer_email = @PayerEmail,
+                    payer_name = @PayerName,
+                    billing_address1 = @BillingAddress1,
+                    billing_address2 = @BillingAddress2,
+                    billing_city = @BillingCity,
+                    billing_state = @BillingState,
+                    billing_postal_code = @BillingPostalCode,
+                    billing_country = @BillingCountry,
+                    processing_fee = @ProcessingFee,
+                    net_amount = @NetAmount,
+                    processed_at = @ProcessedAt,
+                    completed_at = @CompletedAt,
+                    failed_at = @FailedAt,
+                    refunded_at = @RefundedAt,
+                    error_message = @ErrorMessage,
+                    failure_reason = @FailureReason,
+                    metadata = @Metadata,
+                    notes = @Notes,
+                    created_at = @CreatedAt,
+                    updated_at = @UpdatedAt
+                WHERE id = @Id
+                RETURNING *;";
 
-            var command = new NpgsqlCommand(query, connection);
+            payment.UpdatedAt = DateTime.UtcNow;
+
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
+            AddPaymentParameters(command, payment);
             command.Parameters.AddWithValue("@Id", payment.Id);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
-            Payment paymentObj = new Payment();
-
+            Payment? paymentObj = null;
             if (await reader.ReadAsync())
             {
                 paymentObj = MapPayment(reader);
             }
+
             return new InfrastructureResponse<Payment>()
             {
-                IsSuccess = true,
-                Message = "The process completed successfully",
-                Value = paymentObj
+                IsSuccess = paymentObj != null,
+                Message = paymentObj != null ? "The process completed successfully" : "Payment not found",
+                Value = paymentObj!
             };
         }
 
         public async Task<InfrastructureResponse<bool>> DeleteAsync(int id)
         {
-            string query = "delete from Payments where id = @Id";
+            const string query = "DELETE FROM payments WHERE id = @Id";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@Id", id);
 
             var rowEffected = await command.ExecuteNonQueryAsync();
 
-            await connection.CloseAsync();
-
             return new InfrastructureResponse<bool>()
             {
-                IsSuccess = true,
+                IsSuccess = rowEffected > 0,
                 Message = "The process completed successfully",
                 Value = rowEffected > 0
             };
@@ -413,136 +399,123 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         public async Task<InfrastructureResponse<int>> GetTotalCountAsync()
         {
-            string query = @"SELECT COUNT(1) from payments";
+            const string query = @"SELECT COUNT(1) FROM payments";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             var countObj = await command.ExecuteScalarAsync();
-
-            await connection.CloseAsync();
 
             return new InfrastructureResponse<int>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = Convert.ToInt16(countObj)
+                Value = countObj != null ? Convert.ToInt32(countObj) : 0
             };
         }
 
         public async Task<InfrastructureResponse<int>> GetCountByUserIdAsync(int userId)
         {
-            string query = "select count(1) from payments where user_id = @UserId";
+            const string query = "SELECT COUNT(1) FROM payments WHERE user_id = @UserId";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
-
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@UserId", userId);
 
-            var countObj = command.ExecuteScalarAsync();
-
-            await connection.CloseAsync();
+            var countObj = await command.ExecuteScalarAsync();
 
             return new InfrastructureResponse<int>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = Convert.ToInt16(countObj)
+                Value = countObj != null ? Convert.ToInt32(countObj) : 0
             };
         }
 
         public async Task<InfrastructureResponse<int>> GetCountByStatusAsync(PaymentStatus status)
         {
-            string query = @"select count(1) from payments where status = @Status";
+            const string query = @"SELECT COUNT(1) FROM payments WHERE status = @Status";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@Status", status);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Status", (int)status);
 
             var countObj = await command.ExecuteScalarAsync();
-
-            await connection.CloseAsync();
 
             return new InfrastructureResponse<int>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = Convert.ToInt16(countObj)
+                Value = countObj != null ? Convert.ToInt32(countObj) : 0
             };
         }
 
         public async Task<InfrastructureResponse<decimal>> GetTotalAmountByUserIdAsync(int userId)
         {
-            string sql = @"select sum(Amount) from payments where user_id = @UserId";
+            const string sql = @"SELECT COALESCE(SUM(amount), 0) FROM payments WHERE user_id = @UserId";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(sql, connection);
-
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("@UserId", userId);
 
             var totalObj = await command.ExecuteScalarAsync();
-
-            await connection.CloseAsync();
 
             return new InfrastructureResponse<decimal>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = Convert.ToDecimal(totalObj)
+                Value = totalObj != null && totalObj != DBNull.Value ? Convert.ToDecimal(totalObj) : 0m
             };
         }
 
         public async Task<InfrastructureResponse<decimal>> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            string query = "SELECT sum(amount) from payments where created_at >= @StartDate and created_at <= @EndDate";
+            const string query = "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE created_at >= @StartDate AND created_at <= @EndDate";
 
-            var connection = await OpenConnectionAsync();
-
-            var command = new NpgsqlCommand(query, connection);
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@StartDate", startDate);
             command.Parameters.AddWithValue("@EndDate", endDate);
 
             var totalObj = await command.ExecuteScalarAsync();
 
-            await connection.CloseAsync();
-
             return new InfrastructureResponse<decimal>()
             {
                 IsSuccess = true,
                 Message = "The process completed successfully",
-                Value = Convert.ToDecimal(totalObj)
+                Value = totalObj != null && totalObj != DBNull.Value ? Convert.ToDecimal(totalObj) : 0m
             };
         }
 
         public async Task<InfrastructureResponse<IEnumerable<Payment>>> SearchAsync(string searchTerm, int pageNumber, int pageSize)
         {
-            string query = @"SELECT p.* from payments p
-                             where @searchTerm = null or @searchTerm = ''
-                             or transaction_id ilike '%' || @SearchTerm || '%'
-                             or payer_email ilike '%' || @SearchTerm || '%'
-                             or payer_name ilike '%' || @SearchTerm || '%'
-                             or provider ilike '%' || @SearchTerm || '%'
-                             or email ilike '%' || @SearchTerm || '%'
-                             or user_name ilike '%' || @SearchTerm || '%'";
+            const string query = @"
+                SELECT p.* FROM payments p
+                LEFT JOIN users u ON p.user_id = u.id
+                WHERE @SearchTerm = ''
+                   OR p.transaction_id ILIKE '%' || @SearchTerm || '%'
+                   OR p.payer_email ILIKE '%' || @SearchTerm || '%'
+                   OR p.payer_name ILIKE '%' || @SearchTerm || '%'
+                   OR p.provider ILIKE '%' || @SearchTerm || '%'
+                   OR u.email ILIKE '%' || @SearchTerm || '%'
+                   OR u.user_name ILIKE '%' || @SearchTerm || '%'
+                ORDER BY p.created_at DESC
+                OFFSET @Offset LIMIT @PageSize;";
 
-            var connection = await OpenConnectionAsync();
+            await using var connection = await OpenConnectionAsync();
+            await using var command = new NpgsqlCommand(query, connection);
 
-            var command = new NpgsqlCommand(query, connection);
-
-            var normalizeSearchTerm = searchTerm.Trim();
+            var normalizeSearchTerm = (searchTerm ?? string.Empty).Trim();
+            int offset = Math.Max(0, (pageNumber - 1) * pageSize);
 
             command.Parameters.AddWithValue("@SearchTerm", normalizeSearchTerm);
+            command.Parameters.AddWithValue("@Offset", offset);
+            command.Parameters.AddWithValue("@PageSize", pageSize);
 
-            var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             List<Payment> payments = new List<Payment>();
-
             while (await reader.ReadAsync())
             {
                 payments.Add(MapPayment(reader));
@@ -565,18 +538,25 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
 
         private Payment MapPayment(NpgsqlDataReader reader)
         {
+            var userIdOrd = reader.GetOrdinal("user_id");
+            var orderIdOrd = reader.GetOrdinal("order_id");
+            var providerMethodOrd = reader.GetOrdinal("provider_payment_method");
+            var createdAtOrd = reader.GetOrdinal("created_at");
+            var updatedAtOrd = reader.GetOrdinal("updated_at");
+
             return new Payment()
             {
-                Id = reader.GetInt16(reader.GetOrdinal("id")),
-                UserId = reader.GetInt16(reader.GetOrdinal("user_id")),
-                OrderId = reader.GetInt16(reader.GetOrdinal("order_id")),
+                Id = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("id"))),
+                UserId = reader.IsDBNull(userIdOrd) ? null : Convert.ToInt32(reader.GetValue(userIdOrd)),
+                OrderId = reader.IsDBNull(orderIdOrd) ? null : Convert.ToInt32(reader.GetValue(orderIdOrd)),
                 TransactionId = reader.GetString(reader.GetOrdinal("transaction_id")),
-                Status = (PaymentStatus)reader.GetValue(reader.GetOrdinal("status")),
-                Method = (PaymentMethod)reader.GetValue(reader.GetOrdinal("method")),
+                Status = (PaymentStatus)Convert.ToInt32(reader.GetValue(reader.GetOrdinal("status"))),
+                Method = (PaymentMethod)Convert.ToInt32(reader.GetValue(reader.GetOrdinal("method"))),
                 Provider = reader.GetString(reader.GetOrdinal("provider")),
                 Amount = reader.GetDecimal(reader.GetOrdinal("amount")),
                 Currency = reader.GetString(reader.GetOrdinal("currency")),
                 ProviderTransactionId = reader.IsDBNull(reader.GetOrdinal("provider_transaction_id")) ? null : reader.GetString(reader.GetOrdinal("provider_transaction_id")),
+                ProviderPaymentMethodId = reader.IsDBNull(providerMethodOrd) ? null : reader.GetString(providerMethodOrd),
                 CardLast4 = reader.IsDBNull(reader.GetOrdinal("card_last4")) ? null : reader.GetString(reader.GetOrdinal("card_last4")),
                 CardBrand = reader.IsDBNull(reader.GetOrdinal("card_brand")) ? null : reader.GetString(reader.GetOrdinal("card_brand")),
                 PayerEmail = reader.IsDBNull(reader.GetOrdinal("payer_email")) ? null : reader.GetString(reader.GetOrdinal("payer_email")),
@@ -597,45 +577,45 @@ namespace Berryfy.Infrastructure.Repositories.PaymentConcretes
                 FailureReason = reader.IsDBNull(reader.GetOrdinal("failure_reason")) ? null : reader.GetString(reader.GetOrdinal("failure_reason")),
                 Metadata = reader.IsDBNull(reader.GetOrdinal("metadata")) ? null : reader.GetString(reader.GetOrdinal("metadata")),
                 Notes = reader.IsDBNull(reader.GetOrdinal("notes")) ? null : reader.GetString(reader.GetOrdinal("notes")),
-                //CreatedAt = reader.IsDBNull(reader.GetOrdinal("created_at")) ? null : reader.GetDateTime(reader.GetOrdinal("created_at")),
-                //UpdatedAt = reader.IsDBNull(reader.GetOrdinal("updated_at")) ? null : reader.GetDateTime(reader.GetOrdinal("updated_at"))
-            };        
+                CreatedAt = reader.IsDBNull(createdAtOrd) ? DateTime.UtcNow : reader.GetDateTime(createdAtOrd),
+                UpdatedAt = reader.IsDBNull(updatedAtOrd) ? DateTime.UtcNow : reader.GetDateTime(updatedAtOrd)
+            };
         }
 
         private void AddPaymentParameters(NpgsqlCommand command, Payment payment)
         {
-            command.Parameters.AddWithValue("@UserId", payment.UserId);
-            command.Parameters.AddWithValue("@OrderId", payment.OrderId);
-            command.Parameters.AddWithValue("@TransactionId", payment.TransactionId);
+            command.Parameters.AddWithValue("@UserId", (object?)payment.UserId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@OrderId", (object?)payment.OrderId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@TransactionId", payment.TransactionId ?? string.Empty);
             command.Parameters.AddWithValue("@Status", (int)payment.Status);
             command.Parameters.AddWithValue("@Method", (int)payment.Method);
-            command.Parameters.AddWithValue("@Provider", payment.Provider);
+            command.Parameters.AddWithValue("@Provider", payment.Provider ?? string.Empty);
             command.Parameters.AddWithValue("@Amount", payment.Amount);
-            command.Parameters.AddWithValue("@Currency", payment.Currency);
-            command.Parameters.AddWithValue("@ProviderTransactionId", (object)payment.ProviderTransactionId ?? DBNull.Value);
-            command.Parameters.AddWithValue("@CardLast4", (object)payment.CardLast4 ?? DBNull.Value);
-            command.Parameters.AddWithValue("@CardBrand", (object)payment.CardBrand ?? DBNull.Value);
-            command.Parameters.AddWithValue("@PayerEmail", (object)payment.PayerEmail ?? DBNull.Value);
-            command.Parameters.AddWithValue("@PayerName", (object)payment.PayerName ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingAddress1", (object)payment.BillingAddress1 ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingAddress2", (object)payment.BillingAddress2 ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingCity", (object)payment.BillingCity ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingState", (object)payment.BillingState ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingPostalCode", (object)payment.BillingPostalCode ?? DBNull.Value);
-            command.Parameters.AddWithValue("@BillingCountry", (object)payment.BillingCountry ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ProviderPaymentMethod", (object)payment.ProviderPaymentMethodId ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ProccessingFee", (object)payment.ProcessingFee ?? DBNull.Value);
-            command.Parameters.AddWithValue("@NetAmount", (object)payment.NetAmount ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ProccessedAt", (object)payment.ProcessedAt ?? DBNull.Value);
-            command.Parameters.AddWithValue("CompletedAt", (object)payment.CompletedAt ?? DBNull.Value);
-            command.Parameters.AddWithValue("@FailedAt", (object)payment.FailedAt ?? DBNull.Value);
-            command.Parameters.AddWithValue("@RefundAt", (object)payment.RefundedAt ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ErrorMessage", (object)payment.ErrorMessage ?? DBNull.Value);
-            command.Parameters.AddWithValue("@FailureReason", (object)payment.FailureReason ?? DBNull.Value);
-            command.Parameters.AddWithValue("@Metadata", (object)payment.Metadata ?? DBNull.Value);
-            command.Parameters.AddWithValue("@Notes", (object)payment.Notes ?? DBNull.Value);
-            command.Parameters.AddWithValue("@CreatedAt", (object)payment.CreatedAt ?? DBNull.Value);
-            command.Parameters.AddWithValue("@UpdatedAt", (object)payment.UpdatedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Currency", payment.Currency ?? "USD");
+            command.Parameters.AddWithValue("@ProviderTransactionId", (object?)payment.ProviderTransactionId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CardLast4", (object?)payment.CardLast4 ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CardBrand", (object?)payment.CardBrand ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PayerEmail", (object?)payment.PayerEmail ?? DBNull.Value);
+            command.Parameters.AddWithValue("@PayerName", (object?)payment.PayerName ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingAddress1", (object?)payment.BillingAddress1 ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingAddress2", (object?)payment.BillingAddress2 ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingCity", (object?)payment.BillingCity ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingState", (object?)payment.BillingState ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingPostalCode", (object?)payment.BillingPostalCode ?? DBNull.Value);
+            command.Parameters.AddWithValue("@BillingCountry", (object?)payment.BillingCountry ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProviderPaymentMethod", (object?)payment.ProviderPaymentMethodId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProcessingFee", payment.ProcessingFee);
+            command.Parameters.AddWithValue("@NetAmount", payment.NetAmount);
+            command.Parameters.AddWithValue("@ProcessedAt", (object?)payment.ProcessedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CompletedAt", (object?)payment.CompletedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@FailedAt", (object?)payment.FailedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@RefundedAt", (object?)payment.RefundedAt ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ErrorMessage", (object?)payment.ErrorMessage ?? DBNull.Value);
+            command.Parameters.AddWithValue("@FailureReason", (object?)payment.FailureReason ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Metadata", (object?)payment.Metadata ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Notes", (object?)payment.Notes ?? DBNull.Value);
+            command.Parameters.AddWithValue("@CreatedAt", payment.CreatedAt == default ? DateTime.UtcNow : payment.CreatedAt);
+            command.Parameters.AddWithValue("@UpdatedAt", payment.UpdatedAt == default ? DateTime.UtcNow : payment.UpdatedAt);
         }
     }
 }
