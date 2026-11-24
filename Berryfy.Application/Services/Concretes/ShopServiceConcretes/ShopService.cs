@@ -29,27 +29,27 @@ namespace Berryfy.Application.Services.Concretes.ShopServiceConcretes
 
             var shop = await _shopRepository.GetShopAsync(id);
 
-            if(shop == null)
+            if (shop == null || !shop.IsSuccess || shop.Value == null)
             {
                 return new ApplicationResponse<ShopResponse>()
                 {
                     IsSuccess = false,
                     Value = null,
-                    ErrorMessage = "Error exists while retriving shop data"
+                    ErrorMessage = "Shop not found"
                 };
             }
 
             return new ApplicationResponse<ShopResponse>()
             {
                 IsSuccess = true,
-                SuccessMessage = "Shop data retrived successfully",
+                SuccessMessage = "Shop data retrieved successfully",
                 Value = ShopResponse.MapFromShop(shop.Value)
             };
         }
 
         public async Task<ApplicationResponse<ShopResponse>> UpdateShopAsync(int id, UpdateShop shop)
         {
-            if(shop == null || id <= 0)
+            if (shop == null || id <= 0)
             {
                 return new ApplicationResponse<ShopResponse>()
                 {
@@ -61,20 +61,21 @@ namespace Berryfy.Application.Services.Concretes.ShopServiceConcretes
 
             var existingShop = await _shopRepository.GetShopAsync(id);
 
-            if(existingShop == null)
+            if (existingShop == null || !existingShop.IsSuccess || existingShop.Value == null)
             {
                 return new ApplicationResponse<ShopResponse>()
                 {
                     IsSuccess = false,
                     Value = null,
-                    ErrorMessage = "An error exists while retrive shop's data"
+                    ErrorMessage = "Shop not found"
                 };
             }
 
             var mappedShop = UpdateShop.MapToShop(shop);
+            mappedShop.Id = id;
             var updatedShop = await _shopRepository.UpdateShopAsync(mappedShop);
 
-            if(updatedShop != null)
+            if (updatedShop != null && updatedShop.IsSuccess && updatedShop.Value != null)
             {
                 return new ApplicationResponse<ShopResponse>()
                 {
