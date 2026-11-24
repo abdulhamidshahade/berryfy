@@ -50,7 +50,7 @@ namespace Berryfy.Domain.Entities.OrderEntities
 
 
 
-        [JsonIgnore] public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
         [JsonIgnore] public User User { get; set; }
         [JsonIgnore] public Cart Cart { get; set; }
