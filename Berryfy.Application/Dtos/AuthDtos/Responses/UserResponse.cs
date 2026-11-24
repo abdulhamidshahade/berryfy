@@ -9,6 +9,7 @@ namespace Berryfy.Application.Dtos.AuthDtos.Responses
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public bool EmailConfirmed { get; set; }
         public List<string> Roles { get; set; } = new();
 
         public static UserResponse MapFromUser(User user, IEnumerable<string>? roles = null)
@@ -20,6 +21,7 @@ namespace Berryfy.Application.Dtos.AuthDtos.Responses
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
+                EmailConfirmed = user.EmailConfirmed,
                 Roles = roles?.ToList() ?? new List<string>()
             };
         }
