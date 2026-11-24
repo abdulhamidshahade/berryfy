@@ -118,17 +118,17 @@ namespace Berryfy.API.Controllers
         {
             var product = await _productService.GetByIdAsync(id);
 
-            if (product == null)
+            if (product == null || !product.IsSuccess || product.Value == null)
             {
-                return new ApiResponse<ProductResponse>
+                return NotFound(new ApiResponse<ProductResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error retrieving product",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusMessage = product?.ErrorMessage ?? "Product not found",
+                    Errors = new List<string> { product?.ErrorMessage ?? "Product not found" }
+                });
             }
+
             var response = new ApiResponse<ProductResponse>
             {
                 IsSuccess = true,
@@ -147,17 +147,17 @@ namespace Berryfy.API.Controllers
         {
             var product = await _productService.GetByNameAsync(name);
 
-            if (product == null)
+            if (product == null || !product.IsSuccess || product.Value == null)
             {
-                return new ApiResponse<ProductResponse>
+                return NotFound(new ApiResponse<ProductResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error retrieving product",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusMessage = product?.ErrorMessage ?? "Product not found",
+                    Errors = new List<string> { product?.ErrorMessage ?? "Product not found" }
+                });
             }
+
             var response = new ApiResponse<ProductResponse>
             {
                 IsSuccess = true,
@@ -171,20 +171,24 @@ namespace Berryfy.API.Controllers
 
         [HttpPost]
         [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<ProductResponse>>> Create([FromBody] CreateProduct productDto)
+        public async Task<ActionResult<ApiResponse<ProductResponse>>> Create([FromBody] CreateProduct productDto, [FromQuery] List<int>? categories = null)
         {
+            if (categories != null && categories.Count > 0 && (!productDto.CategoryId.HasValue || productDto.CategoryId.Value <= 0))
+            {
+                productDto.CategoryId = categories[0];
+            }
+
             var createdProduct = await _productService.CreateAsync(productDto);
 
-            if (createdProduct == null)
+            if (createdProduct == null || !createdProduct.IsSuccess || createdProduct.Value == null)
             {
-                return new ApiResponse<ProductResponse>
+                return BadRequest(new ApiResponse<ProductResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error creating product",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = createdProduct?.ErrorMessage ?? "Error creating product",
+                    Errors = new List<string> { createdProduct?.ErrorMessage ?? "An unexpected error occurred" }
+                });
             }
 
             var response = new ApiResponse<ProductResponse>
@@ -195,28 +199,31 @@ namespace Berryfy.API.Controllers
                 Data = createdProduct.Value
             };
 
-            return response;
+            return StatusCode(StatusCodes.Status201Created, response);
         }
-
 
 
         [HttpPut]
         [Route("{id}")]
         [AdminAndAbove]
-        public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto)
+        public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, [FromBody] UpdateProduct productDto, [FromQuery] List<int>? categories = null)
         {
+            if (categories != null && categories.Count > 0 && (!productDto.CategoryId.HasValue || productDto.CategoryId.Value <= 0))
+            {
+                productDto.CategoryId = categories[0];
+            }
+
             var updatedProduct = await _productService.UpdateAsync(id, productDto);
 
-            if (updatedProduct == null)
+            if (updatedProduct == null || !updatedProduct.IsSuccess || updatedProduct.Value == null)
             {
-                return new ApiResponse<ProductResponse>
+                return BadRequest(new ApiResponse<ProductResponse>
                 {
                     IsSuccess = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    StatusMessage = "Error updating product",
-                    Errors = new List<string> { "An unexpected error occurred" }
-                };
-
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    StatusMessage = updatedProduct?.ErrorMessage ?? "Error updating product",
+                    Errors = new List<string> { updatedProduct?.ErrorMessage ?? "An unexpected error occurred" }
+                });
             }
 
             var response = new ApiResponse<ProductResponse>
