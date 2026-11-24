@@ -36,7 +36,7 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlists = await _wishlistService.GetUserWishlistsAsync(userId);
-            return Ok(new { IsSuccess = true, Data = wishlists });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = wishlists.Value });
         }
 
 
@@ -48,13 +48,13 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(id);
-            if (wishlist == null)
-                return NotFound(new { IsSuccess = false, StatusMessage = "Wishlist not found" });
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
 
             if (wishlist.Value.UserId != userId && !wishlist.Value.IsPublic)
                 return Forbid();
 
-            return Ok(new { IsSuccess = true, Data = wishlist });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = wishlist.Value });
         }
 
 
@@ -66,7 +66,7 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetUserDefaultWishlistAsync(userId);
-            return Ok(new { IsSuccess = true, Data = wishlist });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = wishlist.Value });
         }
 
 
@@ -78,7 +78,7 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var summary = await _wishlistService.GetUserSummaryAsync(userId);
-            return Ok(new { IsSuccess = true, Data = summary });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = summary.Value });
         }
 
 
@@ -93,8 +93,11 @@ namespace Berryfy.API.Controllers
                 return BadRequest(ModelState);
 
             var wishlist = await _wishlistService.CreateAsync(userId, createWishlistDto);
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to create wishlist" });
+
             return CreatedAtAction(nameof(GetWishlist), new { id = wishlist.Value.Id },
-                new { IsSuccess = true, Data = wishlist });
+                new { IsSuccess = true, StatusCode = 201, Data = wishlist.Value });
         }
 
 
@@ -109,14 +112,14 @@ namespace Berryfy.API.Controllers
                 return BadRequest(ModelState);
 
             var existingWishlist = await _wishlistService.GetByIdAsync(id);
-            if (existingWishlist == null)
-                return NotFound(new { IsSuccess = false, StatusMessage = "Wishlist not found" });
+            if (existingWishlist == null || !existingWishlist.IsSuccess || existingWishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
 
             if (existingWishlist.Value.UserId != userId)
                 return Forbid();
 
             var updatedWishlist = await _wishlistService.UpdateAsync(id, updateWishlistDto);
-            return Ok(new { IsSuccess = true, Data = updatedWishlist });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = updatedWishlist.Value });
         }
 
 
@@ -128,17 +131,17 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var existingWishlist = await _wishlistService.GetByIdAsync(id);
-            if (existingWishlist == null)
-                return NotFound(new { IsSuccess = false, StatusMessage = "Wishlist not found" });
+            if (existingWishlist == null || !existingWishlist.IsSuccess || existingWishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
 
             if (existingWishlist.Value.UserId != userId)
                 return Forbid();
 
             var result = await _wishlistService.DeleteAsync(id);
-            if (!result.Value)
-                return BadRequest(new { IsSuccess = false, StatusMessage = "Cannot delete the default wishlist" });
+            if (!result.IsSuccess || !result.Value)
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = result.ErrorMessage ?? "Cannot delete the default wishlist" });
 
-            return Ok(new { IsSuccess = true, StatusMessage = "Wishlist deleted successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Wishlist deleted successfully" });
         }
 
 
@@ -153,10 +156,10 @@ namespace Berryfy.API.Controllers
                 return BadRequest(ModelState);
 
             var item = await _wishlistService.AddItemAsync(userId, addToWishlistDto);
-            if (item == null)
-                return BadRequest(new { IsSuccess = false, StatusMessage = "Failed to add item to wishlist" });
+            if (item == null || !item.IsSuccess || item.Value == null)
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = item?.ErrorMessage ?? "Failed to add item to wishlist" });
 
-            return Ok(new { IsSuccess = true, Data = item, StatusMessage = "Item added to wishlist successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = item.Value, StatusMessage = "Item added to wishlist successfully" });
         }
 
 
@@ -168,14 +171,16 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
             var updatedItem = await _wishlistService.UpdateItemAsync(wishlistId, productId, updateItemDto);
-            if (updatedItem == null)
-                return NotFound(new { IsSuccess = false, StatusMessage = "Wishlist item not found" });
+            if (updatedItem == null || !updatedItem.IsSuccess || updatedItem.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist item not found" });
 
-            return Ok(new { IsSuccess = true, Data = updatedItem });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = updatedItem.Value });
         }
 
 
@@ -187,14 +192,16 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
             var result = await _wishlistService.RemoveItemAsync(wishlistId, productId);
             if (!result.Value)
-                return NotFound(new { IsSuccess = false, StatusMessage = "Wishlist item not found" });
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist item not found" });
 
-            return Ok(new { IsSuccess = true, StatusMessage = "Item removed from wishlist successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Item removed from wishlist successfully" });
         }
 
 
@@ -206,7 +213,7 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var isInWishlist = await _wishlistService.IsProductInWishlistAsync(userId, productId);
-            return Ok(new { IsSuccess = true, Data = new { IsInWishlist = isInWishlist } });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = new { IsInWishlist = isInWishlist.Value } });
         }
 
 
@@ -218,14 +225,16 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
             var result = await _wishlistService.AddMultipleItemsAsync(userId, wishlistId, productIds);
             if (!result.Value)
-                return BadRequest(new { IsSuccess = false, StatusMessage = "Failed to add items to wishlist" });
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to add items to wishlist" });
 
-            return Ok(new { IsSuccess = true, StatusMessage = "Items added to wishlist successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Items added to wishlist successfully" });
         }
 
 
@@ -237,11 +246,13 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
-            var result = await _wishlistService.RemoveMultipleItemsAsync(wishlistId, productIds);
-            return Ok(new { IsSuccess = true, StatusMessage = "Items removed from wishlist successfully" });
+            await _wishlistService.RemoveMultipleItemsAsync(wishlistId, productIds);
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Items removed from wishlist successfully" });
         }
 
 
@@ -253,11 +264,13 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
-            var result = await _wishlistService.ShareWishlistAsync(wishlistId, isPublic);
-            return Ok(new { IsSuccess = true, StatusMessage = $"Wishlist {(isPublic ? "shared" : "made private")} successfully" });
+            await _wishlistService.ShareWishlistAsync(wishlistId, isPublic);
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = $"Wishlist {(isPublic ? "shared" : "made private")} successfully" });
         }
 
 
@@ -269,14 +282,16 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
             var duplicatedWishlist = await _wishlistService.DuplicateWishlistAsync(wishlistId, newName);
-            if (duplicatedWishlist == null)
-                return BadRequest(new { IsSuccess = false, StatusMessage = "Failed to duplicate wishlist" });
+            if (duplicatedWishlist == null || !duplicatedWishlist.IsSuccess || duplicatedWishlist.Value == null)
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = "Failed to duplicate wishlist" });
 
-            return Ok(new { IsSuccess = true, Data = duplicatedWishlist, StatusMessage = "Wishlist duplicated successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = duplicatedWishlist.Value, StatusMessage = "Wishlist duplicated successfully" });
         }
 
 
@@ -288,11 +303,13 @@ namespace Berryfy.API.Controllers
                 return Unauthorized();
 
             var wishlist = await _wishlistService.GetByIdAsync(wishlistId);
-            if (wishlist == null || wishlist.Value.UserId != userId)
+            if (wishlist == null || !wishlist.IsSuccess || wishlist.Value == null)
+                return NotFound(new { IsSuccess = false, StatusCode = 404, StatusMessage = "Wishlist not found" });
+            if (wishlist.Value.UserId != userId)
                 return Forbid();
 
-            var result = await _wishlistService.ClearWishlistAsync(wishlistId);
-            return Ok(new { IsSuccess = true, StatusMessage = "Wishlist cleared successfully" });
+            await _wishlistService.ClearWishlistAsync(wishlistId);
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Wishlist cleared successfully" });
         }
 
         // ADMIN ENDPOINTS
@@ -301,9 +318,8 @@ namespace Berryfy.API.Controllers
         [AdminAndAbove]
         public async Task<IActionResult> GetAllWishlistsForAdmin()
         {
-            //TODO: for test purposes, remove later
             var allWishlists = await _wishlistService.GetAllWishlistsAsync();
-            return Ok(new { IsSuccess = true, Data = allWishlists });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = allWishlists.Value });
         }
 
         [HttpGet("admin/stats")]
@@ -311,7 +327,7 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> GetGlobalWishlistStats()
         {
             var stats = await _wishlistService.GetGlobalStatsAsync();
-            return Ok(new { IsSuccess = true, Data = stats });
+            return Ok(new { IsSuccess = true, StatusCode = 200, Data = stats.Value });
         }
 
         [HttpDelete("admin/{id}")]
@@ -319,26 +335,26 @@ namespace Berryfy.API.Controllers
         public async Task<IActionResult> AdminDeleteWishlist(int id)
         {
             var result = await _wishlistService.DeleteAsync(id);
-            if (!result.Value)
-                return BadRequest(new { IsSuccess = false, StatusMessage = "Cannot delete the default wishlist" });
+            if (!result.IsSuccess || !result.Value)
+                return BadRequest(new { IsSuccess = false, StatusCode = 400, StatusMessage = result.ErrorMessage ?? "Cannot delete the default wishlist" });
 
-            return Ok(new { IsSuccess = true, StatusMessage = "Wishlist deleted successfully" });
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Wishlist deleted successfully" });
         }
 
         [HttpDelete("admin/{id}/clear")]
         [AdminAndAbove]
         public async Task<IActionResult> AdminClearWishlist(int id)
         {
-            var result = await _wishlistService.ClearWishlistAsync(id);
-            return Ok(new { IsSuccess = true, StatusMessage = "Wishlist cleared successfully" });
+            await _wishlistService.ClearWishlistAsync(id);
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = "Wishlist cleared successfully" });
         }
 
         [HttpPut("admin/{id}/visibility")]
         [AdminAndAbove]
         public async Task<IActionResult> AdminToggleWishlistVisibility(int id, [FromBody] bool isPublic)
         {
-            var result = await _wishlistService.ShareWishlistAsync(id, isPublic);
-            return Ok(new { IsSuccess = true, StatusMessage = $"Wishlist {(isPublic ? "shared" : "made private")} successfully" });
+            await _wishlistService.ShareWishlistAsync(id, isPublic);
+            return Ok(new { IsSuccess = true, StatusCode = 200, StatusMessage = $"Wishlist {(isPublic ? "shared" : "made private")} successfully" });
         }
     }
 }
