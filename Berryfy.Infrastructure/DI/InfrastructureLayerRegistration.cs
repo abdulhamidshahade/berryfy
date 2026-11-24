@@ -71,14 +71,6 @@ namespace Berryfy.Infrastructure.DI
 
             serviceDescriptors.AddScoped<DataSeeder>();
 
-            serviceDescriptors.AddScoped<Npgsql.NpgsqlConnection>(sp =>
-            {
-                var config = sp.GetRequiredService<IConfiguration>();
-                var connStr = config.GetConnectionString("Postgres"); // update key as used in appsettings
-                return new Npgsql.NpgsqlConnection(connStr);
-            });
-
-
             return serviceDescriptors;
         }
     }
