@@ -88,6 +88,7 @@ if (corsOrigins.Length == 0 && builder.Environment.IsDevelopment())
     corsOrigins =
     [
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://localhost:30305",
         "https://localhost:7105",
         "http://host.docker.internal:3000",
@@ -209,15 +210,11 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-builder.Configuration.AddJsonFile("appsettings.json", optional: true)
-    .AddUserSecrets(Assembly.GetExecutingAssembly())
-    .AddEnvironmentVariables()
-    .Build();
-
-var migrationConnectionString = builder.Configuration.GetConnectionString("PostgreConnectionString")
-    ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-    ?? throw new InvalidOperationException("PostgreSQL connection string is not configured.");
-DatabaseMigrator.Run(migrationConnectionString);
+var migrationConnectionString = PostgresConnectionStrings.Resolve(builder.Configuration);
+if (!DatabaseMigrator.Run(migrationConnectionString))
+{
+    throw new InvalidOperationException("Database migration failed on startup.");
+}
 
 var app = builder.Build();
 
