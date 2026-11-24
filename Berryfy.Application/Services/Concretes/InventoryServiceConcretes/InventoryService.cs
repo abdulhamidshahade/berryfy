@@ -236,11 +236,11 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
 
         public async Task<ApplicationResponse<Product>> GetProductWithStockInfoAsync(int productId)
         {
-            var product = _inventoryRepository.GetProductWithStockInfoAsync(productId).GetAwaiter().GetResult().Value;
+            var product = (await _inventoryRepository.GetProductWithStockInfoAsync(productId)).Value;
             return new ApplicationResponse<Product>
             {
-                IsSuccess = true,
-                Value = product
+                IsSuccess = product != null,
+                Value = product!
             };
         }
 
@@ -273,7 +273,7 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
         public async Task<ApplicationResponse<bool>> ReleaseReservedStockAsync(int productId, int quantity, int referenceId, string referenceType)
         {
             if (quantity <= 0) return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
-            var product = _productRepository.GetByIdAsync(productId).GetAwaiter().GetResult().Value;
+            var product = (await _productRepository.GetByIdAsync(productId)).Value;
             if (product == null)
             {
                 return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
@@ -284,8 +284,8 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 return new ApplicationResponse<bool> { IsSuccess = false, Value = false };
             }
 
-            //product.ReservedStock -= quantity;
-            //product.UpdatedAt = DateTime.UtcNow;
+            product.ReservedStock = Math.Max(0, product.ReservedStock - quantity);
+            product.UpdatedAt = DateTime.UtcNow;
 
             var inventoryLog = new InventoryLog
             {
@@ -299,13 +299,13 @@ namespace Berryfy.Application.Services.Concretes.InventoryServiceConcretes
                 CreatedAt = DateTime.UtcNow
             };
 
-            //var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
+            var updatedProduct = await _productRepository.UpdateAsync(product.Id, product);
             var createdInventory = await _inventoryRepository.CreateInventory(inventoryLog);
 
             return new ApplicationResponse<bool>
             {
-                IsSuccess = true,
-                Value = createdInventory != null/* && updatedProduct != null*/
+                IsSuccess = createdInventory != null && updatedProduct != null && updatedProduct.IsSuccess,
+                Value = createdInventory != null && updatedProduct != null && updatedProduct.IsSuccess
             };
         }
 
